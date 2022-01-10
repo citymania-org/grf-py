@@ -9,7 +9,7 @@ At this point it's mostly just a proof of concept, API, syntax and goals can be 
 
 Idea is to provide two levels of api:
 
-1) Low level (Aciton*) - directly mimic the grf capabilites with python syntax.
+1) Low level (Action*) - directly mimic the grf capabilites with python syntax.
 2) High level - Something conveniet to use but still interoperable with low-level api.
 
 ## grftopy 
