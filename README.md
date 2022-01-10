@@ -5,7 +5,7 @@ Goal is to combine the convenience and power of Python with control and performa
 
 At this point it's mostly just a proof of concept, API, syntax and goals can be changed at any moment.
 
-See https://github.com/citymania-org/cmclient/tree/master/grf/alpine for an example of grf made with this framework.
+See https://github.com/citymania-org/cmclient/tree/master/grf/alpine/alpine.py for an example of grf made with this framework.
 
 Out of GRF features it currently only supports objects. But most of actions are supported.
 
@@ -14,7 +14,7 @@ Out of GRF features it currently only supports objects. But most of actions are 
 Idea is to provide two levels of api:
 
 1) Low level (Action*) - directly mimic the grf capabilites with python syntax.
-2) High level - Something conveniet to use but still interoperable with low-level api.
+2) High level - Something convenient to use but still interoperable with low-level api.
 
 ## grftopy 
 
