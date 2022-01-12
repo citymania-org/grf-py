@@ -2,13 +2,17 @@ import sys
 import struct
 from nml import lz77
 
-from grf import Node, Expr, Value, Var, Temp, Perm, Range, Set, Call
+import grf
 
 
-def hex_str(s):
+def hex_str(s, n=None):
+    add = ''
+    if n is not None and len(s) > n:
+        s = s[:n - 3]
+        add = '...'
     if isinstance(s, (bytes, memoryview)):
-        return ':'.join('{:02x}'.format(b) for b in s)
-    return ':'.join('{:02x}'.format(ord(c)) for c in s)
+        return ':'.join('{:02x}'.format(b) for b in s) + add
+    return ':'.join('{:02x}'.format(ord(c)) for c in s) + add
 
 
 def read_extended_byte(data, offset):
@@ -248,18 +252,25 @@ def decode_action0(data):
         propdict =  ACTION0_PROPS[feature]
         name, fmt = propdict[prop]
         value, ofs = read_property(data, ofs + 1, fmt)
-        key = f'{name}<{prop:02x}>'
-        assert key not in props, key
-        props[key] = value
+        # key = f'{name}<{prop:02x}>'
+        # assert key not in props, key
+        props[name] = value
 
-    print(f'    <0>FEATURE feature:{str_feature(feature)} num_info:{num_info} first_id:{first_id} props:{props}')
+    return [grf.Action0(
+        feature=feature,
+        first_id=first_id,
+        count=num_info,
+        props=props,
+    )]
 
 
 def decode_action1(data):
-    feature = data[0]
-    num_sets = data[1]
-    num_ent, _ = read_extended_byte(data, 2)
-    print(f'    <1>SPRITESET feature:{str_feature(feature)} num_sets:{num_sets} num_ent:{num_ent}')
+    sprite_count, _ = read_extended_byte(data, 2)
+    return [grf.Action1(
+        feature=data[0],
+        set_count=data[1],
+        sprite_count=sprite_count
+    )]
 
 
 SPRITE_GROUP_OP = [
@@ -344,9 +355,10 @@ TLF_PALETTE_REG_FLAGS = TLF_PALETTE
 
 
 def read_sprite_layout_registers(d, flags, is_parent):
-    regs = {'flags': flags & TLF_DRAWING_FLAGS}
+    # regs = {'flags': flags & TLF_DRAWING_FLAGS}
+    regs = {}
     if flags & TLF_DODRAW:  regs['dodraw']  = d.get_byte();
-    if flags & TLF_SPRITE:  regs['add']  = Temp(d.get_byte());
+    if flags & TLF_SPRITE:  regs['add']  = grf.Temp(d.get_byte());
     if flags & TLF_PALETTE: regs['palette'] = d.get_byte();
 
     if is_parent:
@@ -364,8 +376,10 @@ def read_sprite_layout_registers(d, flags, is_parent):
     return regs
 
 
-def read_sprite_layout(d, num, no_z_position):
-    has_z_position = not no_z_position
+def read_sprite_layout(d, feature, ref_id, num, basic_format):
+    assert feature in (0x07, 0x09, grf.OBJECT, 0x11), feature
+
+    has_z_position = not basic_format
     has_flags = bool((num >> 6) & 1)
     num &= 0x3f
 
@@ -373,28 +387,42 @@ def read_sprite_layout(d, num, no_z_position):
         sprite = d.get_word()
         pal = d.get_word()
         flags = d.get_word() if has_flags else TLF_NOTHING
-        return {'sprite': sprite, 'pal': pal, 'flags': flags}
+        return {'sprite': grf.Sprite.from_grf(sprite, pal), 'flags': flags}
 
     ground = read_sprite()
     ground_regs = read_sprite_layout_registers(d, ground['flags'], False)
     sprites = []
     for _ in range(num):
-        seq = {}
-        seq['sprite'] = read_sprite()
-        delta = seq['delta'] = (d.get_byte(), d.get_byte(), d.get_byte() if has_z_position else 0)
+        seq = read_sprite()
+        delta = seq['offset'] = (d.get_byte(), d.get_byte(), d.get_byte() if has_z_position else 0)
         is_parent = (delta[2] != 0x80)
         if is_parent:
-            seq['size'] = (d.get_byte(), d.get_byte(), d.get_byte())
-        seq['regs'] = read_sprite_layout_registers(d, seq['sprite']['flags'], is_parent)
+            seq['extent'] = (d.get_byte(), d.get_byte(), d.get_byte())
+        seq['regs'] = read_sprite_layout_registers(d, seq['flags'] & TLF_DRAWING_FLAGS, is_parent)
         sprites.append(seq)
 
-    return {
-        'ground': {
-            'sprite': ground,
-            'regs': ground_regs,
-        },
-        'sprites': sprites
-    }
+    if basic_format:
+        assert len(sprites) == 1, len(sprites)
+        return [grf.BasicSpriteLayout(
+            feature=feature,
+            ref_id=ref_id,
+            ground_sprite=ground,
+            building_sprite=sprites[0],
+        )]
+
+    return [[grf.ExtendedSpriteLayout, grf.AdvancedSpriteLayout][has_flags](
+        feature=feature,
+        ref_id=ref_id,
+        ground=ground,
+        buildings=sprites,
+    )]
+    # return {
+    #     'ground': {
+    #         'sprite': ground,
+    #         'regs': ground_regs,
+    #     },
+    #     'sprites': sprites
+    # }
 
 
 VA2_GLOBALS = {
@@ -494,7 +522,7 @@ def get_va2_var(var):
     return V2_OBJECT_VARS[var]
 
 
-class Generic(Node):
+class Generic(grf.Node):
     def __init__(self, var, shift, and_mask, type, add_val, divmod_val):
         self.var = var
         self.shift = shift
@@ -582,20 +610,21 @@ NML_VARACT2_GLOBALVARS_INV = { (v['var'], v['start'], (1 << v['size']) - 1): k f
 
 def decode_action2(data):
     feature = data[0]
-    set_id = data[1]
+    ref_id = data[1]
     num_ent1 = data[2]
     d = DataReader(data, 3)
 
-    print(f'    <2>SPRITEGROUP feature:{str_feature(feature)} set_id:{set_id} ', end='')
+    # print(f'    <2>SPRITEGROUP feature:{str_feature(feature)} set_id:{set_id} ', end='')
 
     if feature in (0x07, 0x09, 0x0f, 0x11):
         if num_ent1 == 0:
             ground_sprite, building_sprite, xofs, yofs, xext, yext, zext = struct.unpack_from('<IIBBBBB', data, offset=3)
             ground_sprite = str_sprite(ground_sprite)
             building_sprite = str_sprite(building_sprite)
-            print(f'BASIC ground_sprite:{ground_sprite} building_sprite:{building_sprite} '
-                  f'xofs:{xofs} yofs:{yofs} extent:({xext}, {yext}, {zext})')
-            return
+            # print(f'BASIC ground_sprite:{ground_sprite} building_sprite:{building_sprite} '
+            #       f'xofs:{xofs} yofs:{yofs} extent:({xext}, {yext}, {zext})')
+            raise NotImplementedError
+
         if num_ent1 <= 0x3f:
             raise NotImplemented
 
@@ -616,31 +645,30 @@ def decode_action2(data):
                 has_more = bool(varadj & 0x20)
                 node_type = varadj >> 6
                 and_mask = d.get_var(group_size)
-                # print(f'CODE op:{op:x} var{var:02x} >>{shift} &{and_mask:x} has_more:{has_more} node_type:{node_type}')
                 if node_type != 0:
                     # old magic, use advaction2 instead
                     add_val = d.get_var(group_size)
                     divmod_val = d.get_var(group_size)
                     node = Generic(var, shift, and_mask, node_type, add_val, divmod_val)
                 elif var == 0x1a and shift == 0:
-                    node = Value(and_mask)
+                    node = grf.Value(and_mask)
                 elif (var, shift, and_mask) == (0x7c, 0, 0xffffffff):
-                    node = Perm(param)
+                    node = grf.Perm(param)
                 elif (var, shift, and_mask) == (0x7d, 0, 0xffffffff):
-                    node = Temp(param)
+                    node = grf.Temp(param)
                 elif (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
-                    node = Call(param)
+                    node = grf.Call(param)
                 else:
                     var_name = NML_VARACT2_GLOBALVARS_INV.get((var, shift, and_mask))
                     if var_name is not None:
-                        node = Var(var_name)
+                        node = grf.Var(var_name)
                     else:
                         node = Generic(var, shift, and_mask, 0, None, None)
 
                 if first:
                     root = node
                 else:
-                    root = Expr(op, root, node)
+                    root = grf.Expr(op, root, node)
 
                 first = False
                 if not has_more:
@@ -655,11 +683,11 @@ def decode_action2(data):
                 group = d.get_word()
                 low = d.get_var(group_size)
                 high = d.get_var(group_size)
-                ranges.append(Range(low, high, Set(group)))
+                ranges.append(grf.Range(low, high, grf.Ref(group)))
 
-            default_group = Set(d.get_word())
+            default_group = grf.Ref(d.get_word())
 
-            print(f'VARACT default_group:{default_group} related_scope:{related_scope} ranges:{ranges} ')
+            # print(f'VARACT default_group:{default_group} related_scope:{related_scope} ranges:{ranges} ')
             # for a in adjusts:
             #     var = a['var']
             #     name, fmt = get_va2_var(var)
@@ -674,13 +702,18 @@ def decode_action2(data):
             #     if a['type'] != 0:
             #         type_str = '+{add_val} /%{divmod_val}'.format(**a)
             #     print(f'   op<{a["op"]}>:{op} var<{var:02x}>:{name}({fmt}){param_str} type:{a["type"]} >>{a["shift_num"]} &{a["and_mask"]:x}{type_str}')
-            for line in root.format():
-                print('        ', line)
-            return
 
-        layout = read_sprite_layout(d, max(num_ent1, 1), num_ent1 == 0)
-        print(f'layout:{layout}')
-        return
+
+            return [grf.VarAction2(
+                feature=feature,
+                ref_id=ref_id,
+                related_scope=related_scope,
+                ranges=ranges,
+                default=default_group,
+                code='\n'.join(root.format()),
+            )]
+
+        return read_sprite_layout(d, feature, ref_id, max(num_ent1, 1), num_ent1 == 0)
         # num_loaded = num_ent1
         # num_loading = get_byte()
         # [get_word() for i in range(num_loaded)]
@@ -692,45 +725,62 @@ def decode_action2(data):
     num_ent2 = data[3]
     ent1 = struct.unpack_from('<' + 'H' * num_ent1, data, offset=4)
     ent2 = struct.unpack_from('<' + 'H' * num_ent2, data, offset=4 + 2 * num_ent1)
-    print(f'ent1:{ent1} ent2:{ent2}')
+    # print(f'ent1:{ent1} ent2:{ent2}')
+    # return grf.BasicSpriteLayout(
+    #     feature=feature,
+    #     ref_id=ref_id,
+    # )
+    raise NotImplementedError
 
 
 def decode_action3(data):
     feature = data[0]
     idcount = data[1]
-    print(f'    <3>MAP feature:{str_feature(feature)} ', end='')
+    objs = []
+    maps = []
     if data[1] == 0:
-        _, set_id = struct.unpack_from('<BH', data, offset=2)
-        print(f'set_id:{set_id}');
+        _, default = struct.unpack_from('<BH', data, offset=2)
     else:
         d = DataReader(data, 2)
         objs = [d.get_byte() for _ in range(idcount)]
         cidcount = d.get_byte()
-        maps = []
         for _ in range(cidcount):
             ctype = d.get_byte()
             groupid = d.get_word()
             maps.append({'ctype': ctype, 'groupid': groupid})
-        def_gid = d.get_word()
-        print(f'objs:{objs} maps:{maps} default_gid:{def_gid}')
+        default = d.get_word()
+        # print(f'objs:{objs} maps:{maps} default_gid:{def_gid}')
+    return [grf.Action3(
+        feature=feature,
+        ids=objs,
+        maps=maps,
+        default=default,
+    )]
 
 
 def decode_action4(data):
-    fmt = '<BBB' + ('H' if data[1] & 0xf0 else 'B')
+    fmt = '<BBB' + ('H' if data[1] & 0x80 else 'B')
     feature, lang, num, offset = struct.unpack_from(fmt, data)
     # strings = [s.decode('utf-8') for s in data[struct.calcsize(fmt):].split(b'\0')[:-1]]
     strings = [s for s in data[struct.calcsize(fmt):].split(b'\0')[:-1]]
-    print(f'    <4>STRINGS feature:{str_feature(feature)} lang:{lang} num:{num} offset:{offset} strings:{strings}')
+    assert len(strings) == num, (len(strings), num,)
+    # print(f'    <4>STRINGS feature:{str_feature(feature)} lang:{lang} num:{num} offset:{offset} strings:{strings}')
+    return [grf.Action4(
+        feature=feature,
+        lang=lang & 0x7f,
+        offset=offset,
+        strings=strings,
+    )]
 
 
 def decode_action5(data):
     t = data[0]
-    offset = 0
+    offset = None
     num, dataofs = read_extended_byte(data, 1)
     if t & 0xf0:
         offset, _ = read_extended_byte(data, dataofs)
         t &= ~0xf0
-    print(f'    <5>REPLACENEW type:{t} num:{num}, offset:{offset}')
+    return [grf.ReplaceNewSprites(t, num, offset=offset)]
 
 
 def decode_action6(data):
@@ -744,12 +794,14 @@ def decode_action6(data):
         offset = d.get_extended_byte()
         params.append({'num': param_num, 'size': param_size, 'offset': offset})
     print(f'    <6>EDITPARAM params:{params}')
+    # return []
+    raise NotImplementedError
 
 
 def decode_actionA(data):
     num = data[0]
     sets = [struct.unpack_from('<BH', data, offset=3*i + 1) for i in range(num)]
-    print(f'    <A>REPLACEBASE sets:<{num}>{sets}')
+    return [grf.ReplaceOldSprites(sets)]
 
 
 OPERATIONS = {
@@ -781,6 +833,7 @@ def decode_actionD(data):
     target_str = f'[{target:02x}]'
     op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
     print(f'    <A>OP {op_str}')
+    raise NotImplementedError
 
 
 def decode_action14(data):
@@ -814,7 +867,7 @@ def decode_action14(data):
     while decode_chunk(res):
         pass
 
-    print(f'    <14>INFO {res}')
+    return [grf.SetProperties(res)]
 
 
 ACTIONS = {
@@ -831,27 +884,36 @@ ACTIONS = {
 }
 
 
+class PyComment:
+    def __init__(self, text):
+        self.text = text
+
+    def py(self):
+        return f'# {self.text}'
+
+
 def read_pseudo_sprite(f, nfo_line, container):
     l = struct.unpack('<H' if container == 1 else '<I', f.read(2 if container == 1 else 4))[0]
     if l == 0:
-        print('End of pseudo sprites')
-        return False
+        return False, [PyComment('End of pseudo sprites')]
     grf_type = f.read(1)[0]
     grf_type_str = hex(grf_type)[2:]
     data = f.read(l)
-    print(f'{nfo_line}: Sprite({l}, {grf_type_str}): ', hex_str(data[:100]))
+    res = [PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}')]
     if container == 1:
-        return True
+        return True, res
     if grf_type == 0xff:
+        res[0] = PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         decoder = ACTIONS.get(data[0])
         if decoder:
-            decoder(data[1:])
-    elif grf_type == 0xff:
-        pass
-    else:
-        if container == 1:
-            read_real_sprite(f)
-    return True
+            res.extend(decoder(data[1:]))
+        else:
+            res.append(PyComment(f'Unsupported action 0x{data[0]:02x}'))
+    # else:
+    #     if container == 1:
+    #         read_real_sprite(f)
+    #         return True, res
+    return True, res
 
 
 def decode_sprite(f, num):
@@ -902,21 +964,28 @@ def read_real_sprite(f):
 with open(sys.argv[1], 'rb') as f:
     first = f.read(1)
     container = None
+    gen = grf.BaseNewGRF()
+    comment = lambda text: gen.add(PyComment(text))
     if first == b'\00':
-        print('Header:', hex_str(first + f.read(9)))
+        header_bytes = first + f.read(9)
+        comment(f'New container header: {hex_str(header_bytes)}')
         data_offest, compression = struct.unpack('<IB', f.read(5))
         header_offset = f.tell() - 1
-        print(f'Offset: {data_offest} compresion: {compression}')
-        print('Magic sprite:', hex_str(f.read(5 + 4)))
+        comment(f'Offset: {data_offest} compresion: {compression}')
+        magic_sprite_bytes = f.read(5 + 4)
+        comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
         container = 2
     else:
         f.seek(0, 0)
-        print('Old container, no header!')
+        comment(f'Old container, no header!')
         container = 1
-        print('Magic sprite:', hex_str(f.read(5 + 2)))
+        magic_sprite_bytes = f.read(5 + 2)
+        comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
+
     # print('Magic sprite:', hex_str(f.read(4)))
     nfo_line = 1
-    while read_pseudo_sprite(f, nfo_line, container):
+    while (res := read_pseudo_sprite(f, nfo_line, container))[0]:
+        gen.add(*res[1])
         nfo_line += 1
     real_data_offset = f.tell() - header_offset
     # while read_real_sprite(f):
@@ -924,5 +993,6 @@ with open(sys.argv[1], 'rb') as f:
         # nfo_line += 1
 
     if data_offest != real_data_offset:
-        print(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
+        comment(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
 
+    print(gen.generate_python())

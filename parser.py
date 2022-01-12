@@ -230,6 +230,9 @@ class Temp(Node):
         assert and_mask <= 0xffffffff, and_mask
         return True, struct.pack('<BBBI', 0x7d, self.register, 0x20 | shift, and_mask)
 
+    def __repr__(self):
+        return f'Temp({self.register})'
+
 
 class Perm(Node):
     def __init__(self, register):
