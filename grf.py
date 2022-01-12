@@ -198,18 +198,6 @@ class FileSprite(RealSprite):
             self.xofs,
             self.yofs,
         ) + data
-        # return struct.pack(
-        #     '<IIBBHHhhI',
-        #     self.sprite_id,
-        #     len(data) + 14, 0x0C,
-        #     self.zoom,
-        #     self.h,
-        #     self.w,
-        #     self.xofs,
-        #     self.yofs,
-        #     len(raw_data),
-        # ) + data
-
 
 
 class SpriteSheet:
@@ -257,15 +245,24 @@ class DummySprite(BaseSprite):
         return 1
 
 
-class DescriptionSprite(BaseSprite):  # action 8
-    def __init__(self, grfid, name, description):
+# Action 8
+class SetDescription(BaseSprite):
+    def __init__(self, version, grfid, name, description):
         assert isinstance(grfid, bytes)
-        assert isinstance(name, str)
-        assert isinstance(description, str)
+        assert isinstance(name, (bytes, str))
+        assert isinstance(description, (bytes, str))
+
+        if isinstance(name, str):
+            name = name.encode('utf-8')
+        if isinstance(description, str):
+            description = description.encode('utf-8')
+
+        self.version = version
         self.grfid = grfid
         self.name = name
         self.description = description
-        self._data = b'\x08\x08' + self.grfid + self.name.encode('utf-8') + b'\x00' + self.description.encode('utf-8') + b'\x00'
+        self._data = bytes((0x08, self.version))
+        self._data += self.grfid + self.name + b'\x00' + self.description + b'\x00'
 
     def get_data(self):
         return self._data
@@ -273,6 +270,14 @@ class DescriptionSprite(BaseSprite):  # action 8
     def get_data_size(self):
         return len(self._data)
 
+    def py(self):
+        return f'''
+        SetDescription(
+            version={self.version},
+            grfid={self.grfid},
+            name={self.name},
+            description={self.description},
+        )'''
 
 # Action 14
 class InformationSprite(BaseSprite):
@@ -493,7 +498,7 @@ class Sprite:
 
     def py(self):
         return (
-            f'Sprite(id={self.id}, pal={self.pal}, is_global={self.is_global}), '
+            f'Sprite(id={self.id}, pal={self.pal}, is_global={self.is_global}, '
             f'use_recolour={self.use_recolour}, always_transparent={self.always_transparent}, '
             f'no_transparent={self.no_transparent})'
         )
@@ -587,17 +592,20 @@ class ExtendedSpriteLayout(AdvancedSpriteLayout):
 
 
 class Ref:
-    def __init__(self, set_id):
-        self.value = set_id
-        self.is_callback = bool(set_id & 0x8000)
-        self.set_id = set_id & 0x7fff
+    def __init__(self, ref_id):
+        self.value = ref_id
+        self.is_callback = bool(ref_id & 0x8000)
+        self.ref_id = ref_id & 0x7fff
 
     def __str__(self):
         if self.is_callback:
-            return f'CB({self.set_id})'
-        return f'Ref({self.set_id})'
+            return f'CB({self.ref_id})'
+        return f'Ref({self.ref_id})'
 
     __repr__ = __str__
+
+    def __int__(self):
+        return self.value
 
 
 class CB(Ref):
@@ -751,6 +759,12 @@ class Action4(LazyBaseSprite):
         )'''
 
 
+EXPORT_CLASSES = [
+    FileSprite, Action0, Action1, Action3, Action4, Map,
+    SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, VarAction2,
+    SetProperties, ReplaceOldSprites, ReplaceNewSprites, SetDescription,
+]
+
 class BaseNewGRF:
     def __init__(self):
         self.sprites = []
@@ -778,19 +792,20 @@ class BaseNewGRF:
         f.write(data)
 
     def generate_python(self):
-        res = ''
+        cn = [c.__name__ for c in EXPORT_CLASSES]
+        res = (
+            'import grf\n\n'
+            'g = grf.BaseNewGRF()\n\n'
+        )
+        res += ', '.join(cn) + ' = ' + ', '.join('g.' + x for x in cn) + '\n\n'
+
         for s in self.pseudo_sprites:
             code = textwrap.dedent(s.py()).strip()
             res += code + '\n'
             if '\n' in code: res += '\n'
+
+        res += '\ng.write("some.grf")'
         return res
-
-
-class NewGRF(BaseNewGRF):
-    def __init__(self, grfid, name, description):
-        super().__init__()
-        self.pseudo_sprites.append(InformationSprite('D'))
-        self.pseudo_sprites.append(DescriptionSprite(grfid, name, description))
 
     def write(self, filename):
         data_offset = 14
@@ -813,3 +828,19 @@ class NewGRF(BaseNewGRF):
                 f.write(s.get_real_data())
 
             f.write(b'\x00\x00\x00\x00')
+
+
+class NewGRF(BaseNewGRF):
+    def __init__(self, version, grfid, name, description):
+        super().__init__()
+        self.pseudo_sprites.append(SetProperties('D'))
+        self.pseudo_sprites.append(SetDescription(version, grfid, name, description))
+
+
+for cls in EXPORT_CLASSES:
+    def func(self, *args, **kw):
+        obj = cls(*args, **kw)
+        self.add(obj)
+        return obj
+
+    setattr(BaseNewGRF, cls.__name__, func)
