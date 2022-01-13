@@ -462,18 +462,14 @@ NML_VARACT2_GLOBALVARS_INV = { (v['var'], v['start'], (1 << v['size']) - 1): k f
 def decode_action2(data):
     feature = data[0]
     ref_id = data[1]
-    num_ent1 = data[2]
-    d = DataReader(data, 3)
-
-    # print(f'    <2>SPRITEGROUP feature:{str_feature(feature)} set_id:{set_id} ', end='')
+    d = DataReader(data, 2)
 
     if feature in (0x07, 0x09, 0x0f, 0x11):
+        num_ent1 = d.get_byte()
         if num_ent1 == 0:
             ground_sprite, building_sprite, xofs, yofs, xext, yext, zext = struct.unpack_from('<IIBBBBB', data, offset=3)
             ground_sprite = str_sprite(ground_sprite)
             building_sprite = str_sprite(building_sprite)
-            # print(f'BASIC ground_sprite:{ground_sprite} building_sprite:{building_sprite} '
-            #       f'xofs:{xofs} yofs:{yofs} extent:({xext}, {yext}, {zext})')
             raise NotImplementedError
 
         if num_ent1 <= 0x3f:
@@ -573,7 +569,33 @@ def decode_action2(data):
         # # assert num_ent1 < 0x3f + 0x40, num_ent1
         # return
 
+    if feature == 0x0a:  # Special Industry production callback format
+        version = d.get_byte()
+        if version < 2:
+            getter = [d.get_word, d.get_byte][version]
+            inputs = [getter(), getter(), getter()]
+            outputs = [getter(), getter()]
+        elif version == 2:
+            num_input = d.get_byte()
+            inputs = []
+            for _ in range(num_input):
+                inputs.append((d.get_byte(), d.get_byte()))
+            num_output = d.get_byte()
+            outputs = []
+            for _ in range(num_output):
+                outputs.append((d.get_byte(), d.get_byte()))
+        else:
+            raise NotImplementedError
+        do_again = d.get_byte()
+        return [grf.IndustryProductionCallback(
+            inputs=inputs,
+            outputs=outputs,
+            do_again=do_again,
+            version=version,
+        )]
+
     num_ent2 = data[3]
+    print('NE', num_ent2, feature)
     ent1 = struct.unpack_from('<' + 'H' * num_ent1, data, offset=4)
     ent2 = struct.unpack_from('<' + 'H' * num_ent2, data, offset=4 + 2 * num_ent1)
     # print(f'ent1:{ent1} ent2:{ent2}')

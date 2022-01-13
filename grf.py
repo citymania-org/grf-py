@@ -996,6 +996,54 @@ class VarAction2(LazyBaseSprite):
         )'''
 
 
+class IndustryProductionCallback(LazyBaseSprite):
+    def __init__(self, inputs, outputs, do_again, version=2):
+        assert isinstance(version, int)
+        assert 0 <= version <= 2, version
+        if version < 2:
+            assert len(inputs) == 3, len(inputs)
+            assert len(outputs) == 2, len(outputs)
+        else:
+            assert len(inputs) < 256, len(inputs)
+            assert len(outputs) < 256, len(outputs)
+
+        super().__init__()
+        self.version = version
+        self.inputs = inputs
+        self.outputs = outputs
+        self.do_again = do_again
+
+    def _encode(self):
+        inputs = self.inputs
+        outputs = self.outputs
+        if self.version == 0:
+            return struct.pack('<BBWWWWWB', 0x0a, self.version, *inputs, *outputs, self.do_again)
+        elif self.version == 1:
+            return struct.pack('<BBBBBBBB', 0x0a, self.version, *inputs, *outputs, self.do_again)
+        elif self.version == 2:
+            fmt = 'B' + 'BB' * len(inputs)
+            fmt += 'B' + 'BB' * len(outputs)
+            return struct.pack(
+                '<BB' + fmt + 'B',
+               0x0a,
+               self.version,
+               len(self.inputs),
+               *sum(self.inputs, []),
+               len(self.outputs),
+               *sum(self.outputs, []),
+               self.do_again
+            )
+
+    def py(self):
+        return f'''
+        {self.__class__.__name__}(
+            version={self.version},
+            inputs={self.inputs!r},
+            outputs={self.outputs!r},
+            do_again={self.do_again},
+        )'''
+
+
 class Action3(LazyBaseSprite):
     def __init__(self, feature, ids, maps, default):
         super().__init__()
