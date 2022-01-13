@@ -70,6 +70,10 @@ def fix_palette(img):
 def open_image(filename, *args, **kw):
     return fix_palette(Image.open(filename, *args, **kw))
 
+
+def pformat(data):
+    return textwrap.indent(pprint.pformat(data, compact=True, sort_dicts=False), '    ')
+
 # def map_rgb_image(self, im):
 #     assert im.mode == 'RGB', im.mode
 #     data = np.array(im)
@@ -354,8 +358,10 @@ class SetProperties(BaseSprite):
         # return len(self._data)
 
     def py(self):
-        pstr = pprint.pformat(self.props, compact=True, sort_dicts=False)
-        return 'SetProperties(\n' + textwrap.indent(pstr, '    ') + '\n)'
+        return f'''
+            SetProperties(
+                {pformat(self.props)}
+            )'''
 
 
 # Action A
@@ -1104,6 +1110,26 @@ class Action4(LazyBaseSprite):
             lang={self.lang},
             offset={self.offset},
             strings={self.strings!r}
+        )'''
+
+
+class Action6(LazyBaseSprite):
+    def __init__(self, params):
+        super().__init__()
+        self.params = params
+
+    def _encode(self):
+        return struct.pack(
+            '<B' + 'BBBH' * len(self.params) + 'B',
+            0x06,
+            *sum(((p['num'], p['size'], 0xff, p['offset']) for p in self.param), ()),
+            0xff
+        )
+
+    def py(self):
+        return f'''
+        Action6(
+            {pformat(self.params)}
         )'''
 
 

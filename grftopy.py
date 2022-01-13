@@ -666,9 +666,7 @@ def decode_action6(data):
         param_size = d.get_byte()
         offset = d.get_extended_byte()
         params.append({'num': param_num, 'size': param_size, 'offset': offset})
-    print(f'    <6>EDITPARAM params:{params}')
-    # return []
-    raise NotImplementedError
+    return [grf.Action6(params)]
 
 
 def decode_action7or9(data, is_static):
@@ -741,6 +739,8 @@ def decode_actionC(data):
 def decode_actionD(data):
     target = data[0]
     operation = data[1]
+    if_undefined = bool(operation & 0x80)
+    operation &= 0x7f
     source1 = data[2]
     source2 = data[3]
     if source1 == 0xff or source2 == 0xff:
@@ -750,7 +750,8 @@ def decode_actionD(data):
     target_str = f'[{target:02x}]'
     op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
     print(f'    <A>OP {op_str}')
-    raise NotImplementedError
+    # raise NotImplementedError
+    return []
 
 
 def decode_action10(data):
