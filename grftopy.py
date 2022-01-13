@@ -27,34 +27,6 @@ def read_dword(data, offset):
     return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24), offset + 4
 
 
-FEATURES = {
-    0: 'Train',
-    1: 'RV',
-    2: 'Ship',
-    3: 'Aircraft',
-    4: 'Station',
-    5: 'Canal',
-    6: 'Bridge',
-    7: 'House',
-    8: 'Setting',
-    9: 'IndTiles',
-    0xa: 'Industry',
-    0xb: 'Cargo',
-    0xc: 'Sound',
-    0xd: 'Airport',
-    0xe: '?Signals?',
-    0xf: 'Object',
-    0x10: 'Railtype',
-    0x11: 'AirportTiles',
-    0x12: 'Roadtype',
-    0x13: 'Tramtype',
-}
-
-
-def str_feature(feature):
-    return f'{FEATURES[feature]}<{feature:02x}>'
-
-
 def str_sprite(sprite):
     sprite_id = sprite & 0x1fff
     draw = {0: 'N', 1 : 'T', 2: 'R'}[(sprite >> 14) & 3]
@@ -97,7 +69,7 @@ def read_property(data, ofs, fmt):
 
 
 def decode_action0(data):
-    feature = data[0]
+    feature = grf.Feature(data[0])
     num_props = data[1]
     num_info = data[2]
     first_id, ofs = read_extended_byte(data, 3)
@@ -105,7 +77,7 @@ def decode_action0(data):
     for _ in range(num_props):
         prop = data[ofs]
         ofs += 1
-        propdict = grf.ACTION0_PROPS[feature]
+        propdict = grf.ACTION0_PROPS[feature.id]
         name, fmt = propdict[prop]
         res = []
         for _ in range(num_info):
@@ -126,7 +98,7 @@ def decode_action0(data):
 def decode_action1(data):
     sprite_count, _ = read_extended_byte(data, 2)
     return [grf.Action1(
-        feature=data[0],
+        feature=grf.Feature(data[0]),
         set_count=data[1],
         sprite_count=sprite_count
     )]
@@ -236,7 +208,7 @@ def read_sprite_layout_registers(d, flags, is_parent):
 
 
 def read_sprite_layout(d, feature, ref_id, num, basic_format):
-    assert feature in (0x07, 0x09, grf.OBJECT, 0x11), feature
+    assert feature in (grf.HOUSE, grf.INDUSTRY_TILE, grf.OBJECT, grf.INDUSTRY), feature
 
     has_z_position = not basic_format
     has_flags = bool((num >> 6) & 1)
@@ -393,7 +365,7 @@ class Generic(grf.Node):
 
 
 def decode_action2(data):
-    feature = data[0]
+    feature = grf.Feature(data[0])
     ref_id = data[1]
     atype = data[2]
     d = DataReader(data, 3)
@@ -429,7 +401,7 @@ def decode_action2(data):
             elif (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
                 node = grf.Call(param)
             else:
-                var_name = VA2_VARS_INV[feature].get((var, shift, and_mask))
+                var_name = VA2_VARS_INV[feature.id].get((var, shift, and_mask))
                 if var_name is not None:
                     node = grf.Var(feature, var_name)
                 else:
@@ -491,7 +463,7 @@ def decode_action2(data):
         # return
 
     # Special Industry production callback format
-    if feature == 0x0a:
+    if feature == grf.INDUSTRY:
         version = atype
         if version < 2:
             getter = [d.get_word, d.get_byte][version]
@@ -530,7 +502,7 @@ def decode_action2(data):
 
 
 def decode_action3(data):
-    feature = data[0]
+    feature = grf.Feature(data[0])
     idcount = data[1]
     objs = []
     maps = []
@@ -557,10 +529,11 @@ def decode_action3(data):
 def decode_action4(data):
     fmt = '<BBB' + ('H' if data[1] & 0x80 else 'B')
     feature, lang, num, offset = struct.unpack_from(fmt, data)
+    feature = grf.Feature(feature)
+
     # strings = [s.decode('utf-8') for s in data[struct.calcsize(fmt):].split(b'\0')[:-1]]
     strings = [s for s in data[struct.calcsize(fmt):].split(b'\0')[:-1]]
     assert len(strings) == num, (len(strings), num,)
-    # print(f'    <4>STRINGS feature:{str_feature(feature)} lang:{lang} num:{num} offset:{offset} strings:{strings}')
     return [grf.Action4(
         feature=feature,
         lang=lang & 0x7f,

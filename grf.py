@@ -9,6 +9,9 @@ import struct
 import numpy as np
 
 from parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT
+from common import Feature
+from common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
+                   CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE
 
 
 to_spectra = lambda r, g, b: spectra.rgb(float(r) / 255., float(g) / 255., float(b) / 255.)
@@ -22,9 +25,6 @@ WATER_COLORS = set(range(0xF5, 0xFF))
 # ZOOM_OUT_4X, ZOOM_NORMAL, ZOOM_OUT_2X, ZOOM_OUT_8X, ZOOM_OUT_16X, ZOOM_OUT_32X = range(6)
 ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
 BPP_8, BPP_32 = range(2)
-
-OBJECT = 0x0f
-INDUSTRY = 0x0a
 
 
 def hex_str(s):
@@ -680,14 +680,15 @@ ACTION0_PROP_DICT = {
 
 class Action0(LazyBaseSprite):  # action 0
     def __init__(self, feature, first_id, count, props):
+        assert isinstance(feature, Feature)
         super().__init__()
         self.feature = feature
         self.first_id = first_id
         self.count = count
-        if feature not in ACTION0_PROP_DICT:
+        if feature.id not in ACTION0_PROP_DICT:
             raise NotImplementedError
         self.props = props
-        assert all(x in ACTION0_PROP_DICT[feature] for x in props)
+        assert all(x in ACTION0_PROP_DICT[feature.id] for x in props)
 
     def _encode_value(self, value, fmt):
         if fmt == 'B': return struct.pack('<B', value)
@@ -706,8 +707,8 @@ class Action0(LazyBaseSprite):  # action 0
 
     def _encode(self):
         res = struct.pack('<BBBBBH',
-            0, self.feature, len(self.props), self.count, 255, self.first_id)
-        pdict = ACTION0_PROP_DICT[self.feature]
+            0, self.feature.id, len(self.props), self.count, 255, self.first_id)
+        pdict = ACTION0_PROP_DICT[self.feature.id]
         for prop, value in self.props.items():
             code, fmt = pdict[prop]
             res += bytes((code,)) + self._encode_value(value, fmt)
@@ -750,6 +751,7 @@ class Object(Action0):
 
 class Action1(LazyBaseSprite):
     def __init__(self, feature, set_count, sprite_count):
+        assert isinstance(feature, Feature)
         super().__init__()
         self.feature = feature
         self.set_count = set_count
@@ -757,7 +759,7 @@ class Action1(LazyBaseSprite):
 
     def _encode(self):
         return struct.pack('<BBBBH', 0x01,
-                           self.feature, self.set_count, 0xFF, self.sprite_count)
+                           self.feature.id, self.set_count, 0xFF, self.sprite_count)
 
     def py(self):
         return f'''
@@ -812,7 +814,7 @@ class Sprite:
 # Action2
 class BasicSpriteLayout(LazyBaseSprite):
     def __init__(self, feature, ref_id, ground, building):
-        assert feature in (0x07, 0x09, OBJECT, 0x11), feature
+        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -820,7 +822,7 @@ class BasicSpriteLayout(LazyBaseSprite):
         self.building = building
 
     def _encode(self):
-        return struct.pack('<BBBBIIbbBBB', 0x02, self.feature, self.ref_id, 0,
+        return struct.pack('<BBBBIIbbBBB', 0x02, self.feature.id, self.ref_id, 0,
                            # self._encode_sprite(), self._encode_sprite(),
                            self.ground['sprite'].to_grf(),
                            self.building['sprite'].to_grf(),
@@ -841,7 +843,7 @@ class BasicSpriteLayout(LazyBaseSprite):
 # Action2
 class AdvancedSpriteLayout(LazyBaseSprite):
     def __init__(self, feature, ref_id, ground, buildings=(), has_flags=True):
-        assert feature in (0x07, 0x09, OBJECT, 0x11), feature
+        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         assert len(buildings) < 64, len(buildings)
 
         super().__init__()
@@ -873,7 +875,7 @@ class AdvancedSpriteLayout(LazyBaseSprite):
         return res
 
     def _encode(self):
-        res = struct.pack('<BBBB', 0x02, self.feature, self.ref_id, len(self.sprites) + 0x40)
+        res = struct.pack('<BBBB', 0x02, self.feature.id, self.ref_id, len(self.sprites) + 0x40)
         res += self._encode_sprite(self.ground)
         for s in self.sprites:
             res += self._encode_sprite(s, True)
@@ -962,7 +964,7 @@ class VarAction2(LazyBaseSprite):
         return set_obj | 0x8000
 
     def _encode(self):
-        res = bytes((0x02, self.feature, self.ref_id, 0x8a if self.related_scope else 0x89))
+        res = bytes((0x02, self.feature.id, self.ref_id, 0x8a if self.related_scope else 0x89))
         ast = self.parsed_code
         code = ast[0].compile(register=0x80)[1]
         for c in ast[1:]:
@@ -1053,6 +1055,7 @@ class IndustryProductionCallback(LazyBaseSprite):
 
 class Action3(LazyBaseSprite):
     def __init__(self, feature, ids, maps, default):
+        assert isinstance(feature, Feature), feature
         super().__init__()
         self.feature = feature
         self.ids = ids
@@ -1063,11 +1066,11 @@ class Action3(LazyBaseSprite):
         idcount = len(self.ids)
         mcount = len(self.maps)
         if idcount == 0:
-            return struct.pack('<BBBBH', 0x03, self.feature, idcount, 0, self.default)
+            return struct.pack('<BBBBH', 0x03, self.feature.id, idcount, 0, self.default)
         else:
             return struct.pack(
                 '<BBB' + 'B' * idcount + 'B' + 'BH' * mcount + 'H',
-                0x03, self.feature, idcount,
+                0x03, self.feature.id, idcount,
                 *self.ids, mcount, *sum(self.maps, []),
                 self.default)
 
@@ -1088,6 +1091,7 @@ class Map(Action3):
 
 class Action4(LazyBaseSprite):
     def __init__(self, feature, lang, offset, strings):
+        assert isinstance(feature, Feature), feature
         super().__init__()
         self.feature = feature
         self.lang = lang
@@ -1101,7 +1105,7 @@ class Action4(LazyBaseSprite):
                 self.strings.append(s.encode('utf-8'))
 
     def _encode(self):
-        return (struct.pack('<BBBH', self.feature, self.lang | 0x80, len(self.strings), self.offset) +
+        return (struct.pack('<BBBH', self.feature.id, self.lang | 0x80, len(self.strings), self.offset) +
             b'\0'.join(self.strings))
 
     def py(self):
