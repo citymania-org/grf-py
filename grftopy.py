@@ -707,6 +707,10 @@ OPERATIONS = {
 }
 
 
+def decode_actionC(data):
+    return [grf.Comment(data)]
+
+
 def decode_actionD(data):
     target = data[0]
     operation = data[1]
@@ -766,6 +770,7 @@ ACTIONS = {
     0x06: decode_action6,
     0x08: decode_action8,
     0x0a: decode_actionA,
+    0x0c: decode_actionC,
     0x0d: decode_actionD,
     0x14: decode_action14,
 }

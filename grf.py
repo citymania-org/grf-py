@@ -1,5 +1,6 @@
 import math
 import textwrap
+import pprint
 
 from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
@@ -309,7 +310,8 @@ class SetProperties(BaseSprite):
         # return len(self._data)
 
     def py(self):
-        return f'SetProperties({self.props!r})'
+        pstr = pprint.pformat(self.props, compact=True, sort_dicts=False)
+        return 'SetProperties(\n' + textwrap.indent(pstr, '    ') + '\n)'
 
 
 # Action A
@@ -331,6 +333,20 @@ class ReplaceOldSprites(BaseSprite):
 
     def py(self):
         return f'ReplaceOldSprites(sets={self.sets!r})'
+
+
+class Comment(LazyBaseSprite):
+    def __init__(self, data):
+        self.data = data
+
+    def _encode(self):
+        return bytes((0x0C)) + data
+
+    def py(self):
+        return f'Comment({self.data!r})'
+
+
+ActionC = Comment
 
 
 # Action 5
@@ -925,6 +941,7 @@ EXPORT_CLASSES = [
     FileSprite, Action0, Action1, Action3, Action4, Map,
     SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, VarAction2,
     SetProperties, ReplaceOldSprites, ReplaceNewSprites, SetDescription,
+    Comment, ActionC
 ]
 
 class BaseNewGRF:
