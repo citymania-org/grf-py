@@ -246,6 +246,33 @@ class DummySprite(BaseSprite):
         return 1
 
 
+class If(LazyBaseSprite):
+    def __init__(self, is_static, variable, varsize, condition, value, skip):
+        self.is_static = is_static
+        self.variable = variable
+        self.varsize = varsize
+        self.condition = condition
+        self.value = value
+        self.skip = skip
+
+    def _encode(self):
+        res = bytes((0x09 if self.is_static else 0x07, self.variable, self.varsize, self.condition))
+        for i in range(self.varsize):
+            res += bytes(((self.value >> (8 * i)) & 0xff,))
+        res += bytes((self.skip,))
+
+    def py(self):
+        return f'''
+            If(
+                is_static={self.is_static},
+                variable={self.variable},
+                varsize={self.varsize},
+                condition={self.condition},
+                value={self.value},
+                skip={self.skip},
+            )'''
+
+
 # Action 8
 class SetDescription(BaseSprite):
     def __init__(self, version, grfid, name, description):
@@ -279,6 +306,23 @@ class SetDescription(BaseSprite):
             name={self.name},
             description={self.description},
         )'''
+
+
+# Action 0x10
+class Label(LazyBaseSprite):
+    def __init__(self, label, comment):
+        self.label = label
+        self.comment = comment
+
+    def _encode(self):
+        return bytes((0x10, self.label)) + data
+
+    def py(self):
+        return f'Label({self.label}, {self.comment!r})'
+
+
+Action10 = Label
+
 
 # Action 14
 class InformationSprite(BaseSprite):
@@ -941,7 +985,7 @@ EXPORT_CLASSES = [
     FileSprite, Action0, Action1, Action3, Action4, Map,
     SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, VarAction2,
     SetProperties, ReplaceOldSprites, ReplaceNewSprites, SetDescription,
-    Comment, ActionC
+    Comment, ActionC, Label, Action10, If,
 ]
 
 class BaseNewGRF:

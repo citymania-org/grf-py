@@ -649,25 +649,26 @@ def decode_action6(data):
     raise NotImplementedError
 
 
-def decode_action7(data):
+def decode_action7or9(data, is_static):
     variable = data[0]
     varsize = data[1]
-    condition_type = data[2]
+    condition = data[2]
     value = 0
     for i in range(varsize):
-        value |= data[3 + i] << (8 * i)
-    skip_count = data[3 + varsize]
-    params = []
-    while True:
-        param_num = d.get_byte()
-        if param_num == 0xFF:
-            break
-        param_size = d.get_byte()
-        offset = d.get_extended_byte()
-        params.append({'num': param_num, 'size': param_size, 'offset': offset})
-    print(f'    <6>EDITPARAM params:{params}')
-    # return []
-    raise NotImplementedError
+        value = data[3 + i] * (1 << (8 * i))
+    skip = data[3 + varsize]
+    return [grf.If(
+        is_static=is_static,
+        variable=variable,
+        varsize=varsize,
+        condition=condition,
+        value=value,
+        skip=skip,
+    )]
+
+
+def decode_action7(data):
+    return decode_action7or9(data, False)
 
 
 def decode_action8(data):
@@ -682,6 +683,10 @@ def decode_action8(data):
         name=name,
         description=description,
     )]
+
+
+def decode_action9(data):
+    return decode_action7or9(data, True)
 
 
 def decode_actionA(data):
@@ -726,6 +731,12 @@ def decode_actionD(data):
     raise NotImplementedError
 
 
+def decode_action10(data):
+    label = data[0]
+    comment = data[1:]
+    return [grf.Label(label, comment)]
+
+
 def decode_action14(data):
     res = {}
     ofs = 0
@@ -768,10 +779,13 @@ ACTIONS = {
     0x04: decode_action4,
     0x05: decode_action5,
     0x06: decode_action6,
+    0x07: decode_action7,
     0x08: decode_action8,
+    0x09: decode_action9,
     0x0a: decode_actionA,
     0x0c: decode_actionC,
     0x0d: decode_actionD,
+    0x10: decode_action10,
     0x14: decode_action14,
 }
 
