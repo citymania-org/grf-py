@@ -691,7 +691,7 @@ def decode_action9(data):
 
 def decode_actionA(data):
     num = data[0]
-    sets = [struct.unpack_from('<BH', data, offset=3*i + 1) for i in range(num)]
+    sets = [struct.unpack_from('<BH', data, offset=3 * i + 1) for i in range(num)]
     return [grf.ReplaceOldSprites(sets)]
 
 
@@ -800,28 +800,32 @@ class PyComment:
 
 def read_pseudo_sprite(f, nfo_line, container):
     data = f.read(2 if container == 1 else 4)
-    if not data and container == 1:
-        return False, []
-    # print(hex_str(data))
+    # if not data and container == 1:
+    #     return False, []
     l = struct.unpack('<H' if container == 1 else '<I', data)[0]
     if l == 0:
         return False, [PyComment('End of pseudo sprites')]
     grf_type = f.read(1)[0]
     grf_type_str = hex(grf_type)[2:]
-    data = f.read(l)
-    res = [PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}')]
+    res = []
     if grf_type == 0xff:
-        res[0] = PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
+        data = f.read(l)
+        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
         # print('Sprite', l, hex_str(data))
         decoder = ACTIONS.get(data[0])
         if decoder:
             res.extend(decoder(data[1:]))
         else:
             res.append(PyComment(f'Unsupported action 0x{data[0]:02x}'))
-    # else:
-    #     if container == 1:
-    #         read_real_sprite(f)
-    #         return True, res
+    else:
+        if container == 1:
+            data = f.read(7)
+            res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data)}...'))
+            decode_sprite(f, l - 8)
+            return True, res
+        else:
+            data = f.read(l)
+            res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}'))
     return True, res
 
 

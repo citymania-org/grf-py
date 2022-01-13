@@ -367,6 +367,7 @@ class ReplaceOldSprites(BaseSprite):
             assert isinstance(first, int)
             assert isinstance(num, int)
 
+        super().__init__()
         self.sets = sets
 
     def get_data(self):
@@ -381,10 +382,11 @@ class ReplaceOldSprites(BaseSprite):
 
 class Comment(LazyBaseSprite):
     def __init__(self, data):
+        super().__init__()
         self.data = data
 
     def _encode(self):
-        return bytes((0x0C)) + data
+        return bytes((0x0C)) + self.data
 
     def py(self):
         return f'Comment({self.data!r})'
@@ -398,6 +400,8 @@ class ReplaceNewSprites(LazyBaseSprite):
     def __init__(self, set_type, num, *, offset=None):
         assert isinstance(set_type, int)
         assert isinstance(num, int)
+
+        super().__init__()
         self.set_type = set_type
         self.num = num
         self.offset = offset
@@ -411,42 +415,112 @@ class ReplaceNewSprites(LazyBaseSprite):
         return f'ReplaceNewSprites(set_type={self.set_type}, num={self.num}, offset={self.offset})'
 
 
+ACTION0_COMMON_VEHICLE_PROPS = {
+    0x00: ('intro_date', 'W'),  # date of introduction    no
+    0x02: ('reliability_decay', 'B'),  # reliability decay speed     no
+    0x03: ('vehicle_lifetime', 'B'),  # vehicle life in years   no
+    0x04: ('model_lifetime', 'B'),  # model life in years     no
+    0x06: ('climates', 'B'),  # climate availability    should be zero
+    0x07: ('loading_speed', 'B'),  # loading speed   yes
+}
+
+
 ACTION0_TRAIN_PROPS = {
-    0x05:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Track type (see below)  should be same as front
-    0x08:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    AI special flag: set to 1 if engine is 'optimized' for passenger service (AI won't use it for other cargo), 0 otherwise     no
-    0x09:  'W',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Speed in mph*1.6 (see below)    no
-    0x0B:  'W',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Power (0 for wagons)    should be zero
-    0x0D:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Running cost factor (0 for wagons)  should be zero
-    0x0E:  'D',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Running cost base, see below    should be zero
-    0x12:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Sprite ID (FD for new graphics)     yes
-    0x13:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
-    0x14:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Cargo capacity  yes
-    0x15:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Cargo type, see CargoTypes
-    0x16:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Weight in tons  should be zero
-    0x17:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0    Cost factor     should be zero
-    0x18:  'B',  # Supported by OpenTTD <0.7<0.7 Supported by TTDPatch 2.02.0[1]   Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
-    0x19:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0 GRFv≥1     Engine traction type (see below)    no
-    0x1A:  'B*', # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0 GRFv≥1     Not a property, but an action: sort the purchase list.  no
-    0x1B:  'W',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.52.5 GRFv≥6     Power added by each wagon connected to this engine, see below   should be zero
-    0x1C:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.52.5 GRFv≥6     Refit cost, using 50% of the purchase price cost base   yes
-    0x1D:  'D',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.52.5 GRFv≥6     Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes     yes
-    0x1E:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.52.5 GRFv≥6     Callback flags bit mask, see below  yes
-    0x1F:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 19)2.5     Coefficient of tractive effort  should be zero
-    0x20:  'B',  # Supported by OpenTTD 1.11.1 Supported by TTDPatch 2.5 (alpha 27)2.5     Coefficient of air drag     should be zero
-    0x21:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.02.0 GRFv≥2     Make vehicle shorter by this amount, see below  yes
-    0x22:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.52.5 GRFv≥6     Set visual effect type (steam/smoke/sparks) as well as position, see below  yes
-    0x23:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.52.5 GRFv≥6     Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
-    0x24:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 44)2.5     High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
-    0x25:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 44)2.5     User-defined bit mask to set when checking veh. var. 42     yes
-    0x26:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 44)2.5     Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
-    0x27:  'B',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 58)2.5     Miscellaneous flags     partly
-    0x28:  'W',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 58)2.5     Refittable cargo classes    yes
-    0x29:  'W',  # Supported by OpenTTD 0.60.6 Supported by TTDPatch 2.5 (alpha 58)2.5     Non-refittable cargo classes    yes
-    0x2A:  'D',  # Supported by OpenTTD 0.6 (r7191)0.6 Supported by TTDPatch 2.5 (r1210)2.5    Long format introduction date   no
-    0x2B:  'W',  # Supported by OpenTTD 1.2 (r22713)1.2 Not supported by TTDPatch  Custom cargo ageing period  yes
-    0x2C:  'n*B', # Supported by OpenTTD 1.2 (r23291)1.2 Not supported by TTDPatch  List of always refittable cargo types   yes
-    0x2D:  'n*B',  # Supported by OpenTTD 1.2 (r23291)1.2 Not supported by TTDPatch  List of never refittable cargo types    yes
-    0x2E:  'W',  # Supported by OpenTTD 12 (g2183fd4dab)12 Not supported by TTDPatch   Maximum curve speed modifier    yes
+    **ACTION0_COMMON_VEHICLE_PROPS,
+    0x05: ('railtype', 'B'),  # Track type (see below)  should be same as front
+    0x08: ('ai_flag', 'B'),  # AI special flag: set to 1 if engine is 'optimized' for passenger service (AI won't use it for other cargo), 0 otherwise     no
+    0x09: ('speed', 'W'),  # Speed in mph*1.6 (see below)    no
+    0x0B: ('power', 'W'),  # Power (0 for wagons)    should be zero
+    0x0D: ('running_cost_factor', 'B'),  # Running cost factor (0 for wagons)  should be zero
+    0x0E: ('running_cost', 'D'),  # Running cost base, see below    should be zero
+    0x12: ('sprite_id', 'B'),  # Sprite ID (FD for new graphics)     yes
+    0x13: ('is_dual_headed', 'B'),  # Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
+    0x14: ('cargo_capacity', 'B'),  # Cargo capacity  yes
+    0x15: ('cargo_type', 'B'),  # Cargo type, see CargoTypes
+    0x16: ('weight', 'B'),  # Weight in tons  should be zero
+    0x17: ('cost_factor', 'B'),  # Cost factor     should be zero
+    0x18: ('engine_rank', 'B'),  # Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
+    0x19: ('engine_traction', 'B'),  # Engine traction type (see below)    no
+    0x1A: ('sort_purchase_list', 'B*'), # Not a property, but an action: sort the purchase list.  no
+    0x1B: ('wagon_power', 'W'),  # Power added by each wagon connected to this engine, see below   should be zero
+    0x1C: ('refit_cost', 'B'),  # Refit cost, using 50% of the purchase price cost base   yes
+    0x1D: ('refit_cargoes', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes     yes
+    0x1E: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
+    0x1F: ('tractive_effort', 'B'),  # Coefficient of tractive effort  should be zero
+    0x20: ('air_drag', 'B'),  # Coefficient of air drag     should be zero
+    0x21: ('shorten_by', 'B'),  # Make vehicle shorter by this amount, see below  yes
+    0x22: ('visual_effect', 'B'),  # Set visual effect type (steam/smoke/sparks) as well as position, see below  yes
+    0x23: ('powered_weight', 'B'),  # Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
+    0x24: ('weight_hi', 'B'),  # High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
+    0x25: ('bitmask', 'B'),  # User-defined bit mask to set when checking veh. var. 42     yes
+    0x26: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
+    0x27: ('flags', 'B'),  # Miscellaneous flags     partly
+    0x28: ('refit_classes', 'W'),  # Refittable cargo classes    yes
+    0x29: ('non_refit_classes', 'W'),  # Non-refittable cargo classes    yes
+    0x2A: ('intro_date_long', 'D'),  # Long format introduction date   no
+    0x2B: ('period', 'W'),  # period  yes
+    0x2C: ('refit_cargo_types1', 'n*B'), # refittable cargo types   yes
+    0x2D: ('refit_cargo_types2', 'n*B'),  # refittable cargo types    yes
+    0x2E: ('speed_mod', 'W'),  # speed modifier    yes
+}
+
+ACTION0_RV_PROPS = {
+    **ACTION0_COMMON_VEHICLE_PROPS,
+    0x05: ('roadtype', 'B'),  # Roadtype / tramtype (see below)     should be same as front
+    0x08: ('speed1', 'B'),  # Speed in mph*3.2    no
+    0x09: ('running_cost_factor', 'B'),  # Running cost factor     should be zero
+    0x0A: ('running_cost_base', 'D'),  # Running cost base, see below    should be zero
+    0x0E: ('sprite_id', 'B'),  # Sprite ID (FF for new graphics)     yes
+    0x0F: ('capacity', 'B'),  # Capacity    yes
+    0x10: ('cargo_type', 'B'),  # Cargo type, see CargoTypes
+    0x11: ('cost_factor', 'B'),  # Cost factor     should be zero
+    0x12: ('sound', 'B'),  # Sound effect: 17/19/1A for regular, 3C/3E for toyland
+    0x13: ('power', 'B'),  # Power in 10 hp, see below   should be zero
+    0x14: ('weight', 'B'),  # Weight in 1/4 tons, see below   should be zero
+    0x15: ('speed2', 'B'),  # Speed in mph*0.8, see below     no
+    0x16: ('refit_mask', 'D'),  # Bit mask of cargo types available for refitting (not refittable if 0 or unset), see column 2 (bit values) in CargoTypes     yes
+    0x17: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
+    0x18: ('tractive_effort', 'B'),  # Coefficient of tractive effort  should be zero
+    0x19: ('air_drag', 'B'),  # Coefficient of air drag     should be zero
+    0x1A: ('refit_cost', 'B'),  # Refit cost, using 25% of the purchase price cost base   yes
+    0x1B: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
+    0x1C: ('flags', 'B'),  # Miscellaneous vehicle flags     partly ("tram" should be same as front)
+    0x1D: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28    yes
+    0x1E: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29    yes
+    0x1F: ('intro_date_long', 'D'),  # Long format introduction date   no
+    0x20: ('sort_purchase_list', 'B*'), # Sort the purchase list  no
+    0x21: ('effect', 'B'),  # Visual effect   yes
+    0x22: ('cargo_ageing', 'W'),  # Custom cargo ageing period  yes
+    0x23: ('shorter_by', 'B'),  # Make vehicle shorter, see train property 21     yes
+    0x24: ('refit_cargo_types1', 'B n*B'),  # List of always refittable cargo types, see train property 2C    yes
+    0x25: ('refit_cargo_types2', 'B n*B'),  # List of never refittable cargo types, see train property 2D     yes
+}
+
+ACTION0_SHIP_PROPS = {
+    **ACTION0_COMMON_VEHICLE_PROPS,
+    0x08: ('sprite_id', 'B'),  # Sprite (FF for new graphics)
+    0x09: ('is_refittable', 'B'),  # Refittable (0 no, 1 yes)
+    0x0A: ('cost_factor', 'B'),  # Cost factor
+    0x0B: ('speed', 'B'),  # Speed in mph*3.2
+    0x0C: ('cargo_type', 'B'),  # Cargo type, see CargoTypes
+    0x0D: ('capacity', 'W'),  # Capacity
+    0x0F: ('running_cost_factor', 'B'),  # Running cost factor
+    0x10: ('sound', 'B'),  # Sound effect type (4=cargo ship, 5=passenger ship)
+    0x11: ('refit_cargoes', 'D'),  # v≥1     Bit mask of cargo types available for refitting, see column 2 (bit values) in CargoTypes
+    0x12: ('cb_flags', 'B'),  # Callback flags bit mask, see below
+    0x13: ('refit_cost', 'B'),  #  Refit cost, using 1/32 of the default refit cost base
+    0x14: ('ocean_speed', 'B'),  # Ocean speed fraction, sets fraction of top speed available in the ocean; e.g. 00=100%, 80=50%, FF=0.4%
+    0x15: ('canal_speed', 'B'),  # Canal speed fraction, same as above but for canals and rivers
+    0x16: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
+    0x17: ('flags', 'B'),  # Miscellaneous vehicle flags
+    0x18: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28
+    0x19: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
+    0x1A: ('intro_date_long', 'D'),  # Long format introduction date
+    0x1B: ('sort_purchase_list', 'B*'), # Sort the purchase list
+    0x1C: ('effect', 'B'),  # Visual effect
+    0x1D: ('cargo_ageing', 'W'),  # Custom cargo ageing period
+    0x1E: ('refit_cargo_types1', 'B n*B'),  # List of always refittable cargo types, see train property 2C
+    0x1F: ('refit_cargo_types2', 'B n*B'),  # List of never refittable cargo types, see train property 2D
 }
 
 ACTION0_GLOBAL_PROPS = {
@@ -581,7 +655,9 @@ ACTION0_OBJECT_PROPS = {
 
 
 ACTION0_PROPS = {
-    # 0: ACTION0_TRAIN_PROPS,
+    0x0: ACTION0_TRAIN_PROPS,
+    0x1: ACTION0_RV_PROPS,
+    0x2: ACTION0_SHIP_PROPS,
     0x7: ACTION0_HOUSE_PROPS,
     0x8: ACTION0_GLOBAL_PROPS,
     0xa: ACTION0_INDUSTRY_PROPS,
@@ -729,8 +805,8 @@ class Sprite:
 # Action2
 class BasicSpriteLayout(LazyBaseSprite):
     def __init__(self, feature, ref_id, ground, building):
-        super().__init__()
         assert feature in (0x07, 0x09, OBJECT, 0x11), feature
+        super().__init__()
         self.feature = feature
         self.ref_id = ref_id
         self.ground = ground
@@ -758,9 +834,10 @@ class BasicSpriteLayout(LazyBaseSprite):
 # Action2
 class AdvancedSpriteLayout(LazyBaseSprite):
     def __init__(self, feature, ref_id, ground, buildings=(), has_flags=True):
-        super().__init__()
         assert feature in (0x07, 0x09, OBJECT, 0x11), feature
         assert len(buildings) < 64, len(buildings)
+
+        super().__init__()
         self.feature = feature
         self.ref_id = ref_id
         self.ground = ground
@@ -851,9 +928,10 @@ class Range:
 
 class VarAction2(LazyBaseSprite):
     def __init__(self, feature, ref_id, related_scope, ranges, default, code):
+        assert feature == OBJECT, feature
+
         super().__init__()
         self.feature = feature
-        assert feature == OBJECT, feature
         self.ref_id = ref_id
         self.related_scope = related_scope
         self.ranges = ranges
@@ -1061,8 +1139,8 @@ class NewGRF(BaseNewGRF):
 
 
 for cls in EXPORT_CLASSES:
-    def func(self, *args, **kw):
-        obj = cls(*args, **kw)
+    def func(self, *args, _cls=cls, **kw):
+        obj = _cls(*args, **kw)
         self.add(obj)
         return obj
 
