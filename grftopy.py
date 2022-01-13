@@ -3,6 +3,7 @@ import struct
 from nml import lz77
 
 import grf
+from va2vars import VA2_VARS_INV
 
 
 def hex_str(s, n=None):
@@ -385,87 +386,92 @@ class Generic(grf.Node):
     def format(self, parent_priority=0):
         addstr = ''
         if self.type == 1:
-            addstr = f' +{self.add_val} /{self.divmod_val}'
+            addstr = f', add={self.add_val}, div={self.divmod_val}'
         elif self.type == 2:
-            addstr = f' +{self.add_val} %{self.divmod_val}'
-        return [f'(var{self.var:02x} >>{self.shift} &{self.and_mask:x}{addstr})']
-
-
-signed_tile_offset = None
-industry_count = None
-
-NML_VARACT2_GLOBALVARS = {
-    'current_month'        : {'var': 0x02, 'start':  0, 'size':  8},
-    'current_day_of_month' : {'var': 0x02, 'start':  8, 'size':  5},
-    'is_leapyear'          : {'var': 0x02, 'start': 15, 'size':  1},
-    'current_day_of_year'  : {'var': 0x02, 'start': 16, 'size':  9},
-    'traffic_side'         : {'var': 0x06, 'start':  4, 'size':  1},
-    'animation_counter'    : {'var': 0x0A, 'start':  0, 'size': 16},
-    'current_callback'     : {'var': 0x0C, 'start':  0, 'size': 16},
-    'extra_callback_info1' : {'var': 0x10, 'start':  0, 'size': 32},
-    'game_mode'            : {'var': 0x12, 'start':  0, 'size':  8},
-    'extra_callback_info2' : {'var': 0x18, 'start':  0, 'size': 32},
-    'display_options'      : {'var': 0x1B, 'start':  0, 'size':  6},
-    'last_computed_result' : {'var': 0x1C, 'start':  0, 'size': 32},
-    'snowline_height'      : {'var': 0x20, 'start':  0, 'size':  8},
-    'difficulty_level'     : {'var': 0x22, 'start':  0, 'size':  8},
-    'current_date'         : {'var': 0x23, 'start':  0, 'size': 32},
-    'current_year'         : {'var': 0x24, 'start':  0, 'size': 32},
-
-    # TODO object vars
-    'relative_x'             : {'var': 0x40, 'start':  0, 'size':  8},
-    'relative_y'             : {'var': 0x40, 'start':  8, 'size':  8},
-    'relative_pos'           : {'var': 0x40, 'start':  0, 'size': 16},
-
-    'terrain_type'           : {'var': 0x41, 'start':  0, 'size':  3},
-    'tile_slope'             : {'var': 0x41, 'start':  8, 'size':  5},
-
-    'build_date'             : {'var': 0x42, 'start':  0, 'size': 32},
-
-    'animation_frame'        : {'var': 0x43, 'start':  0, 'size':  8},
-    'company_colour'         : {'var': 0x43, 'start':  0, 'size':  8},
-
-    'owner'                  : {'var': 0x44, 'start':  0, 'size':  8},
-
-    'town_manhattan_dist'    : {'var': 0x45, 'start':  0, 'size': 16},
-    'town_zone'              : {'var': 0x45, 'start': 16, 'size':  8},
-
-    'town_euclidean_dist'    : {'var': 0x46, 'start':  0, 'size': 16},
-    'view'                   : {'var': 0x48, 'start':  0, 'size':  8},
-    'random_bits'            : {'var': 0x5F, 'start':  8, 'size':  8},
-
-
-    'tile_height' : {'var': 0x62, 'start':  16, 'size':  8},
-
-    'nearby_tile_object_type'      : {'var': 0x60, 'start':  0, 'size': 16, 'param_function': signed_tile_offset},
-    'nearby_tile_object_view'      : {'var': 0x60, 'start': 16, 'size':  4, 'param_function': signed_tile_offset},
-
-    'nearby_tile_random_bits'      : {'var': 0x61, 'start':  0, 'size':  8, 'param_function': signed_tile_offset},
-
-    'nearby_tile_slope'            : {'var': 0x62, 'start':  0, 'size':  5, 'param_function': signed_tile_offset},
-    'nearby_tile_is_same_object'   : {'var': 0x62, 'start':  8, 'size':  1, 'param_function': signed_tile_offset},
-    'nearby_tile_is_water'         : {'var': 0x62, 'start':  9, 'size':  1, 'param_function': signed_tile_offset},
-    'nearby_tile_terrain_type'     : {'var': 0x62, 'start': 10, 'size':  3, 'param_function': signed_tile_offset},
-    'nearby_tile_water_class'      : {'var': 0x62, 'start': 13, 'size':  2, 'param_function': signed_tile_offset},
-    'nearby_tile_height'           : {'var': 0x62, 'start': 16, 'size':  8, 'param_function': signed_tile_offset},
-    'nearby_tile_class'            : {'var': 0x62, 'start': 24, 'size':  4, 'param_function': signed_tile_offset},
-
-    'nearby_tile_animation_frame'  : {'var': 0x63, 'start':  0, 'size':  8, 'param_function': signed_tile_offset},
-
-    'object_count'                 : {'var': 0x64, 'start': 16, 'size':  8, 'param_function': industry_count},
-    'object_distance'              : {'var': 0x64, 'start':  0, 'size': 16, 'param_function': industry_count},
-}
-
-NML_VARACT2_GLOBALVARS_INV = { (v['var'], v['start'], (1 << v['size']) - 1): k for k, v in NML_VARACT2_GLOBALVARS.items()}
+            addstr = f', add={self.add_val}, mod={self.divmod_val}'
+        return [f'var(0x{self.var:02x}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})']
 
 
 def decode_action2(data):
     feature = data[0]
     ref_id = data[1]
-    d = DataReader(data, 2)
+    atype = data[2]
+    d = DataReader(data, 3)
+
+    # VarAction2
+    if atype in (0x81, 0x82, 0x85, 0x86, 0x89, 0x8a):
+        group_size = (atype >> 2) & 3
+        related_scope = bool(atype & 2)
+        first = True
+        ofs = 3
+        root = None
+        while True:
+            op = 0 if first else d.get_byte()
+            var = d.get_byte()
+            if 0x60 <= var < 0x80:
+                param = d.get_byte()
+            varadj = d.get_byte()
+            shift = varadj & 0x1f
+            has_more = bool(varadj & 0x20)
+            node_type = varadj >> 6
+            and_mask = d.get_var(group_size)
+            if node_type != 0:
+                # old magic, use advaction2 instead
+                add_val = d.get_var(group_size)
+                divmod_val = d.get_var(group_size)
+                node = Generic(var, shift, and_mask, node_type, add_val, divmod_val)
+            elif var == 0x1a and shift == 0:
+                node = grf.Value(and_mask)
+            elif (var, shift, and_mask) == (0x7c, 0, 0xffffffff):
+                node = grf.Perm(param)
+            elif (var, shift, and_mask) == (0x7d, 0, 0xffffffff):
+                node = grf.Temp(param)
+            elif (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
+                node = grf.Call(param)
+            else:
+                var_name = VA2_VARS_INV[feature].get((var, shift, and_mask))
+                if var_name is not None:
+                    node = grf.Var(feature, var_name)
+                else:
+                    node = Generic(var, shift, and_mask, 0, None, None)
+
+            if first:
+                root = node
+            else:
+                root = grf.Expr(op, root, node)
+
+            first = False
+            if not has_more:
+                break
+
+        # no ranges is special for "do not switch, return the switch value"
+        # <frosch123> oh, also, the ranges are unsigned
+        # <frosch123> so if you want to set -5..5 you have to split into two ranges -5..-1, 0..5
+        n_ranges = d.get_byte()
+        ranges = []
+        for _ in range(n_ranges):
+            group = d.get_word()
+            low = d.get_var(group_size)
+            high = d.get_var(group_size)
+            ranges.append(grf.Range(low, high, grf.Ref(group)))
+
+        default_group = grf.Ref(d.get_word())
+
+        return [grf.VarAction2(
+            feature=feature,
+            ref_id=ref_id,
+            related_scope=related_scope,
+            ranges=ranges,
+            default=default_group,
+            code='\n'.join(root.format()),
+        )]
+
+    # Random switch
+    if atype in (0x80, 0x83, 0x84):
+        raise NotImplementedError
 
     if feature in (0x07, 0x09, 0x0f, 0x11):
-        num_ent1 = d.get_byte()
+        num_ent1 = atype
         if num_ent1 == 0:
             ground_sprite, building_sprite, xofs, yofs, xext, yext, zext = struct.unpack_from('<IIBBBBB', data, offset=3)
             ground_sprite = str_sprite(ground_sprite)
@@ -474,91 +480,6 @@ def decode_action2(data):
 
         if num_ent1 <= 0x3f:
             raise NotImplemented
-
-        if num_ent1 in (0x81, 0x82, 0x85, 0x86, 0x89, 0x8a):
-            # varact2
-            group_size = (num_ent1 >> 2) & 3
-            related_scope = bool(num_ent1 & 2)
-            first = True
-            ofs = 3
-            root = None
-            while True:
-                op = 0 if first else d.get_byte()
-                var = d.get_byte()
-                if 0x60 <= var < 0x80:
-                    param = d.get_byte()
-                varadj = d.get_byte()
-                shift = varadj & 0x1f
-                has_more = bool(varadj & 0x20)
-                node_type = varadj >> 6
-                and_mask = d.get_var(group_size)
-                if node_type != 0:
-                    # old magic, use advaction2 instead
-                    add_val = d.get_var(group_size)
-                    divmod_val = d.get_var(group_size)
-                    node = Generic(var, shift, and_mask, node_type, add_val, divmod_val)
-                elif var == 0x1a and shift == 0:
-                    node = grf.Value(and_mask)
-                elif (var, shift, and_mask) == (0x7c, 0, 0xffffffff):
-                    node = grf.Perm(param)
-                elif (var, shift, and_mask) == (0x7d, 0, 0xffffffff):
-                    node = grf.Temp(param)
-                elif (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
-                    node = grf.Call(param)
-                else:
-                    var_name = NML_VARACT2_GLOBALVARS_INV.get((var, shift, and_mask))
-                    if var_name is not None:
-                        node = grf.Var(var_name)
-                    else:
-                        node = Generic(var, shift, and_mask, 0, None, None)
-
-                if first:
-                    root = node
-                else:
-                    root = grf.Expr(op, root, node)
-
-                first = False
-                if not has_more:
-                    break
-
-            # no ranges is special for "do not switch, return the switch value"
-            # <frosch123> oh, also, the ranges are unsigned
-            # <frosch123> so if you want to set -5..5 you have to split into two ranges -5..-1, 0..5
-            n_ranges = d.get_byte()
-            ranges = []
-            for _ in range(n_ranges):
-                group = d.get_word()
-                low = d.get_var(group_size)
-                high = d.get_var(group_size)
-                ranges.append(grf.Range(low, high, grf.Ref(group)))
-
-            default_group = grf.Ref(d.get_word())
-
-            # print(f'VARACT default_group:{default_group} related_scope:{related_scope} ranges:{ranges} ')
-            # for a in adjusts:
-            #     var = a['var']
-            #     name, fmt = get_va2_var(var)
-            #     op = VA2_OP[a['op']]
-            #     param_str = ''
-            #     if 0x60 <= var < 0x80:
-            #         if var == 0x7e:
-            #             param_str = ' proc:{:02x}'.format(a['subroutine'])
-            #         else:
-            #             param_str = ' param:{:02x}'.format(a['parameter'])
-            #     type_str = ''
-            #     if a['type'] != 0:
-            #         type_str = '+{add_val} /%{divmod_val}'.format(**a)
-            #     print(f'   op<{a["op"]}>:{op} var<{var:02x}>:{name}({fmt}){param_str} type:{a["type"]} >>{a["shift_num"]} &{a["and_mask"]:x}{type_str}')
-
-
-            return [grf.VarAction2(
-                feature=feature,
-                ref_id=ref_id,
-                related_scope=related_scope,
-                ranges=ranges,
-                default=default_group,
-                code='\n'.join(root.format()),
-            )]
 
         return read_sprite_layout(d, feature, ref_id, max(num_ent1, 1), num_ent1 == 0)
         # num_loaded = num_ent1
@@ -569,8 +490,9 @@ def decode_action2(data):
         # # assert num_ent1 < 0x3f + 0x40, num_ent1
         # return
 
-    if feature == 0x0a:  # Special Industry production callback format
-        version = d.get_byte()
+    # Special Industry production callback format
+    if feature == 0x0a:
+        version = atype
         if version < 2:
             getter = [d.get_word, d.get_byte][version]
             inputs = [getter(), getter(), getter()]
@@ -594,16 +516,17 @@ def decode_action2(data):
             version=version,
         )]
 
-    num_ent2 = data[3]
-    print('NE', num_ent2, feature)
-    ent1 = struct.unpack_from('<' + 'H' * num_ent1, data, offset=4)
-    ent2 = struct.unpack_from('<' + 'H' * num_ent2, data, offset=4 + 2 * num_ent1)
+    raise NotImplementedError
+    # num_ent1 = atype
+    # num_ent2 = data[3]
+    # print('NE', num_ent2, feature)
+    # ent1 = struct.unpack_from('<' + 'H' * num_ent1, data, offset=4)
+    # ent2 = struct.unpack_from('<' + 'H' * num_ent2, data, offset=4 + 2 * num_ent1)
     # print(f'ent1:{ent1} ent2:{ent2}')
     # return grf.BasicSpriteLayout(
     #     feature=feature,
     #     ref_id=ref_id,
     # )
-    raise NotImplementedError
 
 
 def decode_action3(data):
@@ -833,8 +756,8 @@ def read_pseudo_sprite(f, nfo_line, container):
     res = []
     if grf_type == 0xff:
         data = f.read(l)
+        # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
-        # print('Sprite', l, hex_str(data))
         decoder = ACTIONS.get(data[0])
         if decoder:
             res.extend(decoder(data[1:]))

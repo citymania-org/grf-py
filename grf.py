@@ -24,6 +24,7 @@ ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
 BPP_8, BPP_32 = range(2)
 
 OBJECT = 0x0f
+INDUSTRY = 0x0a
 
 
 def hex_str(s):
@@ -934,7 +935,7 @@ class Range:
 
 class VarAction2(LazyBaseSprite):
     def __init__(self, feature, ref_id, related_scope, ranges, default, code):
-        assert feature == OBJECT, feature
+        assert feature in (OBJECT, INDUSTRY), feature
 
         super().__init__()
         self.feature = feature

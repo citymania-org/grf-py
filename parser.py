@@ -3,6 +3,9 @@ import struct
 import ply.lex
 import ply.yacc
 
+from va2vars import VA2_VARS
+
+
 OP_ADD = 0x00
 OP_SUB = 0x01
 OP_MIN = 0x02
@@ -147,61 +150,18 @@ class Value(Node):
         return True, struct.pack('<BBI', 0x1a, 0x20, valueadj)
 
 
-NML_VARACT2_GLOBALVARS = {
-    'current_month'        : {'var': 0x02, 'start':  0, 'size':  8},
-    'current_day_of_month' : {'var': 0x02, 'start':  8, 'size':  5},
-    'is_leapyear'          : {'var': 0x02, 'start': 15, 'size':  1},
-    'current_day_of_year'  : {'var': 0x02, 'start': 16, 'size':  9},
-    'traffic_side'         : {'var': 0x06, 'start':  4, 'size':  1},
-    'animation_counter'    : {'var': 0x0A, 'start':  0, 'size': 16},
-    'current_callback'     : {'var': 0x0C, 'start':  0, 'size': 16},
-    'extra_callback_info1' : {'var': 0x10, 'start':  0, 'size': 32},
-    'game_mode'            : {'var': 0x12, 'start':  0, 'size':  8},
-    'extra_callback_info2' : {'var': 0x18, 'start':  0, 'size': 32},
-    'display_options'      : {'var': 0x1B, 'start':  0, 'size':  6},
-    'last_computed_result' : {'var': 0x1C, 'start':  0, 'size': 32},
-    'snowline_height'      : {'var': 0x20, 'start':  0, 'size':  8},
-    'difficulty_level'     : {'var': 0x22, 'start':  0, 'size':  8},
-    'current_date'         : {'var': 0x23, 'start':  0, 'size': 32},
-    'current_year'         : {'var': 0x24, 'start':  0, 'size': 32},
-
-    # TODO object vars
-    'relative_x'             : {'var': 0x40, 'start':  0, 'size':  8},
-    'relative_y'             : {'var': 0x40, 'start':  8, 'size':  8},
-    'relative_pos'           : {'var': 0x40, 'start':  0, 'size': 16},
-
-    'terrain_type'           : {'var': 0x41, 'start':  0, 'size':  3},
-    'tile_slope'             : {'var': 0x41, 'start':  8, 'size':  5},
-
-    'build_date'             : {'var': 0x42, 'start':  0, 'size': 32},
-
-    'animation_frame'        : {'var': 0x43, 'start':  0, 'size':  8},
-    'company_colour'         : {'var': 0x43, 'start':  0, 'size':  8},
-
-    'owner'                  : {'var': 0x44, 'start':  0, 'size':  8},
-
-    'town_manhattan_dist'    : {'var': 0x45, 'start':  0, 'size': 16},
-    'town_zone'              : {'var': 0x45, 'start': 16, 'size':  8},
-
-    'town_euclidean_dist'    : {'var': 0x46, 'start':  0, 'size': 16},
-    'view'                   : {'var': 0x48, 'start':  0, 'size':  8},
-    'random_bits'            : {'var': 0x5F, 'start':  8, 'size':  8},
-
-    # TODO object nearby vars
-    'tile_height'            : {'var': 0x62, 'start':  16, 'size':  8, 'param': 0},
-}
-
-
 class Var(Node):
-    def __init__(self, name):
+    def __init__(self, feature, name):
+        assert feature in VA2_VARS
         super().__init__()
+        self.feature = feature
         self.name = name
 
     def format(self, parent_priority=0):
         return [self.name]
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
-        var_data = NML_VARACT2_GLOBALVARS.get(self.name)
+        var_data = VA2_VARS[self.feature].get(self.name)
 
         if var_data is None:
             raise ValueError(f'Unknown variable `{self.name}`')
@@ -470,7 +430,7 @@ def p_expression_number(t):
 
 def p_expression_name(t):
     'expression : NAME'
-    t[0] = Var(t[1])
+    t[0] = Var(t.parser.grf_feature, t[1])
 
 
 def p_error(t):
@@ -488,9 +448,10 @@ def p_error(t):
     print(f'Syntax error at `{t.value}` line {t.lineno}')
 
 
-def parse_code(code):
+def parse_code(feature, code):
     lexer = ply.lex.lex()
     parser = ply.yacc.yacc()
+    parser.grf_feature = feature
     return parser.parse(code)
 
 
