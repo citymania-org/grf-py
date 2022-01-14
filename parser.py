@@ -152,7 +152,7 @@ class Value(Node):
 
 class Var(Node):
     def __init__(self, feature, name):
-        assert feature.id in VA2_VARS
+        assert feature in VA2_VARS, feature
         super().__init__()
         self.feature = feature
         self.name = name

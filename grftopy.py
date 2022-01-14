@@ -57,6 +57,9 @@ def read_property(data, ofs, fmt):
         n = data[ofs]
         return data[ofs + 1: ofs + 1 + n], ofs + 1 + n
 
+    if fmt == '3*B':
+        return (data[ofs], data[ofs + 1], data[ofs + 2]), ofs + 3
+
     if fmt == '(BV)+':
         res = {}
         while data[ofs] != 0:
@@ -64,6 +67,46 @@ def read_property(data, ofs, fmt):
             res[data[ofs]] = data[ofs + 1: name_end]
             ofs = name_end + 1
         return res, ofs + 1
+
+    if fmt == 'n*(BB)':
+        num = data[ofs]
+        res = ((data[ofs + 2 * i + 1], data[ofs + 2 * i + 2]) for i in range(num))
+        return res, ofs + 2 * num + 1
+
+    if fmt == 'Layouts':
+        d = DataReader(data, ofs)
+        num = d.get_byte()
+        size = d.get_dword()
+        res = []
+        for _ in range(num):
+            for k in range(size):  # effectively infinite loop
+                xofs = d.get_byte()
+                yofs = d.get_byte()
+                if xofs == 0xfe and k == 0:
+                    # borrow base layout
+                    raise NotImplementedError
+
+                if xofs == 0 and yofs == 0x80:
+                    break
+
+                gfx = d.get_byte()
+                if gfx == 0xfe:
+                    local_tile_id = d.get_word()
+                    gfx = f'todo_ref({local_tile_id})'
+                elif gfx == 0xff:
+                    xofs = xofs & 0xff
+                    xofs |= -(xofs & 0x80)
+                    yofs = yofs & 0xff
+                    yofs |= -(yofs & 0x80)
+                    gfx = None
+
+                res.append({
+                    'xofs': xofs,
+                    'yofs': yofs,
+                    'gfx': gfx,
+                })
+
+        return res, d.offset
 
     assert False, fmt
 
@@ -80,6 +123,7 @@ def decode_action0(data):
         propdict = grf.ACTION0_PROPS[feature.id]
         name, fmt = propdict[prop]
         res = []
+        print(name, fmt)
         for _ in range(num_info):
             value, ofs = read_property(data, ofs, fmt)
             res.append(value)
@@ -146,6 +190,9 @@ class DataReader:
     def get_word(self):
         return self.get_byte() | (self.get_byte() << 8)
 
+    def get_dword(self):
+        return self.get_word() | (self.get_word() << 16)
+
     def get_var(self, n):
         size = 1 << n
         res = struct.unpack_from({0: '<B', 1: '<H', 2: '<I'}[n], self.data, offset=self.offset)[0]
@@ -211,7 +258,7 @@ def read_sprite_layout(d, feature, ref_id, num, basic_format):
     assert feature in (grf.HOUSE, grf.INDUSTRY_TILE, grf.OBJECT, grf.INDUSTRY), feature
 
     has_z_position = not basic_format
-    has_flags = bool((num >> 6) & 1)
+    has_flags = bool(num & 0x40)
     num &= 0x3f
 
     def read_sprite():
@@ -237,8 +284,8 @@ def read_sprite_layout(d, feature, ref_id, num, basic_format):
         return [grf.BasicSpriteLayout(
             feature=feature,
             ref_id=ref_id,
-            ground_sprite=ground,
-            building_sprite=sprites[0],
+            ground=ground,
+            building=sprites[0],
         )]
 
     return [[grf.ExtendedSpriteLayout, grf.AdvancedSpriteLayout][has_flags](
@@ -401,7 +448,8 @@ def decode_action2(data):
             elif (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
                 node = grf.Call(param)
             else:
-                var_name = VA2_VARS_INV[feature.id].get((var, shift, and_mask))
+                assert feature in VA2_VARS_INV, feature
+                var_name = VA2_VARS_INV[feature].get((var, shift, and_mask))
                 if var_name is not None:
                     node = grf.Var(feature, var_name)
                 else:
@@ -440,18 +488,19 @@ def decode_action2(data):
 
     # Random switch
     if atype in (0x80, 0x83, 0x84):
+        return []
         raise NotImplementedError
 
-    if feature in (0x07, 0x09, 0x0f, 0x11):
+    if feature in (grf.HOUSE, grf.INDUSTRY_TILE, grf.OBJECT, grf.AIRPORT_TILE):
         num_ent1 = atype
-        if num_ent1 == 0:
-            ground_sprite, building_sprite, xofs, yofs, xext, yext, zext = struct.unpack_from('<IIBBBBB', data, offset=3)
-            ground_sprite = str_sprite(ground_sprite)
-            building_sprite = str_sprite(building_sprite)
-            raise NotImplementedError
+        # if num_ent1 == 0:
+        #     ground_sprite, building_sprite, xofs, yofs, xext, yext, zext = struct.unpack_from('<IIBBBBB', data, offset=3)
+        #     ground_sprite = str_sprite(ground_sprite)
+        #     building_sprite = str_sprite(building_sprite)
+        #     return []
 
-        if num_ent1 <= 0x3f:
-            raise NotImplemented
+        # if 0 < num_ent1 <= 0x3f:
+        #     raise NotImplementedError
 
         return read_sprite_layout(d, feature, ref_id, max(num_ent1, 1), num_ent1 == 0)
         # num_loaded = num_ent1
@@ -488,17 +537,21 @@ def decode_action2(data):
             version=version,
         )]
 
-    raise NotImplementedError
-    # num_ent1 = atype
-    # num_ent2 = data[3]
+
+    # print('VA2', feature)
+    # raise NotImplementedError
+    num_ent1 = atype
+    num_ent2 = data[3]
     # print('NE', num_ent2, feature)
-    # ent1 = struct.unpack_from('<' + 'H' * num_ent1, data, offset=4)
-    # ent2 = struct.unpack_from('<' + 'H' * num_ent2, data, offset=4 + 2 * num_ent1)
+    ent1 = struct.unpack_from('<' + 'H' * num_ent1, data, offset=4)
+    ent2 = struct.unpack_from('<' + 'H' * num_ent2, data, offset=4 + 2 * num_ent1)
     # print(f'ent1:{ent1} ent2:{ent2}')
-    # return grf.BasicSpriteLayout(
-    #     feature=feature,
-    #     ref_id=ref_id,
-    # )
+    return [grf.GenericSpriteLayout(
+        feature=feature,
+        ref_id=ref_id,
+        ent1=ent1,
+        ent2=ent2,
+    )]
 
 
 def decode_action3(data):
@@ -729,7 +782,9 @@ def read_pseudo_sprite(f, nfo_line, container):
     res = []
     if grf_type == 0xff:
         data = f.read(l)
-        # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
+        if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
+            return True, []
+        print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
         decoder = ACTIONS.get(data[0])
         if decoder:

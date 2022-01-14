@@ -359,10 +359,7 @@ class SetProperties(BaseSprite):
         # return len(self._data)
 
     def py(self):
-        return f'''
-            SetProperties(
-                {pformat(self.props)}
-            )'''
+        return f'SetProperties(\n' + pformat(self.props) + '\n)'
 
 
 # Action A
@@ -579,10 +576,25 @@ ACTION0_HOUSE_PROPS = {
     0x23: ('tile_acceptance', 'V'), # Tile acceptance list
 }
 
+ACTION0_INDUSTRY_TILE_PROPS = {
+    0x08: ('building_type', 'B'),  # Substitute building type
+    0x09: ('tile_override', 'B'),  # Industry tile override
+    0x0A: ('tile_acceptance_1', 'W'),  # Tile acceptance
+    0x0B: ('tile_acceptance_2', 'W'),  # Tile acceptance
+    0x0C: ('tile_acceptance_3', 'W'),  # Tile acceptance
+    0x0D: ('land_shape_flags', 'B'),  # Land shape flags
+    0x0E: ('cb_flags', 'B'),  # Callback flags
+    0x0F: ('anim_info', 'W'),  # Animation information
+    0x10: ('anim_speed', 'B'),  # Animation speed.
+    0x11: ('cb25_triggers', 'B'),  # Triggers for callback 25
+    0x12: ('flags', 'B'),  # Special flags
+    0x13: ('tile_acceptance_list', 'n*(BB)'),  # Tile acceptance list
+}
+
 ACTION0_INDUSTRY_PROPS = {
     0x08: ('substitute_type', 'B'),  # Substitute industry type
     0x09: ('override_type', 'B'),  # Industry type override
-    0x0A: ('layouts', 'V'),  # Set industry layout(s)
+    0x0A: ('layouts', 'Layouts'),  # Set industry layout(s)
     0x0B: ('production_flags', 'B'),  # Industry production flags
     0x0C: ('closure_message', 'W'),  # Industry closure message
     0x0D: ('production_increase_message', 'W'),  # Production increase message
@@ -593,7 +605,7 @@ ACTION0_INDUSTRY_PROPS = {
     0x12: ('produciton_multipliers', 'B'),  # Production multipliers
     0x13: ('acceptance_multipliers', 'B'),  # Production multipliers
     0x14: ('minimal_distributed', 'B'),  # Minimal amount of cargo distributed
-    0x15: ('random_sound', 'V'),  # Random sound effects
+    0x15: ('random_sound', 'n*B'),  # Random sound effects
     0x16: ('conflicting_indtypes', '3*B'),  # Conflicting industry types
     0x17: ('mapgen_probability', 'B'),  # Probability in random game
     0x18: ('ingame_probability', 'B'),  # Probability during gameplay
@@ -667,6 +679,7 @@ ACTION0_PROPS = {
     0x2: ACTION0_SHIP_PROPS,
     0x7: ACTION0_HOUSE_PROPS,
     0x8: ACTION0_GLOBAL_PROPS,
+    0x9: ACTION0_INDUSTRY_TILE_PROPS,
     0xa: ACTION0_INDUSTRY_PROPS,
     0xb: ACTION0_CARGO_PROPS,
     0xf: ACTION0_OBJECT_PROPS,
@@ -812,6 +825,39 @@ class Sprite:
 
 
 # Action2
+class GenericSpriteLayout(LazyBaseSprite):
+    def __init__(self, feature, ref_id, ent1, ent2):
+        assert feature not in (HOUSE, INDUSTRY_TILE, OBJECT, AIRPORT_TILE, INDUSTRY), feature
+        super().__init__()
+        self.feature = feature
+        self.ref_id = ref_id
+        self.ent1 = ent1
+        self.ent2 = ent2
+
+    def _encode(self):
+        return struct.pack(
+            '<BBBBB' + 'H' * (len(self.ent1) + len(self.ent2)),
+            0x02,
+            self.feature.id,
+            self.ref_id,
+            len(self.ent1),
+            len(self.ent2),
+            *self.ent1,
+            *self.ent2,
+        )
+
+    def py(self):
+        return f''' \
+        GenericSpriteLayout(
+            feature={self.feature},
+            ref_id={self.ref_id},
+            ent1={self.ent1!r},
+            ent2={self.ent2!r},
+        )
+        '''
+
+
+# Action2
 class BasicSpriteLayout(LazyBaseSprite):
     def __init__(self, feature, ref_id, ground, building):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
@@ -835,7 +881,7 @@ class BasicSpriteLayout(LazyBaseSprite):
             feature={self.feature},
             ref_id={self.ref_id},
             ground={self.ground!r},
-            building={self.buildind!r},
+            building={self.building!r},
         )
         '''
 
@@ -937,8 +983,6 @@ class Range:
 
 class VarAction2(LazyBaseSprite):
     def __init__(self, feature, ref_id, related_scope, ranges, default, code):
-        assert feature in (OBJECT, INDUSTRY), feature
-
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1132,10 +1176,7 @@ class Action6(LazyBaseSprite):
         )
 
     def py(self):
-        return f'''
-        Action6(
-            {pformat(self.params)}
-        )'''
+        return f'Action6(\n' + pformat(self.params) + '\n)'
 
 
 EXPORT_CLASSES = [
@@ -1152,7 +1193,8 @@ class BaseNewGRF:
         self._next_sprite_id = 1
 
     def add(self, *sprites):
-        assert(len(sprites) > 0)
+        if not sprites:
+            return
         if isinstance(sprites[0], RealSprite):
             assert(all(isinstance(s, RealSprite) for s in sprites))
             assert(len(set(s.zoom for s in sprites)) == len(sprites))
