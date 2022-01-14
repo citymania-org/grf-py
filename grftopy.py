@@ -60,6 +60,15 @@ def read_property(data, ofs, fmt):
     if fmt == '3*B':
         return (data[ofs], data[ofs + 1], data[ofs + 2]), ofs + 3
 
+    if fmt == 'n*m*W':
+        d = DataReader(data, ofs)
+        n = d.get_byte()
+        m = d.get_byte()
+        res = []
+        for _ in range(n):
+            res.append([d.get_word() for _ in range(m)])
+        return res, d.offset
+
     if fmt == '(BV)+':
         res = {}
         while data[ofs] != 0:
@@ -123,12 +132,9 @@ def decode_action0(data):
         propdict = grf.ACTION0_PROPS[feature.id]
         name, fmt = propdict[prop]
         res = []
-        print(name, fmt)
         for _ in range(num_info):
             value, ofs = read_property(data, ofs, fmt)
             res.append(value)
-        # key = f'{name}<{prop:02x}>'
-        # assert key not in props, key
         props[name] = res
 
     return [grf.Action0(
@@ -784,7 +790,7 @@ def read_pseudo_sprite(f, nfo_line, container):
         data = f.read(l)
         if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
             return True, []
-        print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
+        # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
         decoder = ACTIONS.get(data[0])
         if decoder:

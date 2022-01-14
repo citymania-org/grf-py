@@ -621,10 +621,10 @@ ACTION0_INDUSTRY_PROPS = {
     0x22: ('cb_flags2', 'B'),  # Callback flags
     0x23: ('destruction_cost', 'D'),  # Destruction cost multiplier
     0x24: ('station_text', 'W'),  # Default text for nearby station
-    0x25: ('production_types', 'V'),  # Production cargo type list
-    0x26: ('acceptance_typess', 'V'),  # Acceptance cargo type list
-    0x27: ('produciton_multipliers', 'V'),  # Production multiplier list
-    0x28: ('input_multipliers', 'V'),  # Input cargo multiplier list
+    0x25: ('production_types', 'n*B'),  # Production cargo type list
+    0x26: ('acceptance_types', 'n*B'),  # Acceptance cargo type list
+    0x27: ('produciton_multipliers', 'n*B'),  # Production multiplier list
+    0x28: ('input_multipliers', 'n*m*W'),  # Input cargo multiplier list
 }
 
 ACTION0_CARGO_PROPS = {
