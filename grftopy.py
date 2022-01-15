@@ -103,10 +103,8 @@ def read_property(data, ofs, fmt):
                     local_tile_id = d.get_word()
                     gfx = f'todo_ref({local_tile_id})'
                 elif gfx == 0xff:
-                    xofs = xofs & 0xff
-                    xofs |= -(xofs & 0x80)
-                    yofs = yofs & 0xff
-                    yofs |= -(yofs & 0x80)
+                    xofs = grf.utoi8(xofs & 0xff)
+                    yofs = grf.utoi8(yofs & 0xff)
                     gfx = None
 
                 res.append({

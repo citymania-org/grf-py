@@ -12,6 +12,10 @@ OP_MIN = 0x02
 OP_MAX = 0x03
 OP_MINU = 0x04
 OP_MAXU = 0x05
+OP_DIV = 0x06
+OP_MOD = 0x07
+OP_DIVU = 0x08
+OP_MODU = 0x09
 OP_MUL = 0x0A
 OP_BINAND = 0x0B
 OP_BINOR = 0x0C
@@ -33,6 +37,10 @@ OPERATORS = {
     OP_MAX: ('max({a}, {b})', 7, False),
     OP_MINU: ('minu({a}, {b})', 7, False),
     OP_MAXU: ('maxu({a}, {b})', 7, False),
+    OP_DIV: ('{a} / {b}', 6, False),
+    OP_MOD: ('{a} % {b}', 6, False),
+    OP_DIVU: ('{a} u/ {b}', 6, False),
+    OP_MODU: ('{a} u% {b}', 6, False),
     OP_MUL: ('{a} * {b}', 6, False),
     OP_BINAND: ('{a} & {b}', 4, True),
     OP_BINOR: ('{a} | {b}', 4, True),

@@ -32,6 +32,11 @@ def hex_str(s):
         return ':'.join('{:02x}'.format(b) for b in s)
     return ':'.join('{:02x}'.format(ord(c)) for c in s)
 
+def utoi8(value):
+    return value | -(value & 0x80)
+
+def utoi32(value):
+    return value | -(value & 0x80000000)
 
 def color_distance(c1, c2):
     rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
@@ -983,7 +988,9 @@ class Range:
             return f'{self.low} -> {self.set}'
         return f'{self.low}..{self.high} -> {self.set}'
 
-    __repr__ = __str__
+    def __repr__(self):
+        return f'Range({self.low}, {self.high}, {self.set})'
+
 
 
 class VarAction2(LazyBaseSprite):
@@ -1047,12 +1054,16 @@ class VarAction2(LazyBaseSprite):
             code_str = repr(self.code)
         else:
             code_str = textwrap.indent("'''\n" + self.code + "'''", ' ' * 16).lstrip()
+        ranges_str = pformat({
+            utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high)): r.set
+            for r in self.ranges
+        }, indent_first=0, indent=19)
         return f'''
         VarAction2(
             feature={self.feature},
             ref_id={self.ref_id},
             related_scope={self.related_scope},
-            ranges={self.ranges!r},
+            ranges={ranges_str},
             default={self.default},
             code={code_str},
         )'''
