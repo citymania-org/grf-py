@@ -1,3 +1,21 @@
+def hex_str(s, n=None):
+    add = ''
+    if n is not None and len(s) > n:
+        s = s[:n - 3]
+        add = '...'
+    if isinstance(s, (bytes, memoryview)):
+        return ':'.join('{:02x}'.format(b) for b in s) + add
+    return ':'.join('{:02x}'.format(ord(c)) for c in s) + add
+
+
+def utoi8(value):
+    return value | -(value & 0x80)
+
+
+def utoi32(value):
+    return value | -(value & 0x80000000)
+
+
 class FeatureMeta(type):
     def __call__(cls, feature):
         return cls.FEATURES[feature]

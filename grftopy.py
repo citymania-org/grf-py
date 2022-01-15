@@ -3,17 +3,8 @@ import struct
 from nml import lz77
 
 import grf
+from common import hex_str, utoi8
 from va2vars import VA2_VARS_INV
-
-
-def hex_str(s, n=None):
-    add = ''
-    if n is not None and len(s) > n:
-        s = s[:n - 3]
-        add = '...'
-    if isinstance(s, (bytes, memoryview)):
-        return ':'.join('{:02x}'.format(b) for b in s) + add
-    return ':'.join('{:02x}'.format(ord(c)) for c in s) + add
 
 
 def read_extended_byte(data, offset):

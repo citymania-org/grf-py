@@ -9,7 +9,7 @@ import struct
 import numpy as np
 
 from parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT
-from common import Feature
+from common import Feature, hex_str, utoi32
 from common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE
 
@@ -26,17 +26,6 @@ WATER_COLORS = set(range(0xF5, 0xFF))
 ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
 BPP_8, BPP_32 = range(2)
 
-
-def hex_str(s):
-    if isinstance(s, (bytes, memoryview)):
-        return ':'.join('{:02x}'.format(b) for b in s)
-    return ':'.join('{:02x}'.format(ord(c)) for c in s)
-
-def utoi8(value):
-    return value | -(value & 0x80)
-
-def utoi32(value):
-    return value | -(value & 0x80000000)
 
 def color_distance(c1, c2):
     rmean = (c1.rgb[0] + c2.rgb[0]) / 2.

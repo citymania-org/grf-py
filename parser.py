@@ -3,6 +3,7 @@ import struct
 import ply.lex
 import ply.yacc
 
+from common import utoi32
 from va2vars import VA2_VARS
 
 
@@ -107,10 +108,7 @@ class Expr(Node):
         self.b = b
 
     def format(self, parent_priority=0):
-        if self.op in OPERATORS:
-            fmt, prio, bracket = OPERATORS[self.op]
-        else:
-            fmt, prio, bracket = f'{{a}} <{self.op:02x}> {{b}}', 1, True
+        fmt, prio, bracket = OPERATORS[self.op]
 
         ares = self.a.format(prio - 1)
         bres = self.b.format(prio - int(not bracket))
@@ -149,7 +147,7 @@ class Value(Node):
         self.value = value
 
     def format(self, parent_priority=0):
-        return [str(self.value)]
+        return [str(utoi32(self.value))]
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
