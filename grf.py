@@ -72,8 +72,14 @@ def open_image(filename, *args, **kw):
     return fix_palette(Image.open(filename, *args, **kw))
 
 
-def pformat(data):
-    return textwrap.indent(pprint.pformat(data, compact=True, sort_dicts=False), '    ')
+def pformat(data, indent=4, indent_first=None):
+    INDENTATION = ' '
+    if indent_first is None:
+        indent_first = indent
+    res = textwrap.indent(pprint.pformat(data, compact=True, sort_dicts=False), INDENTATION * indent)
+    if indent_first != indent:
+        res = res.lstrip() + INDENTATION * indent_first
+    return res
 
 # def map_rgb_image(self, im):
 #     assert im.mode == 'RGB', im.mode
@@ -733,7 +739,7 @@ class Action0(LazyBaseSprite):  # action 0
             feature={self.feature},
             first_id={self.first_id},
             count={self.count},
-            props={self.props!r},
+            props=''' + pformat(self.props, indent_first=0, indent=10 + 8) + '''
         )'''
 
 
@@ -869,7 +875,6 @@ class BasicSpriteLayout(LazyBaseSprite):
 
     def _encode(self):
         return struct.pack('<BBBBIIbbBBB', 0x02, self.feature.id, self.ref_id, 0,
-                           # self._encode_sprite(), self._encode_sprite(),
                            self.ground['sprite'].to_grf(),
                            self.building['sprite'].to_grf(),
                            *self.building['offset'],
@@ -1038,6 +1043,10 @@ class VarAction2(LazyBaseSprite):
         return res
 
     def py(self):
+        if '\n' not in self.code:
+            code_str = repr(self.code)
+        else:
+            code_str = textwrap.indent("'''\n" + self.code + "'''", ' ' * 16).lstrip()
         return f'''
         VarAction2(
             feature={self.feature},
@@ -1045,7 +1054,7 @@ class VarAction2(LazyBaseSprite):
             related_scope={self.related_scope},
             ranges={self.ranges!r},
             default={self.default},
-            code={self.code!r},
+            code={code_str},
         )'''
 
 
