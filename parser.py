@@ -18,9 +18,9 @@ OP_MOD = 0x07
 OP_DIVU = 0x08
 OP_MODU = 0x09
 OP_MUL = 0x0A
-OP_BINAND = 0x0B
-OP_BINOR = 0x0C
-OP_BINXOR = 0x0D
+OP_AND = 0x0B
+OP_OR = 0x0C
+OP_XOR = 0x0D
 OP_TSTO = 0x0E
 OP_INIT = 0x0F
 OP_PSTO = 0x10
@@ -31,32 +31,71 @@ OP_SHL = 0x14
 OP_SHRU = 0x15
 OP_SHR = 0x16
 
-OPERATORS = {
-    OP_ADD: ('{a} + {b}', 5, False),
-    OP_SUB: ('{a} - {b}', 5, True),
-    OP_MIN: ('min({a}, {b})', 7, False),
-    OP_MAX: ('max({a}, {b})', 7, False),
-    OP_MINU: ('minu({a}, {b})', 7, False),
-    OP_MAXU: ('maxu({a}, {b})', 7, False),
-    OP_DIV: ('{a} / {b}', 6, False),
-    OP_MOD: ('{a} % {b}', 6, False),
-    OP_DIVU: ('{a} u/ {b}', 6, False),
-    OP_MODU: ('{a} u% {b}', 6, False),
-    OP_MUL: ('{a} * {b}', 6, False),
-    OP_BINAND: ('{a} & {b}', 4, True),
-    OP_BINOR: ('{a} | {b}', 4, True),
-    OP_BINXOR: ('{a} ^ {b}', 4, True),
-    OP_TSTO: ('TEMP[{b}] = {a}', 2, True),
-    OP_INIT: (None, 1, False),
-    OP_PSTO: ('PERM[{b}] = {a}', 2, True),
-    OP_ROT: ('rot({a}, {b})', 7, False),
-    OP_CMP: ('cmp({a}, {b})', 7, False),
-    OP_CMPU: ('cmpu({a}, {b})', 7, False),
-    OP_SHL: ('{a} << {b}', 4, True),
-    OP_SHRU: ('{a} u>> {b}', 4, True),
-    OP_SHR: ('{a} >> {b}', 4, True),
+OPE_LT, OPE_GT, OPE_LE, OPE_GE, OPE_EQ, OPE_NEQ, OPE_HASBIT, OPE_NHASBIT = range(-1, -9, -1)
+
+NML_OPE = {
+    OPE_LT: (OP_CMP, OP_MIN, 1, OP_XOR, 1),
+    OPE_GT: (OP_CMP, OP_SUB, 1, OP_MAX, 0),
+    OPE_LE: (OP_CMP, OP_XOR, 2, OP_MIN, 1),
+    OPE_GE: (OP_CMP, OP_MIN, 1, None, None),
+    OPE_EQ: (OP_CMP, OP_AND, 1, None, None),
+    OPE_NEQ: (OP_CMP, OP_AND, 1, OP_XOR, 1),
+    OPE_HASBIT: (OP_SHRU, OP_AND, 1, None, None),
+    OPE_NHASBIT: (OP_SHRU, OP_AND, 1, OP_XOR, 1),
 }
 
+NML_OPE_PARSE = {}
+
+for k, (a, b, bv, c, cv) in NML_OPE.items():
+    root = NML_OPE_PARSE
+    if c is not None:
+        root = root.setdefault((c, cv), {})
+    root = root.setdefault((b, bv), {})
+    root[a] = k
+
+
+OPERATORS = {
+    OP_ADD: ('ADD', '{a} + {b}', 5, False),
+    OP_SUB: ('SUB', '{a} - {b}', 5, True),
+    OP_MIN: ('MIN', 'min({a}, {b})', 7, False),
+    OP_MAX: ('MAX', 'max({a}, {b})', 7, False),
+    OP_MINU: ('MINU', 'minu({a}, {b})', 7, False),
+    OP_MAXU: ('MAXU', 'maxu({a}, {b})', 7, False),
+    OP_DIV: ('DIV', '{a} / {b}', 6, False),
+    OP_MOD: ('MOD', '{a} % {b}', 6, False),
+    OP_DIVU: ('DIVU', '{a} u/ {b}', 6, False),
+    OP_MODU: ('MODU', '{a} u% {b}', 6, False),
+    OP_MUL: ('MUL', '{a} * {b}', 6, False),
+    OP_AND: ('AND', '{a} & {b}', 4, True),
+    OP_OR: ('OR', '{a} | {b}', 4, True),
+    OP_XOR: ('XOR', '{a} ^ {b}', 4, True),
+    OP_TSTO: ('TSTO', 'TEMP[{b}] = {a}', 2, True),
+    OP_INIT: ('INIT', None, 1, False),
+    OP_PSTO: ('PSTO', 'PERM[{b}] = {a}', 2, True),
+    OP_ROT: ('ROT', 'rot({a}, {b})', 7, False),
+    OP_CMP: ('CMP', 'cmp({a}, {b})', 7, False),
+    OP_CMPU: ('CMPU', 'cmpu({a}, {b})', 7, False),
+    OP_SHL: ('SHL', '{a} << {b}', 4, True),
+    OP_SHRU: ('SHRU', '{a} u>> {b}', 4, True),
+    OP_SHR: ('SHR', '{a} >> {b}', 4, True),
+
+    OPE_LT: ('LT', '{a} < {b}', 3, False),
+    OPE_GT: ('GT', '{a} > {b}', 3, False),
+    OPE_LE: ('LE', '{a} <= {b}', 3, False),
+    OPE_GE: ('GE', '{a} >= {b}', 3, False),
+    OPE_EQ: ('EQ', '{a} == {b}', 3, False),
+    OPE_NEQ: ('NEQ', '{a} != {b}', 3, False),
+    OPE_HASBIT: ('HASBIT', 'hasbit({a}, {b})', 7, False),
+    OPE_NHASBIT: ('NHASBIT', '!hasbit({a}, {b})', 7, False),
+    # OPE_LT: ('LT', '{a} < {b} ? {c} : 0', 3, False),
+    # OPE_GT: ('GT', '{a} > {b} ? {c} : 0', 3, False),
+    # OPE_LE: ('LE', '{a} <= {b} ? {c} : 0', 3, False),
+    # OPE_GE: ('GE', '{a} >= {b} ? {c} : 0', 3, False),
+    # OPE_EQ: ('EQ', '{a} == {b} ? {c} : 0', 3, False),
+    # OPE_NEQ: ('NEQ', '{a} != {b} ? {c} : 0', 3, False),
+    # OPE_HASBIT: ('HASBIT', 'hasbit({a}, {b}) ? {c} : 0', 3, False),
+    # OPE_NHASBIT: ('NHASBIT', '!hasbit({a}, {b}) ? {c} : 0', 3, False),
+}
 DEFAULT_INDENT_STR = '    '
 
 
@@ -92,13 +131,16 @@ class Node:
         raise NotImplementedError
 
     def __str__(self):
-        return '\n'.join(self.format())
+        return self.format()
 
     def __repr__(self):
-        return '; '.join(self.format())
+        return self.format()
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         raise NotImplementedError
+
+    def simplify(self):
+        pass
 
 
 class Expr(Node):
@@ -106,20 +148,22 @@ class Expr(Node):
         self.op = op
         self.a = a
         self.b = b
+        self.c = None
 
     def format(self, parent_priority=0):
-        fmt, prio, bracket = OPERATORS[self.op]
+        _, fmt, prio, bracket = OPERATORS[self.op]
 
         ares = self.a.format(prio - 1)
         bres = self.b.format(prio - int(not bracket))
-        # assert len(bres) == 1, bres
 
         assert self.op != OP_INIT
-        # if self.op == OP_INIT:
-        #     ares.append(bres[0])
-        #     return ares
 
-        res = fmt.format(a=ares, b=bres)
+        if self.c is not None:
+            cres = self.c.format(prio - 1)
+            res = fmt.format(a=ares, b=bres, c=cres)
+        else:
+            res = fmt.format(a=ares, b=bres)
+
         if prio <= parent_priority:
             res = f'({res})'
         return res
@@ -139,6 +183,36 @@ class Expr(Node):
         res += self.a.compile(register + 1, shift, and_mask)[1]
         res += struct.pack('<BBBBI', self.op, 0x7d, register, 0x20, 0xffffffff)
         return False, res
+
+    def simplify(self):
+        # if self.op != OP_MUL or not isinstance(self.a, Expr):
+        #     return
+
+        # node = self.a
+        node = self
+        is_final = False
+        root = NML_OPE_PARSE
+
+        while not is_final:
+            if not isinstance(node.a, Expr) or not isinstance(node.b, Value):
+                break
+            val = root.get((node.op, node.b.value))
+            if val is None:
+                break
+            root = val
+            node = node.a
+
+            if node.op in root:
+                self.op = root[node.op]
+                # self.c = self.b
+                self.a = node.a
+                self.b = node.b
+                break
+
+        self.a.simplify()
+        self.b.simplify()
+        if self.c is not None:
+            self.c.simplify()
 
 
 class Value(Node):
@@ -189,6 +263,10 @@ class Var(Node):
         else:
             return True, struct.pack('<BBI', var_data['var'], 0x20 | shift, and_mask)
 
+    def simplify(self):
+        if self.param is not None:
+            self.param.simplify()
+
 
 class Temp(Node):
     def __init__(self, register):
@@ -209,6 +287,10 @@ class Temp(Node):
     def __repr__(self):
         return f'Temp({self.register!r})'
 
+    def simplify(self):
+        if self.register is not None:
+            self.register.simplify()
+
 
 class Perm(Node):
     def __init__(self, register):
@@ -228,6 +310,10 @@ class Perm(Node):
 
     def __repr__(self):
         return f'Perm({self.register!r})'
+
+    def simplify(self):
+        if self.register is not None:
+            self.register.simplify()
 
 
 class Call(Node):

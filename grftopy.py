@@ -406,7 +406,11 @@ class Generic(grf.Node):
         elif self.type == 2:
             addstr = f', add={self.add_val}, mod={self.divmod_val}'
         param_str = '' if self.param is None else f', param=({self.param.format()})'
-        return [f'var(0x{self.var:02x}{param_str}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})']
+        return f'var(0x{self.var:02x}{param_str}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})'
+
+    def simplify(self):
+        if self.param is not None:
+            self.param.simplify()
 
 
 def get_var_node(feature, root, var, param, shift, and_mask, node_type, add_val=None, divmod_val=None):
@@ -492,6 +496,9 @@ def decode_action2(data):
             ranges.append(grf.Range(low, high, grf.Ref(group)))
 
         default_group = grf.Ref(d.get_word())
+
+        for c in code:
+            c.simplify()
 
         return [grf.VarAction2(
             feature=feature,
