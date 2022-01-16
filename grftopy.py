@@ -5,6 +5,7 @@ from nml import lz77
 import grf
 from common import hex_str, utoi8
 from va2vars import VA2_VARS_INV
+from parser import OP_INIT
 
 
 def read_extended_byte(data, offset):
@@ -94,8 +95,8 @@ def read_property(data, ofs, fmt):
                     local_tile_id = d.get_word()
                     gfx = f'todo_ref({local_tile_id})'
                 elif gfx == 0xff:
-                    xofs = grf.utoi8(xofs & 0xff)
-                    yofs = grf.utoi8(yofs & 0xff)
+                    xofs = utoi8(xofs & 0xff)
+                    yofs = utoi8(yofs & 0xff)
                     gfx = None
 
                 res.append({
@@ -231,7 +232,7 @@ def read_sprite_layout_registers(d, flags, is_parent):
     # regs = {'flags': flags & TLF_DRAWING_FLAGS}
     regs = {}
     if flags & TLF_DODRAW:  regs['dodraw']  = d.get_byte();
-    if flags & TLF_SPRITE:  regs['add']  = grf.Temp(d.get_byte());
+    if flags & TLF_SPRITE:  regs['add']  = grf.Temp(grf.Value(d.get_byte()));
     if flags & TLF_PALETTE: regs['palette'] = d.get_byte();
 
     if is_parent:
@@ -389,13 +390,14 @@ def get_va2_var(var):
 
 
 class Generic(grf.Node):
-    def __init__(self, var, shift, and_mask, type, add_val, divmod_val):
+    def __init__(self, var, shift, and_mask, type, add_val, divmod_val, param=None):
         self.var = var
         self.shift = shift
         self.and_mask = and_mask
         self.type = type
         self.add_val = add_val
         self.divmod_val = divmod_val
+        self.param = param
 
     def format(self, parent_priority=0):
         addstr = ''
@@ -403,7 +405,32 @@ class Generic(grf.Node):
             addstr = f', add={self.add_val}, div={self.divmod_val}'
         elif self.type == 2:
             addstr = f', add={self.add_val}, mod={self.divmod_val}'
-        return [f'var(0x{self.var:02x}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})']
+        param_str = '' if self.param is None else f', param=({self.param.format()})'
+        return [f'var(0x{self.var:02x}{param_str}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})']
+
+
+def get_var_node(feature, root, var, param, shift, and_mask, node_type, add_val=None, divmod_val=None):
+    if add_val is not None or divmod_val is not None:
+        return Generic(var, shift, and_mask, node_type, add_val, divmod_val, param=param)
+    if var == 0x1a and shift == 0:
+        return grf.Value(and_mask)
+
+    if var == 0x7b:
+        return get_var_node(feature, root, param.value, root, shift, and_mask, node_type, add_val, divmod_val)
+    if (var, shift, and_mask) == (0x7c, 0, 0xffffffff):
+        return grf.Perm(param)
+    if (var, shift, and_mask) == (0x7d, 0, 0xffffffff):
+        return grf.Temp(param)
+    if (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
+        assert isinstance(param, grf.Value)
+        return grf.Call(param.value)
+
+    assert feature in VA2_VARS_INV, feature
+    var_name = VA2_VARS_INV[feature].get((var, shift, and_mask))
+    if var_name is not None:
+        return grf.Var(feature, var_name, param=param)
+
+    return Generic(var, shift, and_mask, 0, None, None, param=param)
 
 
 def decode_action2(data):
@@ -418,42 +445,36 @@ def decode_action2(data):
         related_scope = bool(atype & 2)
         first = True
         ofs = 3
-        root = None
+        code = []
+        accumulator = None
         while True:
             op = 0 if first else d.get_byte()
             var = d.get_byte()
+            param = None
             if 0x60 <= var < 0x80:
-                param = d.get_byte()
+                param = grf.Value(d.get_byte())
             varadj = d.get_byte()
             shift = varadj & 0x1f
             has_more = bool(varadj & 0x20)
             node_type = varadj >> 6
             and_mask = d.get_var(group_size)
+            add_val = None
+            divmod_val = None
             if node_type != 0:
                 # old magic, use advaction2 instead
                 add_val = d.get_var(group_size)
                 divmod_val = d.get_var(group_size)
-                node = Generic(var, shift, and_mask, node_type, add_val, divmod_val)
-            elif var == 0x1a and shift == 0:
-                node = grf.Value(and_mask)
-            elif (var, shift, and_mask) == (0x7c, 0, 0xffffffff):
-                node = grf.Perm(param)
-            elif (var, shift, and_mask) == (0x7d, 0, 0xffffffff):
-                node = grf.Temp(param)
-            elif (var, shift, and_mask) == (0x7e, 0, 0xffffffff):
-                node = grf.Call(param)
-            else:
-                assert feature in VA2_VARS_INV, feature
-                var_name = VA2_VARS_INV[feature].get((var, shift, and_mask))
-                if var_name is not None:
-                    node = grf.Var(feature, var_name)
-                else:
-                    node = Generic(var, shift, and_mask, 0, None, None)
+
+            node = get_var_node(feature, accumulator, var, param, shift, and_mask, node_type, add_val, divmod_val)
 
             if first:
-                root = node
+                accumulator = node
+            elif op == OP_INIT:
+                if var != 0x7b:
+                    code.append(accumulator)
+                accumulator = node
             else:
-                root = grf.Expr(op, root, node)
+                accumulator = grf.Expr(op, accumulator, node)
 
             first = False
             if not has_more:
@@ -478,7 +499,7 @@ def decode_action2(data):
             related_scope=related_scope,
             ranges=ranges,
             default=default_group,
-            code='\n'.join(root.format()),
+            code='\n'.join(x.format() for x in code),
         )]
 
     # Random switch
@@ -780,7 +801,7 @@ def read_pseudo_sprite(f, nfo_line, container):
         if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
             return True, []
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
-        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
+        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data)}'))
         decoder = ACTIONS.get(data[0])
         if decoder:
             res.extend(decoder(data[1:]))

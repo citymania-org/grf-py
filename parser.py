@@ -112,17 +112,17 @@ class Expr(Node):
 
         ares = self.a.format(prio - 1)
         bres = self.b.format(prio - int(not bracket))
-        assert len(bres) == 1, bres
+        # assert len(bres) == 1, bres
 
-        if self.op == OP_INIT:
-            ares.append(bres[0])
-            return ares
+        assert self.op != OP_INIT
+        # if self.op == OP_INIT:
+        #     ares.append(bres[0])
+        #     return ares
 
-        res = fmt.format(a=ares[-1], b=bres[-1])
+        res = fmt.format(a=ares, b=bres)
         if prio <= parent_priority:
             res = f'({res})'
-        ares[-1] = res
-        return ares
+        return res
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         is_value, b_code = self.b.compile(register, shift, and_mask)
@@ -143,11 +143,12 @@ class Expr(Node):
 
 class Value(Node):
     def __init__(self, value):
+        assert isinstance(value, int)
         super().__init__()
         self.value = value
 
     def format(self, parent_priority=0):
-        return [str(utoi32(self.value))]
+        return str(utoi32(self.value))
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
@@ -157,14 +158,20 @@ class Value(Node):
 
 
 class Var(Node):
-    def __init__(self, feature, name):
+    def __init__(self, feature, name, param=None):
         assert feature in VA2_VARS, feature
         super().__init__()
         self.feature = feature
         self.name = name
+        self.param = param
 
     def format(self, parent_priority=0):
-        return [self.name]
+        if self.param is not None:
+            if isinstance(self.param, int):
+                return  f'{self.name}({self.param})'
+            else:
+                return f'{self.name}({self.param.format()})'
+        return self.name
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         var_data = VA2_VARS[self.feature].get(self.name)
@@ -176,6 +183,7 @@ class Var(Node):
         shift += var_data['start']
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
+        # TODO dynamic param (var 7B)
         if 'param' in var_data:
             return True, struct.pack('<BBBI', var_data['var'], var_data['param'], 0x20 | shift, and_mask)
         else:
@@ -184,34 +192,42 @@ class Var(Node):
 
 class Temp(Node):
     def __init__(self, register):
+        assert isinstance(register, Node), type(register)
         super().__init__()
-        assert isinstance(register, int), type(register)
         self.register = register
 
     def format(self, parent_priority=0):
-        return [f'TEMP[{self.register}]']
+        return  f'TEMP[{self.register.format()}]'
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
-        return True, struct.pack('<BBBI', 0x7d, self.register, 0x20 | shift, and_mask)
+        # TODO Node register
+        assert isinstance(self.register, Value)
+        return True, struct.pack('<BBBI', 0x7d, self.register.value, 0x20 | shift, and_mask)
 
     def __repr__(self):
-        return f'Temp({self.register})'
+        return f'Temp({self.register!r})'
 
 
 class Perm(Node):
     def __init__(self, register):
+        assert isinstance(register, Node), type(register)
         super().__init__()
         self.register = register
 
     def format(self, parent_priority=0):
-        return [f'PERM[{self.register}]']
+        return  f'PERM({self.register.format()})'
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
-        return True, struct.pack('<BBI', 0x7c, 0x20 | shift, and_mask)
+        # TODO Node register
+        assert isinstance(self.register, Value)
+        return True, struct.pack('<BBBI', 0x7c, self.register.value, 0x20 | shift, and_mask)
+
+    def __repr__(self):
+        return f'Perm({self.register!r})'
 
 
 class Call(Node):
@@ -220,7 +236,7 @@ class Call(Node):
         self.subroutine = subroutine
 
     def format(self, parent_priority=0):
-        return [f'call({self.subroutine})']
+        return f'call({self.subroutine})'
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
