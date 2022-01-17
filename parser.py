@@ -270,19 +270,25 @@ class Var(Node):
 
 class Temp(Node):
     def __init__(self, register):
-        assert isinstance(register, Node), type(register)
+        assert isinstance(register, (int, Node)), type(register)
         super().__init__()
         self.register = register
 
     def format(self, parent_priority=0):
+        if isinstance(self.register, int):
+            return  f'TEMP[{self.register}]'
         return  f'TEMP[{self.register.format()}]'
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
-        # TODO Node register
-        assert isinstance(self.register, Value)
-        return True, struct.pack('<BBBI', 0x7d, self.register.value, 0x20 | shift, and_mask)
+        if isinstance(self.register, int):
+            register = self.register
+        elif isinstance(self.register, Value):
+            register = self.register.value
+        else:
+            assert True, "TODO node needs 7b"
+        return True, struct.pack('<BBBI', 0x7d, register, 0x20 | shift, and_mask)
 
     def __repr__(self):
         return f'Temp({self.register!r})'
@@ -299,7 +305,7 @@ class Perm(Node):
         self.register = register
 
     def format(self, parent_priority=0):
-        return  f'PERM({self.register.format()})'
+        return  f'PERM[{self.register.format()}]'
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
@@ -455,9 +461,9 @@ def p_expression_binop(t):
         '+': OP_ADD,
         '-': OP_SUB,
         '*': OP_MUL,
-        '&': OP_BINAND,
-        '|': OP_BINOR,
-        '^': OP_BINXOR,
+        '&': OP_AND,
+        '|': OP_OR,
+        '^': OP_XOR,
         '>>': OP_SHL,
         '<<': OP_SHR,
     }.get(t[2])
@@ -563,8 +569,23 @@ def parse_code(feature, code):
     return parser.parse(code)
 
 
+SPRITE_FLAGS = {
+    'dodraw': (None, 0x01, 1, None),
+    'add': (None, 0x02, 1, Temp),
+    'add_palette': (None, 0x04, 1, None),
+    'custom_palette': (None, 0x08, 0, None),
+    'delta_parent_xy': (True, 0x10, 2, None),
+    'delta_parent_z': (True, 0x20, 1, None),
+    'delta_child_x': (False, 0x10, 1, None),
+    'delta_child_y': (False, 0x20, 1, None),
+    'sprite_var10': (None, 0x40, 1, None),
+    'palette_var10': (None, 0x80, 1, None),
+}
+
+
 if __name__ == "__main__":
-    res = parse_code('''
+    from common import OBJECT
+    res = parse_code(OBJECT, '''
         TEMP[128] = (cmp(tile_slope, 30) & 1) * 18
         TEMP[129] = (cmp(tile_slope, 29) & 1) * 15
         TEMP[130] = (cmp(tile_slope, 27) & 1) * 17

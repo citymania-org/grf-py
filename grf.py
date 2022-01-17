@@ -8,7 +8,7 @@ import spectra
 import struct
 import numpy as np
 
-from parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT
+from parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
 from common import Feature, hex_str, utoi32
 from common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE
@@ -346,17 +346,17 @@ class InformationSprite(BaseSprite):
 # Action 14 - take 2
 class SetProperties(BaseSprite):
     def __init__(self, props):
-        # self.palette = palette.encode('utf-8')
-        # self._data = b'\x14CINFOBPALS\x01\x00' + self.palette + b'\x00\x00'
+        self.palette = 'D'.encode('utf-8')
+        self._data = b'\x14CINFOBPALS\x01\x00' + self.palette + b'\x00\x00'
         self.props = props
 
     def get_data(self):
-        raise NotImplementedError
-        # return self._data
+        # raise NotImplementedError
+        return self._data
 
     def get_data_size(self):
-        raise NotImplementedError
-        # return len(self._data)
+        # raise NotImplementedError
+        return len(self._data)
 
     def py(self):
         return f'SetProperties(\n' + pformat(self.props) + '\n)'
@@ -788,7 +788,7 @@ class SpriteSet(Action1):
 
 
 class Sprite:
-    def __init__(self, id, pal=0, is_global=True, use_recolour=False, always_transparent=False, no_transparent=False):
+    def __init__(self, id, pal=0, is_global=False, use_recolour=False, always_transparent=False, no_transparent=False):
         self.id = id
         self.pal = pal
         self.is_global = is_global
@@ -898,16 +898,25 @@ class AdvancedSpriteLayout(LazyBaseSprite):
         self.buildings = buildings
 
     def _encode_sprite(self, sprite, aux=False):
-        res = struct.pack('<IH', sprite['sprite'].to_grf(), sprite['flags'])
+        flags = 0
+        is_parent = ('extent' in sprite or 'offset' in sprite)
+        for key, (parent_state, mask, _, _) in SPRITE_FLAGS.items():
+            if parent_state is not None and parent_state != is_parent:
+                continue
+            if key in sprite:
+                flags |= mask
+        res = struct.pack('<IH', sprite['sprite'].to_grf(), flags)
 
         if aux:
-            delta = sprite.get('delta', (0, 0, 0))
-            is_parent = bool(sprite.get('parent'))
-            if not is_parent:
-                delta = (delta[0], delta[1], 0x80)
-            res += struct.pack('<BBB', *delta)
+            is_parent = 'extent' in sprite or 'offset' in sprite
             if is_parent:
-                res += struct.pack('<BBB', *sprite.get('size'))
+                offset = sprite.get('offset', (0, 0, 0))
+            else:
+                offset = sprite.get('pixel_offset', (0, 0))
+                offset = (offset[0], offset[1], 0x80)
+            res += struct.pack('<BBB', *offset)
+            if is_parent:
+                res += struct.pack('<BBB', *sprite.get('extent', (0, 0, 0)))
 
         for k in ('dodraw', 'add', 'palette', 'sprite_var10', 'palette_var10'):
             if k in sprite:
@@ -920,9 +929,9 @@ class AdvancedSpriteLayout(LazyBaseSprite):
         return res
 
     def _encode(self):
-        res = struct.pack('<BBBB', 0x02, self.feature.id, self.ref_id, len(self.sprites) + 0x40)
+        res = struct.pack('<BBBB', 0x02, self.feature.id, self.ref_id, len(self.buildings) + 0x40)
         res += self._encode_sprite(self.ground)
-        for s in self.sprites:
+        for s in self.buildings:
             res += self._encode_sprite(s, True)
 
         return res
@@ -996,14 +1005,15 @@ class VarAction2(LazyBaseSprite):
     @property
     def parsed_code(self):
         if self._parsed_code is None:
-            self._parsed_code = parse_code(code)
+            # TODO related scope
+            self._parsed_code = parse_code(self.feature, self.code)
         return self._parsed_code
 
     def __str__(self):
         return str(self.ref_id)
 
     def _get_set_value(self, set_obj):
-        if isinstance(set_obj, Set):
+        if isinstance(set_obj, Ref):
             return set_obj.value
         assert isinstance(set_obj, int)
         return set_obj | 0x8000
@@ -1015,12 +1025,10 @@ class VarAction2(LazyBaseSprite):
         for c in ast[1:]:
             code += bytes((OP_INIT,))
             code += c.compile(register=0x80)[1]
-        # print('CODE', hex_str(code))
         res += code[:-5]
         res += bytes((code[-5] & ~0x20,))  # mark the end of a chain
         res += code[-4:]
         res += bytes((len(self.ranges),))
-        # print('RES', hex_str(res))
         ranges = self.ranges
         if isinstance(ranges, dict):
             ranges = self.ranges.items()
@@ -1262,7 +1270,7 @@ class BaseNewGRF:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, version, grfid, name, description):
+    def __init__(self, grfid, version, name, description):
         super().__init__()
         self.pseudo_sprites.append(SetProperties('D'))
         self.pseudo_sprites.append(SetDescription(version, grfid, name, description))

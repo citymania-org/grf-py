@@ -5,7 +5,7 @@ from nml import lz77
 import grf
 from common import hex_str, utoi8
 from va2vars import VA2_VARS_INV
-from parser import OP_INIT
+from parser import OP_INIT, SPRITE_FLAGS
 
 
 def read_extended_byte(data, offset):
@@ -199,54 +199,56 @@ class DataReader:
         return hex_str(self.data[self.offset: self.offset + n])
 
 
-TLF_NOTHING           = 0x00
-TLF_DODRAW            = 0x01  # Only draw sprite if value of register TileLayoutRegisters::dodraw is non-zero.
-TLF_SPRITE            = 0x02  # Add signed offset to sprite from register TileLayoutRegisters::sprite.
-TLF_PALETTE           = 0x04  # Add signed offset to palette from register TileLayoutRegisters::palette.
-TLF_CUSTOM_PALETTE    = 0x08  # Palette is from Action 1 (moved to SPRITE_MODIFIER_CUSTOM_SPRITE in palette during loading).
-TLF_BB_XY_OFFSET      = 0x10  # Add signed offset to bounding box X and Y positions from register TileLayoutRegisters::delta.parent[0..1].
-TLF_BB_Z_OFFSET       = 0x20  # Add signed offset to bounding box Z positions from register TileLayoutRegisters::delta.parent[2].
-TLF_CHILD_X_OFFSET    = 0x10  # Add signed offset to child sprite X positions from register TileLayoutRegisters::delta.child[0].
-TLF_CHILD_Y_OFFSET    = 0x20  # Add signed offset to child sprite Y positions from register TileLayoutRegisters::delta.child[1].
-TLF_SPRITE_VAR10      = 0x40  # Resolve sprite with a specific value in variable 10.
-TLF_PALETTE_VAR10     = 0x80  # Resolve palette with a specific value in variable 10.
-TLF_KNOWN_FLAGS       = 0xFF  # Known flags. Any unknown set flag will disable the GRF.
+# TLF_NOTHING           = 0x00
+# TLF_DODRAW            = 0x01  # Only draw sprite if value of register TileLayoutRegisters::dodraw is non-zero.
+# TLF_SPRITE            = 0x02  # Add signed offset to sprite from register TileLayoutRegisters::sprite.
+# TLF_PALETTE           = 0x04  # Add signed offset to palette from register TileLayoutRegisters::palette.
+# TLF_CUSTOM_PALETTE    = 0x08  # Palette is from Action 1 (moved to SPRITE_MODIFIER_CUSTOM_SPRITE in palette during loading).
+# TLF_BB_XY_OFFSET      = 0x10  # Add signed offset to bounding box X and Y positions from register TileLayoutRegisters::delta.parent[0..1].
+# TLF_BB_Z_OFFSET       = 0x20  # Add signed offset to bounding box Z positions from register TileLayoutRegisters::delta.parent[2].
+# TLF_CHILD_X_OFFSET    = 0x10  # Add signed offset to child sprite X positions from register TileLayoutRegisters::delta.child[0].
+# TLF_CHILD_Y_OFFSET    = 0x20  # Add signed offset to child sprite Y positions from register TileLayoutRegisters::delta.child[1].
+# TLF_SPRITE_VAR10      = 0x40  # Resolve sprite with a specific value in variable 10.
+# TLF_PALETTE_VAR10     = 0x80  # Resolve palette with a specific value in variable 10.
+# TLF_KNOWN_FLAGS       = 0xFF  # Known flags. Any unknown set flag will disable the GRF.
 
-# /** Flags which are still required after loading the GRF. */
-TLF_DRAWING_FLAGS     = ~TLF_CUSTOM_PALETTE
+# # /** Flags which are still required after loading the GRF. */
+# TLF_DRAWING_FLAGS     = ~TLF_CUSTOM_PALETTE
 
-# /** Flags which do not work for the (first) ground sprite. */
-TLF_NON_GROUND_FLAGS  = TLF_BB_XY_OFFSET | TLF_BB_Z_OFFSET | TLF_CHILD_X_OFFSET | TLF_CHILD_Y_OFFSET
+# # /** Flags which do not work for the (first) ground sprite. */
+# TLF_NON_GROUND_FLAGS  = TLF_BB_XY_OFFSET | TLF_BB_Z_OFFSET | TLF_CHILD_X_OFFSET | TLF_CHILD_Y_OFFSET
 
-# /** Flags which refer to using multiple action-1-2-3 chains. */
-TLF_VAR10_FLAGS       = TLF_SPRITE_VAR10 | TLF_PALETTE_VAR10
+# # /** Flags which refer to using multiple action-1-2-3 chains. */
+# TLF_VAR10_FLAGS       = TLF_SPRITE_VAR10 | TLF_PALETTE_VAR10
 
-# /** Flags which require resolving the action-1-2-3 chain for the sprite, even if it is no action-1 sprite. */
-TLF_SPRITE_REG_FLAGS  = TLF_DODRAW | TLF_SPRITE | TLF_BB_XY_OFFSET | TLF_BB_Z_OFFSET | TLF_CHILD_X_OFFSET | TLF_CHILD_Y_OFFSET
+# # /** Flags which require resolving the action-1-2-3 chain for the sprite, even if it is no action-1 sprite. */
+# TLF_SPRITE_REG_FLAGS  = TLF_DODRAW | TLF_SPRITE | TLF_BB_XY_OFFSET | TLF_BB_Z_OFFSET | TLF_CHILD_X_OFFSET | TLF_CHILD_Y_OFFSET
 
-# /** Flags which require resolving the action-1-2-3 chain for the palette, even if it is no action-1 palette. */
-TLF_PALETTE_REG_FLAGS = TLF_PALETTE
-
+# # /** Flags which require resolving the action-1-2-3 chain for the palette, even if it is no action-1 palette. */
+# TLF_PALETTE_REG_FLAGS = TLF_PALETTE
 
 def read_sprite_layout_registers(d, flags, is_parent):
     # regs = {'flags': flags & TLF_DRAWING_FLAGS}
     regs = {}
-    if flags & TLF_DODRAW:  regs['dodraw']  = d.get_byte();
-    if flags & TLF_SPRITE:  regs['add']  = grf.Temp(grf.Value(d.get_byte()));
-    if flags & TLF_PALETTE: regs['palette'] = d.get_byte();
+    for flag, (fparent, mask, size, conversion) in SPRITE_FLAGS.items():
+        if flags & mask == 0:
+            continue
+        if fparent is not None and fparent != is_parent:
+            continue
 
-    if is_parent:
-        delta = [d.get_byte(), d.get_byte(), 0] if flags & TLF_BB_XY_OFFSET else [0, 0, 0]
-        if flags & TLF_BB_Z_OFFSET: delta[2] = d.get_byte()
-        regs['delta_parent'] = tuple(delta)
-    else:
-        delta, delta_set = [0, 0], False
-        if flags & TLF_CHILD_X_OFFSET: delta[0], delta_set = d.get_byte(), True
-        if flags & TLF_CHILD_Y_OFFSET: delta[1], delta_set = d.get_byte(), True
-        if delta_set: regs['delta_child'] = tuple(delta)
+        if size == 0:
+            value = True
+        elif size == 1:
+            value = d.get_byte()
+        elif size == 2:
+            value = (d.get_byte(), d.get_byte())
+        else:
+            raise RuntimeError(f'Incorrect size of sprite register {flag}: {size}')
 
-    if flags & TLF_SPRITE_VAR10: regs['sprite_var10'] = d.get_byte()
-    if flags & TLF_PALETTE_VAR10: regs['palette_var10'] = d.get_byte()
+        if conversion:
+            value = conversion(value)
+        regs[flag] = value
+
     return regs
 
 
@@ -260,19 +262,24 @@ def read_sprite_layout(d, feature, ref_id, num, basic_format):
     def read_sprite():
         sprite = d.get_word()
         pal = d.get_word()
-        flags = d.get_word() if has_flags else TLF_NOTHING
-        return {'sprite': grf.Sprite.from_grf(sprite, pal), 'flags': flags}
+        flags = d.get_word() if has_flags else 0
+        return grf.Sprite.from_grf(sprite, pal), flags
 
-    ground = read_sprite()
-    ground_regs = read_sprite_layout_registers(d, ground['flags'], False)
+    ground_sprite, ground_flags = read_sprite()
+    ground = {'sprite': ground_sprite}
+    ground.update(read_sprite_layout_registers(d, ground_flags, False))
     sprites = []
     for _ in range(num):
-        seq = read_sprite()
-        delta = seq['offset'] = (d.get_byte(), d.get_byte(), d.get_byte() if has_z_position else 0)
-        is_parent = (delta[2] != 0x80)
+        sprite, flags = read_sprite()
+        seq = {'sprite': sprite}
+        offset = (d.get_byte(), d.get_byte(), d.get_byte() if has_z_position else 0)
+        is_parent = (offset[2] != 0x80)
         if is_parent:
+            seq['offset'] = offset
             seq['extent'] = (d.get_byte(), d.get_byte(), d.get_byte())
-        seq['regs'] = read_sprite_layout_registers(d, seq['flags'] & TLF_DRAWING_FLAGS, is_parent)
+        else:
+            seq['pixel_offset'] = (offset[0], offset[1])
+        seq.update(read_sprite_layout_registers(d, flags, is_parent))
         sprites.append(seq)
 
     if basic_format:
@@ -483,6 +490,8 @@ def decode_action2(data):
             first = False
             if not has_more:
                 break
+
+        code.append(accumulator)
 
         # no ranges is special for "do not switch, return the switch value"
         # <frosch123> oh, also, the ranges are unsigned
@@ -808,7 +817,7 @@ def read_pseudo_sprite(f, nfo_line, container):
         if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
             return True, []
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
-        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data)}'))
+        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
         decoder = ACTIONS.get(data[0])
         if decoder:
             res.extend(decoder(data[1:]))
@@ -817,7 +826,7 @@ def read_pseudo_sprite(f, nfo_line, container):
     else:
         if container == 1:
             data = f.read(7)
-            res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data)}...'))
+            res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}...'))
             decode_sprite(f, l - 8)
             return True, res
         else:
