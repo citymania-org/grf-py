@@ -788,7 +788,7 @@ class SpriteSet(Action1):
 
 
 class Sprite:
-    def __init__(self, id, pal=0, is_global=False, use_recolour=False, always_transparent=False, no_transparent=False):
+    def __init__(self, id, pal=0, is_global=True, use_recolour=False, always_transparent=False, no_transparent=False):
         self.id = id
         self.pal = pal
         self.is_global = is_global
@@ -801,7 +801,7 @@ class Sprite:
         return cls(
             id=sprite & 0x3fff,
             pal=pal & 0x3ffff,
-            is_global=bool(pal & 0x8000),
+            is_global=not bool(pal & 0x8000),
             use_recolour=bool(sprite & 0x8000),
             always_transparent=bool(sprite & 0x4000),
             no_transparent=bool(pal & 0x4000),
@@ -810,7 +810,7 @@ class Sprite:
     def to_grf(self):
         return (
             self.id | (self.always_transparent << 14) | (self.use_recolour << 15) |
-            (self.pal | (self.no_transparent << 14) | (self.is_global << 15)) << 16
+            (self.pal | (self.no_transparent << 14) | ((not self.is_global) << 15)) << 16
         )
 
     def __repr__(self):
@@ -919,13 +919,13 @@ class AdvancedSpriteLayout(LazyBaseSprite):
                 res += struct.pack('<BBB', *sprite.get('extent', (0, 0, 0)))
 
         for k in ('dodraw', 'add', 'palette', 'sprite_var10', 'palette_var10'):
+            # TODO deltas
             if k in sprite:
                 val = sprite[k]
                 if k == 'add':
                     assert isinstance(val, Temp)
                     val = val.register
                 res += bytes((val, ))
-        # TODO deltas
         return res
 
     def _encode(self):
