@@ -1,3 +1,4 @@
+import functools
 import math
 import textwrap
 import pprint
@@ -492,6 +493,11 @@ class ReplaceNewSprites(LazyBaseSprite):
 
     def py(self):
         return f'ReplaceNewSprites(set_type={self.set_type}, num={self.num}, offset={self.offset})'
+
+
+class SpriteGenerator:
+    def get_sprites(self):
+        return NotImplementedError
 
 
 ACTION0_COMMON_VEHICLE_PROPS = {
@@ -1280,27 +1286,30 @@ EXPORT_CLASSES = [
 
 class BaseNewGRF:
     def __init__(self):
-        self.sprites = []
-        self.pseudo_sprites = []
-        self._next_sprite_id = 1
+        self.generators = []
         self._sprite_encoder = SpriteEncoder(True, False, None)
 
-    def add(self, *sprites):
+    def _add(self, l, *sprites):
         if not sprites:
             return
+
+        # Unfold real sprite tuple if it was passed as a single arg
+        if isinstance(sprites[0], tuple):
+            assert len(sprites) == 1
+            sprites = sprites[0]
+            assert len(sprites) >= 1
+            assert isinstance(sprites[0], RealSprite)
+
         if isinstance(sprites[0], RealSprite):
             assert(all(isinstance(s, RealSprite) for s in sprites))
             assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites))
-            for s in sprites:
-                s.sprite_id = self._next_sprite_id
-            self._next_sprite_id += 1
 
-            for s in sprites:
-                self.sprites.append(s)
-
-            self.pseudo_sprites.append(sprites[0])
+            l.append(tuple(sprites))
         else:
-            self.pseudo_sprites.extend(sprites)
+            l.extend(sprites)
+
+    def add(self, *sprites):
+        self._add(self.generators, *sprites)
 
     def _write_pseudo_sprite(self, f, data, grf_type=0xff):
         f.write(struct.pack('<IB', len(data), grf_type))
@@ -1314,7 +1323,9 @@ class BaseNewGRF:
         )
         res += ', '.join(cn) + ' = ' + ', '.join('g.' + x for x in cn) + '\n\n'
 
-        for s in self.pseudo_sprites:
+        for s in self.generators:
+            if isinstance(s, tuple):
+                s = s[0]
             code = textwrap.dedent(s.py()).strip()
             res += code + '\n'
             if '\n' in code: res += '\n'
@@ -1322,9 +1333,27 @@ class BaseNewGRF:
         res += '\ng.write("some.grf")'
         return res
 
+    def generate_sprites(self):
+        res = []
+        for g in self.generators:
+            if isinstance(g, SpriteGenerator):
+                for s in g.get_sprites():
+                    self._add(res, s)
+            else:
+                res.append(g)
+        return res
+
     def write(self, filename):
+        sprites = self.generate_sprites()
         data_offset = 14
-        for s in self.pseudo_sprites:
+
+        next_sprite_id = 1
+        for s in sprites:
+            if isinstance(s, tuple):
+                for x in s:
+                    x.sprite_id = next_sprite_id
+                next_sprite_id += 1
+                s = s[0]
             data_offset += s.get_data_size() + 5
 
         with open(filename, 'wb') as f:
@@ -1336,11 +1365,17 @@ class BaseNewGRF:
             # f.write(b'\xb0\x01\x00\x00')  # num + 0xff -> recoloursprites() (257 each)
             self._write_pseudo_sprite(f, b'\x02\x00\x00\x00')
 
-            for s in self.pseudo_sprites:
-                self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd if isinstance(s, RealSprite) else 0xff)
+            for s in sprites:
+                if isinstance(s, tuple):
+                    self._write_pseudo_sprite(f, s[0].get_data(), grf_type=0xfd)
+                else:
+                    self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
             f.write(b'\x00\x00\x00\x00')
-            for s in self.sprites:
-                f.write(s.get_real_data(self._sprite_encoder))
+            for sl in sprites:
+                if not isinstance(sl, tuple):
+                    continue
+                for s in sl:
+                    f.write(s.get_real_data(self._sprite_encoder))
 
             f.write(b'\x00\x00\x00\x00')
 
@@ -1351,12 +1386,20 @@ class BaseNewGRF:
             return obj
         return wrapper
 
+    def bind(self, cls):
+        @functools.wraps(cls)
+        def wrapper(*args, **kw):
+            gen = cls(*args, **kw)
+            self.add(gen)
+            return gen
+        return wrapper
+
 
 class NewGRF(BaseNewGRF):
     def __init__(self, grfid, version, name, description):
         super().__init__()
-        self.pseudo_sprites.append(SetProperties('D'))
-        self.pseudo_sprites.append(SetDescription(version, grfid, name, description))
+        self.generators.append(SetProperties('D'))
+        self.generators.append(SetDescription(version, grfid, name, description))
 
 
 
