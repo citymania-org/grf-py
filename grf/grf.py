@@ -2,6 +2,7 @@ import functools
 import math
 import textwrap
 import pprint
+import datetime
 
 from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
@@ -26,6 +27,84 @@ WATER_COLORS = set(range(0xF5, 0xFF))
 # ZOOM_OUT_4X, ZOOM_NORMAL, ZOOM_OUT_2X, ZOOM_OUT_8X, ZOOM_OUT_16X, ZOOM_OUT_32X = range(6)
 ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
 BPP_8, BPP_24, BPP_32 = 8, 24, 32
+
+TEMPERATE, ARCTIC, TROPICAL, TOYLAND = 1, 2, 4, 8
+ALL_CLIMATES = TEMPERATE | ARCTIC | TROPICAL | TOYLAND
+
+af_ZA = 0x1b  # afrikaans,True,Afrikaans,Afrikaans,0,male,
+ar_EG = 0x14  # arabic_egypt,True,Arabic (Egypt),Arabic (Egypt),1,,
+be_BY = 0x10  # belarusian,True,Belarusian,Беларуская,6,n m f p,n nom m abl gen pre p dat acc f
+bg_BG = 0x18  # bulgarian,True,Bulgarian,Български,0,n m f p,n m f p
+ca_ES = 0x22  # catalan,True,Catalan,Català,0,Femenin Masculin,
+cs_CZ = 0x15  # czech,True,Czech,Čeština,10,n m fp mnp map np f,small ins nom big loc gen voc dat acc
+cv_RU = 0x0b  # chuvash,True,Chuvash,Чӑвашла,0,,
+cy_GB = 0x0f  # welsh,True,Welsh,Cymraeg,0,,
+da_DK = 0x2d  # danish,True,Danish,Dansk,0,,
+de_DE = 0x02  # german,True,German,Deutsch,0,n m w p,
+el_GR = 0x1e  # greek,True,Greek,Ελληνικά,2,n m f,geniki date subs
+en_AU = 0x3d  # english_AU,True,English (AU),English (AU),0,,
+en_GB = 0x01  # english,True,English (UK),English (UK),0,,
+en_US = 0x00  # english_US,True,English (US),English (US),0,,
+eo_EO = 0x05  # esperanto,True,Esperanto,Esperanto,0,,n
+es_ES = 0x04  # spanish,True,Spanish,Español (ES),0,m f,
+es_MX = 0x55  # spanish_MX,True,Spanish (Mexican),Español (MX),0,m f,
+et_EE = 0x34  # estonian,True,Estonian,Eesti keel,0,,in sü g
+eu_ES = 0x21  # basque,True,Basque,Euskara,0,,
+fa_IR = 0x62  # persian,True,Persian,فارسی,0,,
+fi_FI = 0x35  # finnish,True,Finnish,Suomi,0,,
+fo_FO = 0x12  # faroese,True,Faroese,Føroyskt,0,n m f,
+fr_FR = 0x03  # french,True,French,Français,2,m2 m f,
+fy_NL = 0x32  # frisian,True,Frisian,Frysk,0,,
+ga_IE = 0x08  # irish,True,Irish,Gaeilge,4,,
+gd_GB = 0x13  # gaelic,True,Scottish Gaelic,Gàidhlig,13,m f,dat nom voc gen
+gl_ES = 0x31  # galician,True,Galician,Galego,0,n m f,
+he_IL = 0x61  # hebrew,True,Hebrew,עברית,0,m f,gen plural singular
+hi_IN = 0x17  # hindi,True,Hindi,हिन्दी,0,,
+hr_HR = 0x38  # croatian,True,Croatian,Hrvatski,6,female male middle,lok ins nom aku gen dat vok
+hu_HU = 0x24  # hungarian,True,Hungarian,Magyar,2,,ba t
+id_ID = 0x5a  # indonesian,True,Indonesian,Bahasa Indonesia,1,,
+io_IO = 0x06  # ido,True,Ido,Ido,0,,
+is_IS = 0x29  # icelandic,True,Icelandic,Íslenska,0,kvenkyn karlkyn hvorugkyn,
+it_IT = 0x27  # italian,True,Italian,Italiano,0,m ma f,fp fs ms mp
+ja_JP = 0x39  # japanese,True,Japanese,日本語,1,,
+ko_KR = 0x3a  # korean,True,Korean,한국어,11,m f,
+la_VA = 0x66  # latin,True,Latin,Latina,0,n m fp mp np f,dat abl acc gen
+lb_LU = 0x23  # luxembourgish,True,Luxembourgish,Lëtzebuergesch,0,,
+lt_LT = 0x2b  # lithuanian,True,Lithuanian,Lietuvių,5,mot vyr,kam ka ko kur kreip kas kuo
+lv_LV = 0x2a  # latvian,True,Latvian,Latviešu,3,m f,kas
+mk_MK = 0x26  # macedonian,True,Macedonian,Македонски,0,,
+mr_IN = 0x11  # marathi,True,Marathi,मराठी,0,,
+ms_MY = 0x3c  # malay,True,Malay,Melayu,0,,
+mt_MT = 0x09  # maltese,True,Maltese,Malti,12,,
+nb_NO = 0x2f  # norwegian_bokmal,True,Norwegian (Bokmal),Norsk (bokmål),0,masculine neuter feminine,small
+nl_NL = 0x1f  # dutch,True,Dutch,Nederlands,0,,
+nn_NO = 0x0e  # norwegian_nynorsk,True,Norwegian (Nynorsk),Norsk (nynorsk),0,masculine neuter feminine,small
+pl_PL = 0x30  # polish,True,Polish,Polski,7,n m f,n m w c d b
+pt_BR = 0x37  # brazilian_portuguese,True,Portuguese (Brazilian),Português (BR),2,m f,
+pt_PT = 0x36  # portuguese,True,Portuguese,Português,0,n m fp mp f,
+ro_RO = 0x28  # romanian,True,Romanian,Română,14,,
+ru_RU = 0x07  # russian,True,Russian,Русский,6,n m f p,n nom m abl gen pre p dat acc f
+sk_SK = 0x16  # slovak,True,Slovak,Slovenčina,10,m z s,g
+sl_SI = 0x2c  # slovenian,True,Slovenian,Slovenščina,8,,t d r
+sr_RS = 0x0d  # serbian,True,Serbian,Srpski,6,srednji ženski muški,lok ins nom aku big gen dat vok
+sv_SE = 0x2e  # swedish,True,Swedish,Svenska,0,,
+ta_IN = 0x0a  # tamil,True,Tamil,தமிழ்,0,,
+th_TH = 0x42  # thai,True,Thai,Thai,1,,
+tr_TR = 0x3e  # turkish,True,Turkish,Türkçe,1,,tamlanan
+uk_UA = 0x33  # ukrainian,True,Ukrainian,Українська,6,m mn s f,z d r
+ur_PK = 0x5c  # urdu,True,Urdu,Urdu,0,m f,
+vi_VN = 0x54  # vietnamese,True,Vietnamese,Tiếng Việt,1,,
+zh_CN = 0x56  # simplified_chinese,True,Chinese (Simplified),简体中文,1,,
+zh_TW = 0x0c  # traditional_chinese,True,Chinese (Traditional),繁體中文,1,,
+ANY_LANGUAGE = 0x7f
+
+
+def is_leap_year(year):
+    return yr % 4 == 0 and (yr % 100 != 0 or yr % 400 == 0)
+
+
+def date_to_days(d):
+    return (d - datetime.date(1, 1, 1)).days + 365
 
 
 def color_distance(c1, c2):
@@ -501,11 +580,11 @@ class SpriteGenerator:
 
 
 ACTION0_COMMON_VEHICLE_PROPS = {
-    0x00: ('intro_date', 'W'),  # date of introduction    no
+    0x00: ('introduction_days_since_1920', 'W', 'deprecated by introduction_date'),  # date of introduction as the amount of days since 1920
     0x02: ('reliability_decay', 'B'),  # reliability decay speed     no
-    0x03: ('vehicle_lifetime', 'B'),  # vehicle life in years   no
-    0x04: ('model_lifetime', 'B'),  # model life in years     no
-    0x06: ('climates', 'B'),  # climate availability    should be zero
+    0x03: ('vehicle_life', 'B'),  # vehicle life in years   no
+    0x04: ('model_life', 'B'),  # model life in years     no
+    0x06: ('climates_available', 'B'),  # climate availability    should be zero
     0x07: ('loading_speed', 'B'),  # loading speed   yes
 }
 
@@ -521,7 +600,7 @@ ACTION0_TRAIN_PROPS = {
     0x12: ('sprite_id', 'B'),  # Sprite ID (FD for new graphics)     yes
     0x13: ('is_dual_headed', 'B'),  # Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
     0x14: ('cargo_capacity', 'B'),  # Cargo capacity  yes
-    0x15: ('cargo_type', 'B'),  # Cargo type, see CargoTypes
+    0x15: ('default_cargo_type', 'B'),  # Cargo type, see CargoTypes
     0x16: ('weight', 'B'),  # Weight in tons  should be zero
     0x17: ('cost_factor', 'B'),  # Cost factor     should be zero
     0x18: ('engine_rank', 'B'),  # Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
@@ -540,45 +619,45 @@ ACTION0_TRAIN_PROPS = {
     0x25: ('bitmask', 'B'),  # User-defined bit mask to set when checking veh. var. 42     yes
     0x26: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
     0x27: ('flags', 'B'),  # Miscellaneous flags     partly
-    0x28: ('refit_classes', 'W'),  # Refittable cargo classes    yes
+    0x28: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes    yes
     0x29: ('non_refit_classes', 'W'),  # Non-refittable cargo classes    yes
-    0x2A: ('intro_date_long', 'D'),  # Long format introduction date   no
-    0x2B: ('period', 'W'),  # period  yes
-    0x2C: ('refit_cargo_types1', 'n*B'), # refittable cargo types   yes
-    0x2D: ('refit_cargo_types2', 'n*B'),  # refittable cargo types    yes
+    0x2A: ('non_refittable_cargo_classes', 'D'),  # Long format introduction date   no
+    0x2B: ('cargo_age_period', 'W'),  # period  yes
+    0x2C: ('cargo_allow_refit', 'n*B'), # refittable cargo types   yes
+    0x2D: ('cargo_disallow_refit', 'n*B'),  # refittable cargo types    yes
     0x2E: ('speed_mod', 'W'),  # speed modifier    yes
 }
 
 ACTION0_RV_PROPS = {
     **ACTION0_COMMON_VEHICLE_PROPS,
-    0x05: ('roadtype', 'B'),  # Roadtype / tramtype (see below)     should be same as front
+    0x05: ('road_type', 'B'),  # Roadtype / tramtype (see below)     should be same as front
     0x08: ('speed1', 'B'),  # Speed in mph*3.2    no
     0x09: ('running_cost_factor', 'B'),  # Running cost factor     should be zero
     0x0A: ('running_cost_base', 'D'),  # Running cost base, see below    should be zero
     0x0E: ('sprite_id', 'B'),  # Sprite ID (FF for new graphics)     yes
-    0x0F: ('capacity', 'B'),  # Capacity    yes
-    0x10: ('cargo_type', 'B'),  # Cargo type, see CargoTypes
+    0x0F: ('cargo_capacity', 'B'),  # Capacity    yes
+    0x10: ('default_cargo_type', 'B'),  # Cargo type, see CargoTypes
     0x11: ('cost_factor', 'B'),  # Cost factor     should be zero
-    0x12: ('sound', 'B'),  # Sound effect: 17/19/1A for regular, 3C/3E for toyland
+    0x12: ('sound_effect', 'B'),  # Sound effect: 17/19/1A for regular, 3C/3E for toyland
     0x13: ('power', 'B'),  # Power in 10 hp, see below   should be zero
     0x14: ('weight', 'B'),  # Weight in 1/4 tons, see below   should be zero
     0x15: ('speed2', 'B'),  # Speed in mph*0.8, see below     no
     0x16: ('refit_mask', 'D'),  # Bit mask of cargo types available for refitting (not refittable if 0 or unset), see column 2 (bit values) in CargoTypes     yes
     0x17: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
-    0x18: ('tractive_effort', 'B'),  # Coefficient of tractive effort  should be zero
-    0x19: ('air_drag', 'B'),  # Coefficient of air drag     should be zero
+    0x18: ('tractive_effort_coefficient', 'B'),  # Coefficient of tractive effort  should be zero
+    0x19: ('air_drag_coefficient', 'B'),  # Coefficient of air drag     should be zero
     0x1A: ('refit_cost', 'B'),  # Refit cost, using 25% of the purchase price cost base   yes
     0x1B: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
-    0x1C: ('flags', 'B'),  # Miscellaneous vehicle flags     partly ("tram" should be same as front)
-    0x1D: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28    yes
-    0x1E: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29    yes
-    0x1F: ('intro_date_long', 'D'),  # Long format introduction date   no
+    0x1C: ('misc_flags', 'B'),  # Miscellaneous vehicle flags     partly ("tram" should be same as front)
+    0x1D: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28    yes
+    0x1E: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29    yes
+    0x1F: ('introduction_date', 'D'),  # Long format introduction date   no
     0x20: ('sort_purchase_list', 'B*'), # Sort the purchase list  no
-    0x21: ('effect', 'B'),  # Visual effect   yes
-    0x22: ('cargo_ageing', 'W'),  # Custom cargo ageing period  yes
-    0x23: ('shorter_by', 'B'),  # Make vehicle shorter, see train property 21     yes
-    0x24: ('refit_cargo_types1', 'B n*B'),  # List of always refittable cargo types, see train property 2C    yes
-    0x25: ('refit_cargo_types2', 'B n*B'),  # List of never refittable cargo types, see train property 2D     yes
+    0x21: ('visual_effect', 'B'),  # Visual effect   yes
+    0x22: ('cargo_age_period', 'W'),  # Custom cargo ageing period  yes
+    0x23: ('shorten_by', 'B'),  # Make vehicle shorter, see train property 21     yes
+    0x24: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C    yes
+    0x25: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D     yes
 }
 
 ACTION0_SHIP_PROPS = {
@@ -600,12 +679,12 @@ ACTION0_SHIP_PROPS = {
     0x17: ('flags', 'B'),  # Miscellaneous vehicle flags
     0x18: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
-    0x1A: ('intro_date_long', 'D'),  # Long format introduction date
+    0x1A: ('introduction_date', 'D'),  # Long format introduction date
     0x1B: ('sort_purchase_list', 'B*'), # Sort the purchase list
-    0x1C: ('effect', 'B'),  # Visual effect
-    0x1D: ('cargo_ageing', 'W'),  # Custom cargo ageing period
-    0x1E: ('refit_cargo_types1', 'B n*B'),  # List of always refittable cargo types, see train property 2C
-    0x1F: ('refit_cargo_types2', 'B n*B'),  # List of never refittable cargo types, see train property 2D
+    0x1C: ('visual_effect', 'B'),  # Visual effect
+    0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
+    0x1E: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
+    0x1F: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
 }
 
 ACTION0_GLOBAL_PROPS = {
@@ -753,6 +832,33 @@ ACTION0_OBJECT_PROPS = {
     0x18: ('num_objects', 'B'),  # Supported by OpenTTD 1.4 (r25879)1.4 Not supported by TTDPatch  Measure for number of objects placed upon map creation
 }
 
+ACTION0_RAILTYPE_PROPS = {
+# common
+    0x08: ('label', 'L'),  # Rail type label
+    0x09: ('toolbar_caption', 'W'),  # StringID: Build rail toolbar caption[1]
+    0x0A: ('menu_text', 'W'),  # StringID: Rail construction dropdown text
+    0x0B: ('build_window_caption', 'W'),  # StringID: Build vehicle window caption
+    0x0C: ('autoreplace_text', 'W'),  # StringID: Autoreplace text
+    0x0D: ('new_engine_text', 'W'),  # StringID: New engine text
+    0x13: ('construction_cost', 'W'),  # Construction costs
+    0x16: ('map_colour', 'B'),  # Minimap colour
+    0x17: ('introduction_date', 'D'),  # Introduction date
+    0x1A: ('sort_order', 'B'),  # Sort order
+    0x1B: ('name', 'W'),  # StringID: Rail type name[4]
+    0x1C: ('maintenance_cost', 'W'),  # Infrastructure maintenance cost factor
+
+# railtype
+    0x0E: ('compatible_railtype_list', 'n*L'),  # Compatible rail type list[2]
+    0x0F: ('powered_railtype_list', 'n*L'),  # Powered rail type list[2]
+    0x10: ('railtype_flags', 'B'),  # Rail type flags
+    0x11: ('curve_speed_multiplier', 'B'),  # Curve speed advantage multiplier
+    0x12: ('station_graphics', 'B'),  # Station (and depot) graphics
+    0x14: ('speed_limit', 'W'),  # Speed limit
+    0x15: ('acceleration_model', 'B'),  # Acceleration model
+    0x18: ('requires_railtype_list', 'n*L'),  # Introduction required rail type list[2]
+    0x19: ('introduces_railtype_list', 'n*L'),  # Introduced rail type list[2]
+    0x1D: ('alternative_railtype_list', 'n*L'),  # Alternate rail type labels that shall be "redirected" to this rail type
+}
 
 ACTION0_PROPS = {
     0x0: ACTION0_TRAIN_PROPS,
@@ -764,10 +870,11 @@ ACTION0_PROPS = {
     0xa: ACTION0_INDUSTRY_PROPS,
     0xb: ACTION0_CARGO_PROPS,
     0xf: ACTION0_OBJECT_PROPS,
+    0x10: ACTION0_RAILTYPE_PROPS,
 }
 
 ACTION0_PROP_DICT = {
-    feature: {name: (id, size) for id, (name, size) in fdict.items()}
+    feature: {name: (id, size) for id, (name, size, *_) in fdict.items()}
     for feature, fdict in ACTION0_PROPS.items()
 }
 
@@ -782,12 +889,17 @@ class Action0(LazyBaseSprite):  # action 0
         if feature.id not in ACTION0_PROP_DICT:
             raise NotImplementedError
         self.props = props
-        assert all(x in ACTION0_PROP_DICT[feature.id] for x in props)
+        for x in props:
+            if x not in ACTION0_PROP_DICT[feature.id]:
+                raise ValueError(f'Unknown property `{x}` for a feature {feature}')
 
     def _encode_value(self, value, fmt):
         if fmt == 'B': return struct.pack('<B', value)
         if fmt == 'W': return struct.pack('<H', value)
-        if fmt == 'D': return struct.pack('<I', value)
+        if fmt == 'D':
+            if isinstance(value, datetime.date):
+                value = date_to_days(value)
+            return struct.pack('<I', value)
         if fmt == 'L':
             if isinstance(value, int): return struct.pack('<I', value)
             assert isinstance(value, bytes)
@@ -1232,12 +1344,20 @@ class Map(Action3):
 
 
 class Action4(LazyBaseSprite):
-    def __init__(self, feature, lang, offset, strings):
+    def __init__(self, feature, offset, is_generic_offset, strings, lang=None):
         assert isinstance(feature, Feature), feature
+        if feature in (TRAIN, RV, SHIP, AIRCRAFT) or is_generic_offset:
+            if not 0 <= offset <= 0xffff:
+                raise ValueError(f'Action4 `offset` {offset} is not in range 0..0xffff (for generic offset or vehicles)')
+        else:
+            if not 0 <= offset <= 0xff:
+                raise ValueError(f'Action4 `offset` {offset} is not in range 0..0xff (for non-generic non-vehicle offset)')
+
         super().__init__()
         self.feature = feature
         self.lang = lang
         self.offset = offset
+        self.is_generic_offset = is_generic_offset
         self.strings = []
         for s in strings:
             if isinstance(s, bytes):
@@ -1247,8 +1367,14 @@ class Action4(LazyBaseSprite):
                 self.strings.append(s.encode('utf-8'))
 
     def _encode(self):
-        return (struct.pack('<BBBBH', 0x04, self.feature.id, self.lang | 0x80, len(self.strings), self.offset) +
-            b'\0'.join(self.strings) + b'\0')
+        lang = self.lang if self.lang is not None else ANY_LANGUAGE
+        str_data = b'\0'.join(self.strings) + b'\0'
+        if self.is_generic_offset:
+            return struct.pack('<BBBBH', 0x04, self.feature.id, lang | 0x80, len(self.strings), self.offset) + str_data
+        elif self.feature in (TRAIN, RV, SHIP, AIRCRAFT):
+            return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
+        else:
+            return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
 
     def py(self):
         return f'''
@@ -1256,7 +1382,8 @@ class Action4(LazyBaseSprite):
             feature={self.feature},
             lang={self.lang},
             offset={self.offset},
-            strings={self.strings!r}
+            is_generic_offset={self.is_generic_offset},
+            strings=''' + pformat(self.strings, indent_first=0, indent=10 + 8) + '''
         )'''
 
 
