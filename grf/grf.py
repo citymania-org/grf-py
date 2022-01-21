@@ -1133,7 +1133,7 @@ class Action3(LazyBaseSprite):
                 '<BBB' + 'B' * idcount + 'B' + 'BH' * mcount + 'H',
                 0x03, self.feature.id, idcount,
                 *self.ids, mcount, *sum(self.maps, []),
-                self.default)
+                self.default.value)
 
     def py(self):
         return f'''
@@ -1166,8 +1166,8 @@ class Action4(LazyBaseSprite):
                 self.strings.append(s.encode('utf-8'))
 
     def _encode(self):
-        return (struct.pack('<BBBH', self.feature.id, self.lang | 0x80, len(self.strings), self.offset) +
-            b'\0'.join(self.strings))
+        return (struct.pack('<BBBBH', 0x04, self.feature.id, self.lang | 0x80, len(self.strings), self.offset) +
+            b'\0'.join(self.strings) + b'\0')
 
     def py(self):
         return f'''
@@ -1268,6 +1268,13 @@ class BaseNewGRF:
 
             f.write(b'\x00\x00\x00\x00')
 
+    def wrap(self, func):
+        def wrapper(*args, **kw):
+            obj = func(*args, **kw)
+            self.add(obj)
+            return obj
+        return wrapper
+
 
 class NewGRF(BaseNewGRF):
     def __init__(self, grfid, version, name, description):
@@ -1276,7 +1283,9 @@ class NewGRF(BaseNewGRF):
         self.pseudo_sprites.append(SetDescription(version, grfid, name, description))
 
 
+
 for cls in EXPORT_CLASSES:
+
     def func(self, *args, _cls=cls, **kw):
         obj = _cls(*args, **kw)
         self.add(obj)
