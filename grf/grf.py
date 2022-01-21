@@ -24,7 +24,7 @@ WATER_COLORS = set(range(0xF5, 0xFF))
 
 # ZOOM_OUT_4X, ZOOM_NORMAL, ZOOM_OUT_2X, ZOOM_OUT_8X, ZOOM_OUT_16X, ZOOM_OUT_32X = range(6)
 ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
-BPP_8, BPP_32 = range(2)
+BPP_8, BPP_24, BPP_32 = 8, 24, 32
 
 
 def color_distance(c1, c2):
@@ -48,11 +48,11 @@ def find_best_color(x, in_range=SAFE_COLORS):
     return mj
 
 
-def fix_palette(img):
+def fix_palette(img, sprite_name):
     assert (img.mode == 'P')  # TODO
     pal = tuple(img.getpalette())
     if pal == PALETTE: return img
-    print(f'Custom palette in file {img.filename}, converting...')
+    print(f'Custom palette in sprite {sprite_name}, converting...')
     # for i in range(256):
     #     if tuple(pal[i * 3: i*3 + 3]) != PALETTE[i * 3: i*3 + 3]:
     #         print(i, pal[i * 3: i*3 + 3], PALETTE[i * 3: i*3 + 3])
@@ -145,9 +145,6 @@ class RealSprite(BaseSprite):
         self.sprite_id = None
         self.w = w
         self.h = h
-        # self.file = None
-        # self.x = None
-        # self.y = None
         self.xofs = xofs
         self.yofs = yofs
         self.zoom = zoom
@@ -158,7 +155,7 @@ class RealSprite(BaseSprite):
     def get_data(self):
         return struct.pack('<I', self.sprite_id)
 
-    def get_real_data(self):
+    def get_real_data(self, encoder):
         raise NotImplementedError
 
     def draw(self, img):
@@ -166,38 +163,116 @@ class RealSprite(BaseSprite):
 
 
 class ImageFile:
-    def __init__(self, filename, bpp=BPP_8):
-        assert(bpp == BPP_8)  # TODO
-        self.filename = filename
-        self.bpp = bpp
+    def __init__(self, path, colourkey=None):
+        self.path = path
+        self.colourkey = colourkey
         self._image = None
 
     def get_image(self):
         if self._image:
             return self._image
-        img = Image.open(self.filename)
-        self._image = fix_palette(img)
+        img = Image.open(self.path)
+        # TODO alpha channel
+        if img.mode == 'P':
+            self._image = (img, BPP_8)
+        else:
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            self._image = (img, BPP_24)
         return self._image
 
 
+class NMLFileSpriteWrapper:
+    def __init__(self, sprite, file, bit_depth):
+        self.sprite = sprite
+        self.file = type('Filename', (object, ), {'value': file.path})
+        self.bit_depth = bit_depth
+        self.mask_file = type('Filename', (object, ), {'value': file.mask}) if file.mask else None
+        self.mask_pos = None
+        self.flags = type('Flags', (object, ), {'value': 0})
+
+    xpos = property(lambda self: type('XSize', (object, ), {'value': self.sprite.x}))
+    ypos = property(lambda self: type('YSize', (object, ), {'value': self.sprite.y}))
+
+    xsize = property(lambda self: type('XSize', (object, ), {'value': self.sprite.w}))
+    ysize = property(lambda self: type('YSize', (object, ), {'value': self.sprite.h}))
+
+    xrel = property(lambda self: type('XSize', (object, ), {'value': self.sprite.xofs}))
+    yrel = property(lambda self: type('YSize', (object, ), {'value': self.sprite.yofs}))
+
+
 class FileSprite(RealSprite):
-    def __init__(self, file, x, y, w, h, **kw):
+    def __init__(self, file, x, y, w, h, *, bpp=None, **kw):
         assert(isinstance(file, ImageFile))
         super().__init__(w, h, **kw)
         self.file = file
+        self.bpp = bpp
         self.x = x
         self.y = y
 
-    def get_real_data(self):
-        img = self.file.get_image()
+    # def get_real_data(self, encoder):
+    #     ns = NMLFileSpriteWrapper(self, self.file, self.bit_depth)
+    #     (size_x, size_y, xoffset, yoffset, compressed_data, info_byte, crop_rect, pixel_stats) = \
+    #         encoder.encode_sprite(ns)
+    #     return struct.pack(
+    #         '<IIBBHHhh',
+    #         self.sprite_id,
+    #         len(compressed_data) + 10, info_byte,
+    #         self.zoom,
+    #         size_y,
+    #         size_x,
+    #         xoffset,
+    #         yoffset,
+    #     ) + compressed_data
+
+    # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
+    def get_real_data(self, encoder):
+        img, bpp = self.file.get_image()
+        if self.bpp is None:
+            self.bpp = bpp
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
-        raw_data = img.tobytes()
-        se = SpriteEncoder(True, False, None)
-        data = se.sprite_compress(raw_data)
+        npalpha = None
+        if bpp != self.bpp:
+            print(f'Sprite {self.file.path} {self.x},{self.y} {self.w}x{self.h} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
+            if bpp == BPP_8:
+                # npmask = numpy.asarray(img)
+                img = img.convert('RGB')
+            else:
+                img = img.convert('P', palette=PALETTE)
+        else:
+            if bpp == BPP_8:
+                img = fix_palette(img, '{self.file.path} {self.x},{self.y} {self.w}x{self.h}')
+
+        npimg = np.asarray(img)
+        if self.file.colourkey is not None:
+            if self.bpp == BPP_24 and self.file.colourkey is not None:
+                npalpha = 255 * np.all(np.not_equal(npimg, self.file.colourkey), axis=2)
+                npalpha = npalpha.astype(np.uint8, copy=False)
+            else:
+                print(f'Colour key on 8bpp sprites is not supported')
+
+        info_byte = 0x40
+        if self.bpp == BPP_24:
+            info_byte |= 0x1  # rgb
+            if npalpha is not None:
+                info_byte |= 0x2  # alpha
+                npimg.shape = (self.w * self.h, 3)
+                npalpha.shape = (self.w * self.h, 1)
+                raw_data = np.concatenate((npimg, npalpha), axis=1)
+                raw_data.shape = self.w * self.h * 4
+            else:
+                npimg.shape = self.w * self.h * 3
+                raw_data = npimg
+        else:
+            info_byte |= 0x4  # pal/mask
+            raw_data = npimg
+            raw_data.shape = self.w * self.h
+
+        data = encoder.sprite_compress(raw_data)
         return struct.pack(
             '<IIBBHHhh',
             self.sprite_id,
-            len(data) + 10, 0x04,
+            len(data) + 10, info_byte,
             self.zoom,
             self.h,
             self.w,
@@ -1208,13 +1283,14 @@ class BaseNewGRF:
         self.sprites = []
         self.pseudo_sprites = []
         self._next_sprite_id = 1
+        self._sprite_encoder = SpriteEncoder(True, False, None)
 
     def add(self, *sprites):
         if not sprites:
             return
         if isinstance(sprites[0], RealSprite):
             assert(all(isinstance(s, RealSprite) for s in sprites))
-            assert(len(set(s.zoom for s in sprites)) == len(sprites))
+            assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites))
             for s in sprites:
                 s.sprite_id = self._next_sprite_id
             self._next_sprite_id += 1
@@ -1264,7 +1340,7 @@ class BaseNewGRF:
                 self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd if isinstance(s, RealSprite) else 0xff)
             f.write(b'\x00\x00\x00\x00')
             for s in self.sprites:
-                f.write(s.get_real_data())
+                f.write(s.get_real_data(self._sprite_encoder))
 
             f.write(b'\x00\x00\x00\x00')
 
