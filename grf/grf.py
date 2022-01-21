@@ -104,7 +104,7 @@ def is_leap_year(year):
 
 
 def date_to_days(d):
-    return (d - datetime.date(1, 1, 1)).days + 365
+    return (d - datetime.date(1, 1, 1)).days + 366
 
 
 def color_distance(c1, c2):
