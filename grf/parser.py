@@ -3,8 +3,8 @@ import struct
 import ply.lex
 import ply.yacc
 
-from common import utoi32
-from va2vars import VA2_VARS
+from .common import utoi32
+from .va2vars import VA2_VARS
 
 
 OP_ADD = 0x00
