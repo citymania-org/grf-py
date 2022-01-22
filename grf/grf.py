@@ -99,6 +99,9 @@ zh_TW = 0x0c  # traditional_chinese,True,Chinese (Traditional),繁體中文,1,,
 ANY_LANGUAGE = 0x7f
 
 
+VEHICLE_FEATURES = (TRAIN, RV, SHIP, AIRCRAFT)
+
+
 def is_leap_year(year):
     return yr % 4 == 0 and (yr % 100 != 0 or yr % 400 == 0)
 
@@ -1322,10 +1325,17 @@ class Action3(LazyBaseSprite):
         if idcount == 0:
             return struct.pack('<BBBBH', 0x03, self.feature.id, idcount, 0, self.default)
         else:
+            idlist = self.ids
+            idfmt = 'B'
+            if self.feature in VEHICLE_FEATURES and any(x >= 0xff for x in self.ids):
+                idlist = [0xff] * (2 * idcount)
+                idlist[1::2] = self.ids
+                idfmt = 'BH'
+
             return struct.pack(
-                '<BBB' + 'B' * idcount + 'B' + 'BH' * mcount + 'H',
+                '<BBB' + idfmt * idcount + 'B' + 'BH' * mcount + 'H',
                 0x03, self.feature.id, idcount,
-                *self.ids, mcount, *sum(self.maps, []),
+                *idlist, mcount, *sum(self.maps, []),
                 self.default.value)
 
     def py(self):
@@ -1346,7 +1356,7 @@ class Map(Action3):
 class Action4(LazyBaseSprite):
     def __init__(self, feature, offset, is_generic_offset, strings, lang=None):
         assert isinstance(feature, Feature), feature
-        if feature in (TRAIN, RV, SHIP, AIRCRAFT) or is_generic_offset:
+        if feature in VEHICLE_FEATURES or is_generic_offset:
             if not 0 <= offset <= 0xffff:
                 raise ValueError(f'Action4 `offset` {offset} is not in range 0..0xffff (for generic offset or vehicles)')
         else:
@@ -1371,7 +1381,7 @@ class Action4(LazyBaseSprite):
         str_data = b'\0'.join(self.strings) + b'\0'
         if self.is_generic_offset:
             return struct.pack('<BBBBH', 0x04, self.feature.id, lang | 0x80, len(self.strings), self.offset) + str_data
-        elif self.feature in (TRAIN, RV, SHIP, AIRCRAFT):
+        elif self.feature in VEHICLE_FEATURES:
             return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
         else:
             return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
