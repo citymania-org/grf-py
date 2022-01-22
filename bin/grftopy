@@ -744,7 +744,7 @@ def decode_actionD(data):
     sf = lambda x: f'[{x:02x}]' if x != 0xff else str(value)
     target_str = f'[{target:02x}]'
     op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
-    print(f'    <A>OP {op_str}')
+    # print(f'    <A>OP {op_str}')
     # raise NotImplementedError
     return []
 
@@ -871,27 +871,29 @@ def decode_sprite(f, num):
     return data
 
 
-def read_real_sprite(f):
+def read_real_sprite(f, nfo_line):
     sprite_id = struct.unpack('<I', f.read(4))[0]
     if sprite_id == 0:
-        print(f'End of real sprites')
-        return False
-    print(f'Real sprite({sprite_id}): ', end='')
+        return False, [PyComment('End of pseudo sprites')]
     num, t = struct.unpack('<IB', f.read(5))
     start_pos = f.tell()
-    print(f'({num}, {t:02x}): ', end='')
+    s = f'{nfo_line}: Real sprite({sprite_id}): ({num}, {t:02x}): '
     if t == 0xff:
-        print('non-real (skip)')
+        s += 'non-real (skipped)'
         f.seek(start_pos + num - 1, 0)
-        return True
+        return True, [PyComment(s)]
     zoom, height, width, x_offs, y_offs = struct.unpack('<BHHhh', f.read(9))
-    bpp = 1  # TODO
+    fmt = ''
+    if t & 0x01: fmt = fmt + 'RGB'
+    if t & 0x02: fmt = fmt + 'A'
+    if t & 0x04: fmt = fmt + 'M'
+    bpp = len(fmt)
     decomp_size = struct.unpack('<I', f.read(4))[0] if t & 0x08 else width * height * bpp
-    print(f'{width}x{height} zoom={zoom} x_offs={x_offs} y_offs={y_offs} bpp={bpp} decomp_size={decomp_size}')
+    s += f'{width}x{height} zoom={zoom} x_offs={x_offs} y_offs={y_offs} bpp={bpp} decomp_size={decomp_size}'
     # data = decode_sprite(f, decomp_size)
     # print('Data: ', hex_str(data[:40]))
     f.seek(start_pos + num - 1, 0)
-    return True
+    return True, [PyComment(s)]
 
 
 filename = sys.argv[1]
@@ -924,9 +926,10 @@ with open(filename, 'rb') as f:
 
     if container == 2:
         real_data_offset = f.tell() - header_offset
-        # while read_real_sprite(f):
-        #     pass
-            # nfo_line += 1
+        print('OFFSET', real_data_offset)
+        while (res := read_real_sprite(f, nfo_line))[0]:
+            gen.add(*res[1])
+            nfo_line += 1
 
         if data_offest != real_data_offset:
             comment(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
