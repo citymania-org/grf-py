@@ -86,7 +86,7 @@ NML_VA2_VEHICLES = {
     'built_during_preview'             : {'var': 0xFE, 'start': 10, 'size':  1},
 }
 
-NML_VA2_TRAINS = {
+NML_VA2_TRAIN = {
     **NML_VA2_VEHICLES,
     #0x4786 / 0x10000 is an approximation of 3.5790976, the conversion factor
     #for train speed
@@ -95,6 +95,18 @@ NML_VA2_TRAINS = {
     'current_railtype'    : {'var': 0x4A, 'start':  0, 'size':  8},
     'current_max_speed'   : {'var': 0x4C, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x4786, 0x10000)},
     'vehicle_is_in_depot' : {'var': 0xE2, 'start': 7, 'size':  1},
+}
+
+NML_VA2_RV = {
+    **NML_VA2_VEHICLES,
+    #0x23C3 / 0x10000 is an approximation of 7.1581952, the conversion factor
+    #for road vehicle speed
+    'max_speed'           : {'var': 0x98, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x23C3, 0x10000)},
+    'current_speed'       : {'var': 0xB4, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x23C3, 0x10000)},
+    'current_roadtype'    : {'var': 0x4A, 'start':  0, 'size':  8},
+    'current_tramtype'    : {'var': 0x4A, 'start':  0, 'size':  8},
+    'current_max_speed'   : {'var': 0x4C, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x23C3, 0x10000)},
+    'vehicle_is_in_depot' : {'var': 0xE2, 'start': 0, 'size':  8, 'value_function': value_equals(0xFE)},
 }
 
 NML_VA2_OBJECTS = {
@@ -199,7 +211,8 @@ VA2_VARS = {
     feature: {**NML_VA2_GLOBALVARS, **d}
     for feature, d in (
         (INDUSTRY_TILE, NML_VA2_INDUSTRY_TILES),
-        (TRAIN, NML_VA2_TRAINS),
+        (TRAIN, NML_VA2_TRAIN),
+        (RV, NML_VA2_RV),
         (INDUSTRY, NML_VA2_INDUSTRIES),
         (OBJECT, NML_VA2_OBJECTS)
     )

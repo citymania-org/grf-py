@@ -1210,7 +1210,7 @@ class Range:
 
 
 class VarAction2(LazyBaseSprite):
-    def __init__(self, feature, ref_id, related_scope, ranges, default, code):
+    def __init__(self, feature, ref_id, ranges, default, code, related_scope=False):
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1357,7 +1357,7 @@ class Action3(LazyBaseSprite):
             return struct.pack(
                 '<BBB' + idfmt * idcount + 'B' + 'BH' * mcount + 'H',
                 0x03, self.feature.id, idcount,
-                *idlist, mcount, *sum(self.maps, []),
+                *idlist, mcount, *sum(list(self.maps), []),
                 self.default.value)
 
     def py(self):
