@@ -889,7 +889,7 @@ def read_real_sprite(f, nfo_line):
     if t & 0x04: fmt = fmt + 'M'
     bpp = len(fmt)
     decomp_size = struct.unpack('<I', f.read(4))[0] if t & 0x08 else width * height * bpp
-    s += f'{width}x{height} zoom={zoom} x_offs={x_offs} y_offs={y_offs} bpp={bpp} decomp_size={decomp_size}'
+    s += f'{fmt} {width}x{height} zoom={zoom} x_offs={x_offs} y_offs={y_offs} decomp_size={decomp_size}'
     # data = decode_sprite(f, decomp_size)
     # print('Data: ', hex_str(data[:40]))
     f.seek(start_pos + num - 1, 0)
@@ -926,7 +926,6 @@ with open(filename, 'rb') as f:
 
     if container == 2:
         real_data_offset = f.tell() - header_offset
-        print('OFFSET', real_data_offset)
         while (res := read_real_sprite(f, nfo_line))[0]:
             gen.add(*res[1])
             nfo_line += 1

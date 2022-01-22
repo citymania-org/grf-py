@@ -101,7 +101,6 @@ ANY_LANGUAGE = 0x7f
 
 VEHICLE_FEATURES = (TRAIN, RV, SHIP, AIRCRAFT)
 
-
 def is_leap_year(year):
     return yr % 4 == 0 and (yr % 100 != 0 or yr % 400 == 0)
 
@@ -285,11 +284,14 @@ class NMLFileSpriteWrapper:
 
 
 class FileSprite(RealSprite):
-    def __init__(self, file, x, y, w, h, *, bpp=None, **kw):
+    def __init__(self, file, x, y, w, h, *, bpp=None, mask=None, **kw):
+        if bpp == BPP_8 and mask is not None:
+            raise ValueError("8bpp sprites can't have a mask")
         assert(isinstance(file, ImageFile))
         super().__init__(w, h, **kw)
         self.file = file
         self.bpp = bpp
+        self.mask = mask
         self.x = x
         self.y = y
 
@@ -315,10 +317,10 @@ class FileSprite(RealSprite):
             self.bpp = bpp
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
         npalpha = None
+
         if bpp != self.bpp:
             print(f'Sprite {self.file.path} {self.x},{self.y} {self.w}x{self.h} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
             if bpp == BPP_8:
-                # npmask = numpy.asarray(img)
                 img = img.convert('RGB')
             else:
                 img = img.convert('P', palette=PALETTE)
@@ -336,16 +338,36 @@ class FileSprite(RealSprite):
 
         info_byte = 0x40
         if self.bpp == BPP_24:
+            npimg.shape = (self.w * self.h, 3)
+            stack = [npimg]
             info_byte |= 0x1  # rgb
+            rbpp = 3
+
             if npalpha is not None:
-                info_byte |= 0x2  # alpha
-                npimg.shape = (self.w * self.h, 3)
                 npalpha.shape = (self.w * self.h, 1)
-                raw_data = np.concatenate((npimg, npalpha), axis=1)
-                raw_data.shape = self.w * self.h * 4
+                stack.append(npalpha)
+                rbpp += 1
+                info_byte |= 0x2  # alpha
+
+            if self.mask is not None:
+                mask_file, xofs, yofs = self.mask
+                mask_img, mask_bpp = mask_file.get_image()
+                if mask_bpp != BPP_8:
+                    raise RuntimeError(f'Mask {mask_file.path} is not an 8bpp image')
+                xofs, yofs = self.x + xofs, self.y + yofs
+                mask_img = mask_img.crop((xofs, yofs, xofs + self.w, yofs + self.h))
+                mask_img = fix_palette(mask_img, f'{mask_file.path} {xofs},{yofs} {self.w}x{self.h}')
+                npmask = np.asarray(mask_img)
+                npmask.shape = (self.w * self.h, 1)
+                stack.append(npmask)
+                rbpp += 1
+                info_byte |= 0x4  # mask
+
+            if len(stack) > 1:
+                raw_data = np.concatenate(stack, axis=1)
             else:
-                npimg.shape = self.w * self.h * 3
-                raw_data = npimg
+                raw_data = stack[0]
+            raw_data.shape = self.w * self.h * rbpp
         else:
             info_byte |= 0x4  # pal/mask
             raw_data = npimg
