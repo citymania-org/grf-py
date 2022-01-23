@@ -1058,7 +1058,7 @@ def get_ref_id(ref_obj):
 
 # Action2
 class GenericSpriteLayout(LazyBaseSprite, ReferenceableAction):
-    def __init__(self, feature, ent1, ent2, ref_id=None):
+    def __init__(self, *, ent1, ent2, feature=None, ref_id=None):
         assert feature not in (HOUSE, INDUSTRY_TILE, OBJECT, AIRPORT_TILE, INDUSTRY), feature
         super().__init__()
         self.feature = feature
@@ -1091,7 +1091,7 @@ class GenericSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
 # Action2
 class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
-    def __init__(self, feature, ref_id, ground, building):
+    def __init__(self, *, ground, building, feature=None, ref_id=None):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         super().__init__()
         self.feature = feature
@@ -1119,7 +1119,7 @@ class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
 # Action2
 class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
-    def __init__(self, feature, ref_id, ground, buildings=(), has_flags=True):
+    def __init__(self, *, ground, feature=None, ref_id=None, buildings=(), has_flags=True):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         assert len(buildings) < 64, len(buildings)
 
@@ -1228,7 +1228,7 @@ class ReferencingAction:
 
 
 class VarAction2(LazyBaseSprite, ReferenceableAction, ReferencingAction):
-    def __init__(self, feature, ranges, default, code, ref_id=None, related_scope=False):
+    def __init__(self, ranges, default, code, feature=None, ref_id=None, related_scope=False):
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1276,7 +1276,6 @@ class VarAction2(LazyBaseSprite, ReferenceableAction, ReferencingAction):
                 low = r[0]
                 high = r[0]
             # TODO split (or validate) negative-positive ranges
-            print('REFID', id(set_obj), set_obj, get_ref_id(set_obj))
             res += struct.pack('<Hii', get_ref_id(set_obj), low, high)
         res += struct.pack('<H', get_ref_id(self.default))
         return res
@@ -1532,7 +1531,6 @@ class BaseNewGRF:
         def resolve(s, i):
             # Action can reference other actions, resolve all the references
             if isinstance(s, ReferencingAction):
-                print(list(s.get_refs()))
                 for r in s.get_refs():
                     if isinstance(r, Ref):
                         if r.is_callback:
@@ -1580,18 +1578,22 @@ class BaseNewGRF:
         linked_refs = {}
         visited = set()
 
-        def dfs(aid, linked):
+        def dfs(aid, linked, feature):
+            a, ai = actions[aid]
+            if a.feature is not None and a.feature != feature:
+                raise RuntimeError(f'Mixed features {a.feature} and {feature} in action {a}')
             if aid in visited:
                 return
             visited.add(aid)
-            a, ai = actions[aid]
+            if a.feature is None:
+                a.feature = feature
             if isinstance(a, ReferenceableAction):
                 if a.ref_id is None:
                     try:
                         while a.ref_id is None or a.ref_id in reserved_ids:
                             a.ref_id = -heapq.heappop(ids)
                     except IndexError:
-                        raise RuntimeError('Ran out of ids while trying to reference action {a}')
+                        raise RuntimeError(f'Ran out of ids while trying to reference action {a}')
                 else:
                     reserved_ids.add(a.ref_id)
 
@@ -1600,10 +1602,10 @@ class BaseNewGRF:
                 linked = linked_refs[aid] = []
 
             for x in ordered_refs[aid]:
-                dfs(x, linked)
+                dfs(x, linked, feature)
 
             for x in unordered_refs[aid]:
-                dfs(x, linked)
+                dfs(x, linked, feature)
 
             # Apppend node to the ordered parent node (or itself)
             linked.append(a)
@@ -1615,16 +1617,17 @@ class BaseNewGRF:
                     heapq.heappush(ids, a.ref_id)
                     reserved_ids.discard(a.ref_id)
 
-        roots = [r for r in actions if ref_count[r] <= 0]
-        print('SPRITES', sprites)
-        print('ACTIONS', actions)
-        print('OREF', ordered_refs)
-        print('UREF', unordered_refs)
-        print('roots', roots)
-        for r in roots:
-            dfs(r, None)
+        roots = [(r, v[0].feature) for r, v in actions.items() if ref_count[r] <= 0]
+        # print('SPRITES', sprites)
+        # print('ACTIONS', actions)
+        # print('OREF', ordered_refs)
+        # print('UREF', unordered_refs)
+        # print('roots', roots)
+        for r, f in roots:
+            assert f is not None
+            dfs(r, None, f)
 
-        print('LREF', linked_refs)
+        # print('LREF', linked_refs)
 
         # Construct the full list of actions with resolved ids and order
         res = []
