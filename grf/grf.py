@@ -3,6 +3,8 @@ import math
 import textwrap
 import pprint
 import datetime
+import heapq
+from collections import defaultdict
 
 from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
@@ -10,7 +12,7 @@ import spectra
 import struct
 import numpy as np
 
-from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
+from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
                     CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE
@@ -656,7 +658,7 @@ ACTION0_TRAIN_PROPS = {
 ACTION0_RV_PROPS = {
     **ACTION0_COMMON_VEHICLE_PROPS,
     0x05: ('road_type', 'B'),  # Roadtype / tramtype (see below)     should be same as front
-    0x08: ('speed1', 'B'),  # Speed in mph*3.2    no
+    0x08: ('precise_max_speed', 'B'),  # Speed in mph*3.2    no
     0x09: ('running_cost_factor', 'B'),  # Running cost factor     should be zero
     0x0A: ('running_cost_base', 'D'),  # Running cost base, see below    should be zero
     0x0E: ('sprite_id', 'B'),  # Sprite ID (FF for new graphics)     yes
@@ -666,7 +668,7 @@ ACTION0_RV_PROPS = {
     0x12: ('sound_effect', 'B'),  # Sound effect: 17/19/1A for regular, 3C/3E for toyland
     0x13: ('power', 'B'),  # Power in 10 hp, see below   should be zero
     0x14: ('weight', 'B'),  # Weight in 1/4 tons, see below   should be zero
-    0x15: ('speed2', 'B'),  # Speed in mph*0.8, see below     no
+    0x15: ('max_speed', 'B'),  # Speed in mph*0.8, see below     no
     0x16: ('refit_mask', 'D'),  # Bit mask of cargo types available for refitting (not refittable if 0 or unset), see column 2 (bit values) in CargoTypes     yes
     0x17: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
     0x18: ('tractive_effort_coefficient', 'B'),  # Coefficient of tractive effort  should be zero
@@ -1042,9 +1044,21 @@ class Sprite:
         )
 
 
+class ReferenceableAction:
+    pass
+
+
+def get_ref_id(ref_obj):
+    if isinstance(ref_obj, Ref):
+        return ref_obj.value
+    if isinstance(ref_obj, int):
+        return ref_obj | 0x8000
+    return ref_obj.ref_id
+
+
 # Action2
-class GenericSpriteLayout(LazyBaseSprite):
-    def __init__(self, feature, ref_id, ent1, ent2):
+class GenericSpriteLayout(LazyBaseSprite, ReferenceableAction):
+    def __init__(self, feature, ent1, ent2, ref_id=None):
         assert feature not in (HOUSE, INDUSTRY_TILE, OBJECT, AIRPORT_TILE, INDUSTRY), feature
         super().__init__()
         self.feature = feature
@@ -1076,7 +1090,7 @@ class GenericSpriteLayout(LazyBaseSprite):
 
 
 # Action2
-class BasicSpriteLayout(LazyBaseSprite):
+class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
     def __init__(self, feature, ref_id, ground, building):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         super().__init__()
@@ -1104,7 +1118,7 @@ class BasicSpriteLayout(LazyBaseSprite):
 
 
 # Action2
-class AdvancedSpriteLayout(LazyBaseSprite):
+class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
     def __init__(self, feature, ref_id, ground, buildings=(), has_flags=True):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         assert len(buildings) < 64, len(buildings)
@@ -1208,9 +1222,13 @@ class Range:
         return f'Range({self.low}, {self.high}, {self.set})'
 
 
+class ReferencingAction:
+    def get_refs(self):
+        return NotImplementedError
 
-class VarAction2(LazyBaseSprite):
-    def __init__(self, feature, ref_id, ranges, default, code, related_scope=False):
+
+class VarAction2(LazyBaseSprite, ReferenceableAction, ReferencingAction):
+    def __init__(self, feature, ranges, default, code, ref_id=None, related_scope=False):
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1219,6 +1237,10 @@ class VarAction2(LazyBaseSprite):
         self.default = default
         self.code = code
         self._parsed_code = None
+
+    def get_refs(self):
+        yield from self.ranges.values()
+        yield self.default
 
     @property
     def parsed_code(self):
@@ -1229,12 +1251,6 @@ class VarAction2(LazyBaseSprite):
 
     def __str__(self):
         return str(self.ref_id)
-
-    def _get_set_value(self, set_obj):
-        if isinstance(set_obj, Ref):
-            return set_obj.value
-        assert isinstance(set_obj, int)
-        return set_obj | 0x8000
 
     def _encode(self):
         res = bytes((0x02, self.feature.id, self.ref_id, 0x8a if self.related_scope else 0x89))
@@ -1260,8 +1276,9 @@ class VarAction2(LazyBaseSprite):
                 low = r[0]
                 high = r[0]
             # TODO split (or validate) negative-positive ranges
-            res += struct.pack('<Hii', self._get_set_value(set_obj), low, high)
-        res += struct.pack('<H', self._get_set_value(self.default))
+            print('REFID', id(set_obj), set_obj, get_ref_id(set_obj))
+            res += struct.pack('<Hii', get_ref_id(set_obj), low, high)
+        res += struct.pack('<H', get_ref_id(self.default))
         return res
 
     def py(self):
@@ -1332,7 +1349,7 @@ class IndustryProductionCallback(LazyBaseSprite):
         )'''
 
 
-class Action3(LazyBaseSprite):
+class Action3(LazyBaseSprite, ReferencingAction):
     def __init__(self, feature, ids, maps, default):
         assert isinstance(feature, Feature), feature
         super().__init__()
@@ -1340,6 +1357,10 @@ class Action3(LazyBaseSprite):
         self.ids = ids
         self.maps = maps
         self.default = default
+
+    def get_refs(self):
+        yield from self.maps.values()
+        yield self.default
 
     def _encode(self):
         idcount = len(self.ids)
@@ -1353,12 +1374,11 @@ class Action3(LazyBaseSprite):
                 idlist = [0xff] * (2 * idcount)
                 idlist[1::2] = self.ids
                 idfmt = 'BH'
-
             return struct.pack(
                 '<BBB' + idfmt * idcount + 'B' + 'BH' * mcount + 'H',
                 0x03, self.feature.id, idcount,
-                *idlist, mcount, *sum(list(self.maps), []),
-                self.default.value)
+                *idlist, mcount, *sum(((k, get_ref_id(x)) for k, x in self.maps.items()), ()),
+                get_ref_id(self.default))
 
     def py(self):
         return f'''
@@ -1502,8 +1522,123 @@ class BaseNewGRF:
                 res.append(g)
         return res
 
+    def resolve_refs(self, sprites):
+        refids = {}
+        actions = {}
+        ordered_refs = defaultdict(list)
+        unordered_refs = defaultdict(list)
+        ref_count = defaultdict(int)
+
+        def resolve(s, i):
+            # Action can reference other actions, resolve all the references
+            if isinstance(s, ReferencingAction):
+                print(list(s.get_refs()))
+                for r in s.get_refs():
+                    if isinstance(r, Ref):
+                        if r.is_callback:
+                            continue
+                        r = refids.get(r.ref_id)
+                        if r is None:
+                            raise RuntimeError(f'Unresolved direct reference {r} in action {s}')
+
+                    if not isinstance(r, ReferenceableAction):
+                        continue
+
+                    if r is s:
+                        raise RuntimeError(f'Action {s} references itself')
+
+                    assert isinstance(r, ReferenceableAction)
+
+                    if id(r) not in actions:
+                        actions[id(r)] = (r, None)
+                        unordered_refs[id(s)].append(id(r))
+                    else:
+                        ordered_refs[id(s)].append(id(r))
+                    ref_count[id(r)] += 1
+                    resolve(r, None)
+
+            prev_i = actions.get(id(s), (None, None))[1]
+            if prev_i is not None and i is not None and prev_i != i:
+                raise RuntimeError(f'Action {s} was added more than once (positions {prev_i} and {i})')
+            actions[id(s)] = (s, i)
+
+        for i, s in enumerate(sprites):
+            if not isinstance(s, (ReferencingAction, ReferenceableAction)):
+                continue
+
+            resolve(s, i)
+
+            # Action can be referenced by other actions, index it
+            # Must be done after processing references to allow reusing the same ref_id
+            if isinstance(s, ReferenceableAction):
+                if s.ref_id is not None:
+                    refids[s.ref_id] = s
+
+
+        ids = list(range(-255, -1))
+        reserved_ids = set()
+        linked_refs = {}
+        visited = set()
+
+        def dfs(aid, linked):
+            if aid in visited:
+                return
+            visited.add(aid)
+            a, ai = actions[aid]
+            if isinstance(a, ReferenceableAction):
+                if a.ref_id is None:
+                    try:
+                        while a.ref_id is None or a.ref_id in reserved_ids:
+                            a.ref_id = -heapq.heappop(ids)
+                    except IndexError:
+                        raise RuntimeError('Ran out of ids while trying to reference action {a}')
+                else:
+                    reserved_ids.add(a.ref_id)
+
+            if ai is not None:
+                # Node is already ordered, prepend unordered nodes to it
+                linked = linked_refs[aid] = []
+
+            for x in ordered_refs[aid]:
+                dfs(x, linked)
+
+            for x in unordered_refs[aid]:
+                dfs(x, linked)
+
+            # Apppend node to the ordered parent node (or itself)
+            linked.append(a)
+
+            if isinstance(a, ReferenceableAction):
+                ref_count[aid] -= 1
+                # If this action is longer referenced return id to the pool
+                if ref_count[aid] <= 0:
+                    heapq.heappush(ids, a.ref_id)
+                    reserved_ids.discard(a.ref_id)
+
+        roots = [r for r in actions if ref_count[r] <= 0]
+        print('SPRITES', sprites)
+        print('ACTIONS', actions)
+        print('OREF', ordered_refs)
+        print('UREF', unordered_refs)
+        print('roots', roots)
+        for r in roots:
+            dfs(r, None)
+
+        print('LREF', linked_refs)
+
+        # Construct the full list of actions with resolved ids and order
+        res = []
+        for s in sprites:
+            if isinstance(s, ReferencingAction):
+                res.extend(linked_refs.get(id(s), []))
+            else:
+                res.append(s)
+        return res
+
+
     def write(self, filename):
         sprites = self.generate_sprites()
+        sprites = self.resolve_refs(sprites)
         data_offset = 14
 
         next_sprite_id = 1

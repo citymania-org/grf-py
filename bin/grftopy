@@ -403,33 +403,9 @@ def get_va2_var(var):
     return V2_OBJECT_VARS[var]
 
 
-class Generic(grf.Node):
-    def __init__(self, var, shift, and_mask, type, add_val, divmod_val, param=None):
-        self.var = var
-        self.shift = shift
-        self.and_mask = and_mask
-        self.type = type
-        self.add_val = add_val
-        self.divmod_val = divmod_val
-        self.param = param
-
-    def format(self, parent_priority=0):
-        addstr = ''
-        if self.type == 1:
-            addstr = f', add={self.add_val}, div={self.divmod_val}'
-        elif self.type == 2:
-            addstr = f', add={self.add_val}, mod={self.divmod_val}'
-        param_str = '' if self.param is None else f', param=({self.param.format()})'
-        return f'var(0x{self.var:02x}{param_str}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})'
-
-    def simplify(self):
-        if self.param is not None:
-            self.param.simplify()
-
-
 def get_var_node(feature, root, var, param, shift, and_mask, node_type, add_val=None, divmod_val=None):
     if add_val is not None or divmod_val is not None:
-        return Generic(var, shift, and_mask, node_type, add_val, divmod_val, param=param)
+        return grf.GenericVar(var, shift, and_mask, node_type, add_val, divmod_val, param=param)
     if var == 0x1a and shift == 0:
         return grf.Value(and_mask)
 
@@ -448,7 +424,7 @@ def get_var_node(feature, root, var, param, shift, and_mask, node_type, add_val=
     if var_name is not None:
         return grf.Var(feature, var_name, param=param)
 
-    return Generic(var, shift, and_mask, 0, None, None, param=param)
+    return grf.GenericVar(var, shift, and_mask, 0, None, None, param=param)
 
 
 def decode_action2(data):

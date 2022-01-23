@@ -268,6 +268,44 @@ class Var(Node):
             self.param.simplify()
 
 
+class GenericVar(Node):
+    def __init__(self, var, shift, and_mask, type=0, add_val=None, divmod_val=None, param=None):
+        assert type == 0 or add_val is not None
+        assert type == 0 or divmod_val is not None
+
+        self.var = var
+        self.shift = shift
+        self.and_mask = and_mask
+        self.type = type
+        self.add_val = add_val
+        self.divmod_val = divmod_val
+        self.param = param
+
+    def format(self, parent_priority=0):
+        addstr = ''
+        if self.type == 1:
+            addstr = f', add={self.add_val}, div={self.divmod_val}'
+        elif self.type == 2:
+            addstr = f', add={self.add_val}, mod={self.divmod_val}'
+        param_str = '' if self.param is None else f', param=({self.param.format()})'
+        return f'var(0x{self.var:02x}{param_str}, shift={self.shift}, and=0x{self.and_mask:x}{addstr})'
+
+    def simplify(self):
+        if self.param is not None:
+            self.param.simplify()
+
+    def compile(self, register, shift=0, and_mask=0xffffffff):
+        and_mask &= self.and_mask >> shift
+        shift += self.shift
+        assert shift < 0x20, shift
+        assert and_mask <= 0xffffffff, and_mask
+        # TODO dynamic param (var 7B)
+        if self.param is not None:
+            return True, struct.pack('<BBBI', self.var, self.param, 0x20 | shift, and_mask)
+        else:
+            return True, struct.pack('<BBI', self.var, 0x20 | shift, and_mask)
+
+
 class Temp(Node):
     def __init__(self, register):
         assert isinstance(register, (int, Node)), type(register)
@@ -517,6 +555,12 @@ def p_expression_call2(t):
     }.get(t[1])
     assert op is not None, t[1]
     t[0] = Expr(op, t[3], t[5])
+
+
+def p_expression_call3(t):
+    'expression : NAME LPAREN NUMBER COMMA NUMBER COMMA NUMBER RPAREN'
+    assert t[1] == 'var'
+    t[0] = GenericVar(var=int(t[3]), shift=int(t[5]), and_mask=int(t[7]))
 
 
 def p_expression_group(t):
