@@ -109,6 +109,27 @@ NML_VA2_RV = {
     'vehicle_is_in_depot' : {'var': 0xE2, 'start': 0, 'size':  8, 'value_function': value_equals(0xFE)},
 }
 
+NML_VA2_SHIP = {
+    **NML_VA2_VEHICLES,
+    #0x23C3 / 0x10000 is an approximation of 7.1581952, the conversion factor
+    #for ship speed
+    'max_speed'           : {'var': 0x98, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x23C3, 0x10000)},
+    'current_speed'       : {'var': 0xB4, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x23C3, 0x10000)},
+    'current_max_speed'   : {'var': 0x4C, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x23C3, 0x10000)},
+    'vehicle_is_in_depot' : {'var': 0xE2, 'start': 7, 'size':  1},
+}
+
+NML_VA2_AIRCRAFT = {
+    **NML_VA2_VEHICLES,
+    #0x3939 / 0x1000 is an approximation of 0.279617, the conversion factor
+    #Note that the denominator has one less zero here!
+    #for aircraft speed
+    'max_speed'           : {'var': 0x98, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x3939, 0x1000)},
+    'current_speed'       : {'var': 0xB4, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x3939, 0x1000)},
+    'current_max_speed'   : {'var': 0x4C, 'start': 0, 'size': 16, 'value_function': value_mul_div(0x3939, 0x1000)},
+    'vehicle_is_in_depot' : {'var': 0xE6, 'start': 0, 'size':  8, 'value_function': value_equals(0)},
+}
+
 NML_VA2_OBJECTS = {
     'relative_x'             : {'var': 0x40, 'start':  0, 'size':  8},
     'relative_y'             : {'var': 0x40, 'start':  8, 'size':  8},
@@ -213,6 +234,8 @@ VA2_VARS = {
         (INDUSTRY_TILE, NML_VA2_INDUSTRY_TILES),
         (TRAIN, NML_VA2_TRAIN),
         (RV, NML_VA2_RV),
+        (SHIP, NML_VA2_SHIP),
+        (AIRCRAFT, NML_VA2_AIRCRAFT),
         (INDUSTRY, NML_VA2_INDUSTRIES),
         (OBJECT, NML_VA2_OBJECTS)
     )

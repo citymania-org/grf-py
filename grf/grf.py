@@ -14,8 +14,9 @@ import numpy as np
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32
-from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
-                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE
+from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
+                    INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
+                    AIRPORT_TILE, ROADTYPE, TRAMTYPE
 
 
 to_spectra = lambda r, g, b: spectra.rgb(float(r) / 255., float(g) / 255., float(b) / 255.)
@@ -31,7 +32,7 @@ ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
 BPP_8, BPP_24, BPP_32 = 8, 24, 32
 
 TEMPERATE, ARCTIC, TROPICAL, TOYLAND = 1, 2, 4, 8
-ALL_CLIMATES = TEMPERATE | ARCTIC | TROPICAL | TOYLAND
+NO_CLIMATE, ALL_CLIMATES = 0, TEMPERATE | ARCTIC | TROPICAL | TOYLAND
 
 af_ZA = 0x1b  # afrikaans,True,Afrikaans,Afrikaans,0,male,
 ar_EG = 0x14  # arabic_egypt,True,Arabic (Egypt),Arabic (Egypt),1,,
@@ -714,6 +715,33 @@ ACTION0_SHIP_PROPS = {
     0x1F: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
 }
 
+ACTION0_AIRCRAFT_PROPS = {
+    **ACTION0_COMMON_VEHICLE_PROPS,
+    0x08: ('sprite_id', 'B'),  # Sprite (FF for new graphics)
+    0x09: ('is_helicopter', 'B'),  # Is helicopter? 2=no, 0=yes
+    0x0A: ('is_large', 'B'),  # Is large? 0=no, 1=yes (i.e. can't safely land on small airports)
+    0x0B: ('cost_factor', 'B'),  # Cost factor
+    0x0C: ('max_speed', 'B'),  # Speed in units of 8 mph, that is: property = (speed in mph) / 8
+    0x0D: ('acceleration', 'B'),  # Acceleration in units of 3/8 mph/tick, that is: property = (acceleration in mph/tick) * 8/3 [1]
+    0x0E: ('running_cost_factor', 'B'),  # Running cost factor
+    0x0F: ('passenger_capacity', 'W'),  # Primary cargo capacity (passenger or refitted cargo)
+    0x11: ('mail_capacity', 'B'),  # Secondary cargo capacity (mail)
+    0x12: ('sound_effect', 'B'),  # Sound effect
+    0x13: ('refittable_cargo_types', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (Bit Value) in CargoTypes
+    0x14: ('cb_flags', 'B'),  # Callback flags bit mask, see below
+    0x15: ('refit_cost', 'B'),  # Refit cost, using 1/32 of the default refit cost base
+    0x16: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
+    0x17: ('misc_flags', 'B'),  # Miscellaneous vehicle flags
+    0x18: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28
+    0x19: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
+    0x1A: ('introduction_date', 'D'),  # Long format introduction date
+    0x1B: ('sort_purchase_list', 'B*'),  # Sort the purchase list
+    0x1C: ('cargo_age_period', 'W'),  # Custom cargo ageing period
+    0x1D: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
+    0x1E: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
+    0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
+}
+
 ACTION0_GLOBAL_PROPS = {
     0x08: ('basecost', 'B'),  # Cost base multipliers
     0x09: ('cargo_table', 'D'),  # Cargo translation table
@@ -888,16 +916,17 @@ ACTION0_RAILTYPE_PROPS = {
 }
 
 ACTION0_PROPS = {
-    0x0: ACTION0_TRAIN_PROPS,
-    0x1: ACTION0_RV_PROPS,
-    0x2: ACTION0_SHIP_PROPS,
-    0x7: ACTION0_HOUSE_PROPS,
-    0x8: ACTION0_GLOBAL_PROPS,
-    0x9: ACTION0_INDUSTRY_TILE_PROPS,
-    0xa: ACTION0_INDUSTRY_PROPS,
-    0xb: ACTION0_CARGO_PROPS,
-    0xf: ACTION0_OBJECT_PROPS,
-    0x10: ACTION0_RAILTYPE_PROPS,
+    TRAIN: ACTION0_TRAIN_PROPS,
+    RV: ACTION0_RV_PROPS,
+    SHIP: ACTION0_SHIP_PROPS,
+    AIRCRAFT: ACTION0_AIRCRAFT_PROPS,
+    HOUSE: ACTION0_HOUSE_PROPS,
+    GLOBAL_VAR: ACTION0_GLOBAL_PROPS,
+    INDUSTRY_TILE: ACTION0_INDUSTRY_TILE_PROPS,
+    INDUSTRY: ACTION0_INDUSTRY_PROPS,
+    CARGO: ACTION0_CARGO_PROPS,
+    OBJECT: ACTION0_OBJECT_PROPS,
+    RAILTYPE: ACTION0_RAILTYPE_PROPS,
 }
 
 ACTION0_PROP_DICT = {
@@ -913,11 +942,11 @@ class Action0(LazyBaseSprite):  # action 0
         self.feature = feature
         self.first_id = first_id
         self.count = count
-        if feature.id not in ACTION0_PROP_DICT:
+        if feature not in ACTION0_PROP_DICT:
             raise NotImplementedError
         self.props = props
         for x in props:
-            if x not in ACTION0_PROP_DICT[feature.id]:
+            if x not in ACTION0_PROP_DICT[feature]:
                 raise ValueError(f'Unknown property `{x}` for a feature {feature}')
 
     def _encode_value(self, value, fmt):

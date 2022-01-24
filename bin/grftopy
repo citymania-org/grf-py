@@ -126,7 +126,7 @@ def decode_action0(data):
     for _ in range(num_props):
         prop = data[ofs]
         ofs += 1
-        propdict = grf.ACTION0_PROPS[feature.id]
+        propdict = grf.ACTION0_PROPS[feature]
         name, fmt, *_ = propdict[prop]
         res = []
         for _ in range(num_info):
