@@ -636,7 +636,7 @@ ACTION0_TRAIN_PROPS = {
     0x1A: ('sort_purchase_list', 'B*'), # Not a property, but an action: sort the purchase list.  no
     0x1B: ('wagon_power', 'W'),  # Power added by each wagon connected to this engine, see below   should be zero
     0x1C: ('refit_cost', 'B'),  # Refit cost, using 50% of the purchase price cost base   yes
-    0x1D: ('refit_cargoes', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes     yes
+    0x1D: ('refittable_cargo_types', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes     yes
     0x1E: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
     0x1F: ('tractive_effort', 'B'),  # Coefficient of tractive effort  should be zero
     0x20: ('air_drag', 'B'),  # Coefficient of air drag     should be zero
@@ -670,7 +670,7 @@ ACTION0_RV_PROPS = {
     0x13: ('power', 'B'),  # Power in 10 hp, see below   should be zero
     0x14: ('weight', 'B'),  # Weight in 1/4 tons, see below   should be zero
     0x15: ('max_speed', 'B'),  # Speed in mph*0.8, see below     no
-    0x16: ('refit_mask', 'D'),  # Bit mask of cargo types available for refitting (not refittable if 0 or unset), see column 2 (bit values) in CargoTypes     yes
+    0x16: ('refittable_cargo_types', 'D'),  # Bit mask of cargo types available for refitting (not refittable if 0 or unset), see column 2 (bit values) in CargoTypes     yes
     0x17: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
     0x18: ('tractive_effort_coefficient', 'B'),  # Coefficient of tractive effort  should be zero
     0x19: ('air_drag_coefficient', 'B'),  # Coefficient of air drag     should be zero
@@ -698,7 +698,7 @@ ACTION0_SHIP_PROPS = {
     0x0D: ('capacity', 'W'),  # Capacity
     0x0F: ('running_cost_factor', 'B'),  # Running cost factor
     0x10: ('sound', 'B'),  # Sound effect type (4=cargo ship, 5=passenger ship)
-    0x11: ('refit_cargoes', 'D'),  # v≥1     Bit mask of cargo types available for refitting, see column 2 (bit values) in CargoTypes
+    0x11: ('refittable_cargo_types', 'D'),  # v≥1     Bit mask of cargo types available for refitting, see column 2 (bit values) in CargoTypes
     0x12: ('cb_flags', 'B'),  # Callback flags bit mask, see below
     0x13: ('refit_cost', 'B'),  #  Refit cost, using 1/32 of the default refit cost base
     0x14: ('ocean_speed', 'B'),  # Ocean speed fraction, sets fraction of top speed available in the ocean; e.g. 00=100%, 80=50%, FF=0.4%
@@ -970,7 +970,7 @@ class Action0(LazyBaseSprite):  # action 0
     def _encode(self):
         res = struct.pack('<BBBBBH',
             0, self.feature.id, len(self.props), self.count, 255, self.first_id)
-        pdict = ACTION0_PROP_DICT[self.feature.id]
+        pdict = ACTION0_PROP_DICT[self.feature]
         for prop, value in self.props.items():
             code, fmt = pdict[prop]
             res += bytes((code,)) + self._encode_value(value, fmt)
@@ -1457,11 +1457,12 @@ class Action4(LazyBaseSprite):
             return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
 
     def py(self):
+        offset_str = f'0x{self.offset:04x}' if self.is_generic_offset else self.offset
         return f'''
         Action4(
             feature={self.feature},
             lang={self.lang},
-            offset={self.offset},
+            offset={offset_str},
             is_generic_offset={self.is_generic_offset},
             strings=''' + pformat(self.strings, indent_first=0, indent=10 + 8) + '''
         )'''
