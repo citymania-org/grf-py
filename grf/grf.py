@@ -326,7 +326,9 @@ class FileSprite(RealSprite):
             if bpp == BPP_8:
                 img = img.convert('RGB')
             else:
-                img = img.convert('P', palette=PALETTE)
+                p_img = Image.new('P', (16, 16))
+                p_img.putpalette(PALETTE)
+                img = img.quantize(palette=p_img, dither=0)
         else:
             if bpp == BPP_8:
                 img = fix_palette(img, '{self.file.path} {self.x},{self.y} {self.w}x{self.h}')
@@ -1510,7 +1512,7 @@ class BaseNewGRF:
 
         if isinstance(sprites[0], RealSprite):
             assert(all(isinstance(s, RealSprite) for s in sprites))
-            assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites))
+            assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites)), sprites
 
             l.append(tuple(sprites))
         else:
