@@ -331,7 +331,7 @@ class FileSprite(RealSprite):
                 img = img.quantize(palette=p_img, dither=0)
         else:
             if bpp == BPP_8:
-                img = fix_palette(img, '{self.file.path} {self.x},{self.y} {self.w}x{self.h}')
+                img = fix_palette(img, f'{self.file.path} {self.x},{self.y} {self.w}x{self.h}')
 
         npimg = np.asarray(img)
         if self.file.colourkey is not None:
