@@ -45,7 +45,7 @@ class RoadVehicle(grf.SpriteGenerator):
             grf.Action3(
                 feature=grf.RV,
                 ids=[self.id],
-                maps=[],
+                maps={},
                 default=grf.Ref(0),
             ),
         ]
