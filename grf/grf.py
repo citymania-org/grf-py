@@ -1,15 +1,15 @@
-import functools
-import math
-import textwrap
-import pprint
 import datetime
+import functools
 import heapq
+import math
+import pprint
+import struct
+import textwrap
 from collections import defaultdict
 
 from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
 import spectra
-import struct
 import numpy as np
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar

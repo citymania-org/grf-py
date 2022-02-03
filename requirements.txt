@@ -1,0 +1,4 @@
+numpy==1.20.3
+nml=0.5.3.post20210524+g09de523
+Pillow==8.2.0
+spectra==0.0.11
