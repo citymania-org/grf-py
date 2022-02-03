@@ -151,6 +151,14 @@ def open_image(filename, *args, **kw):
     return fix_palette(Image.open(filename, *args, **kw))
 
 
+def convert_image(image):
+    if image.mode == 'P':
+        return image, BPP_8
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    return img, BPP_24
+
+
 def pformat(data, indent=4, indent_first=None):
     INDENTATION = ' '
     if indent_first is None:
@@ -189,6 +197,28 @@ class LazyBaseSprite(BaseSprite):
         return len(self.get_data())
 
 
+class RealSprite(BaseSprite):
+    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X):
+        self.sprite_id = None
+        self.w = w
+        self.h = h
+        self.xofs = xofs
+        self.yofs = yofs
+        self.zoom = zoom
+
+    def get_data_size(self):
+        return 4
+
+    def get_data(self):
+        return struct.pack('<I', self.sprite_id)
+
+    def get_real_data(self, encoder):
+        raise NotImplementedError
+
+    def draw(self, img):
+        raise NotImplementedError
+
+
 class PaletteRemap(BaseSprite):
     def __init__(self, ranges=None):
         self.remap = np.arange(256, dtype=np.uint8)
@@ -223,172 +253,6 @@ class PaletteRemap(BaseSprite):
         res = Image.fromarray(data)
         res.putpalette(PALETTE)
         return res
-
-
-class RealSprite(BaseSprite):
-    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X):
-        self.sprite_id = None
-        self.w = w
-        self.h = h
-        self.xofs = xofs
-        self.yofs = yofs
-        self.zoom = zoom
-
-    def get_data_size(self):
-        return 4
-
-    def get_data(self):
-        return struct.pack('<I', self.sprite_id)
-
-    def get_real_data(self, encoder):
-        raise NotImplementedError
-
-    def draw(self, img):
-        raise NotImplementedError
-
-
-class ImageFile:
-    def __init__(self, path, colourkey=None):
-        self.path = path
-        self.colourkey = colourkey
-        self._image = None
-
-    def get_image(self):
-        if self._image:
-            return self._image
-        img = Image.open(self.path)
-        # TODO alpha channel
-        if img.mode == 'P':
-            self._image = (img, BPP_8)
-        else:
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            self._image = (img, BPP_24)
-        return self._image
-
-
-class NMLFileSpriteWrapper:
-    def __init__(self, sprite, file, bit_depth):
-        self.sprite = sprite
-        self.file = type('Filename', (object, ), {'value': file.path})
-        self.bit_depth = bit_depth
-        self.mask_file = type('Filename', (object, ), {'value': file.mask}) if file.mask else None
-        self.mask_pos = None
-        self.flags = type('Flags', (object, ), {'value': 0})
-
-    xpos = property(lambda self: type('XSize', (object, ), {'value': self.sprite.x}))
-    ypos = property(lambda self: type('YSize', (object, ), {'value': self.sprite.y}))
-
-    xsize = property(lambda self: type('XSize', (object, ), {'value': self.sprite.w}))
-    ysize = property(lambda self: type('YSize', (object, ), {'value': self.sprite.h}))
-
-    xrel = property(lambda self: type('XSize', (object, ), {'value': self.sprite.xofs}))
-    yrel = property(lambda self: type('YSize', (object, ), {'value': self.sprite.yofs}))
-
-
-class FileSprite(RealSprite):
-    def __init__(self, file, x, y, w, h, *, bpp=None, mask=None, **kw):
-        if bpp == BPP_8 and mask is not None:
-            raise ValueError("8bpp sprites can't have a mask")
-        assert(isinstance(file, ImageFile))
-        super().__init__(w, h, **kw)
-        self.file = file
-        self.bpp = bpp
-        self.mask = mask
-        self.x = x
-        self.y = y
-
-    # def get_real_data(self, encoder):
-    #     ns = NMLFileSpriteWrapper(self, self.file, self.bit_depth)
-    #     (size_x, size_y, xoffset, yoffset, compressed_data, info_byte, crop_rect, pixel_stats) = \
-    #         encoder.encode_sprite(ns)
-    #     return struct.pack(
-    #         '<IIBBHHhh',
-    #         self.sprite_id,
-    #         len(compressed_data) + 10, info_byte,
-    #         self.zoom,
-    #         size_y,
-    #         size_x,
-    #         xoffset,
-    #         yoffset,
-    #     ) + compressed_data
-
-    # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
-    def get_real_data(self, encoder):
-        img, bpp = self.file.get_image()
-        if self.bpp is None:
-            self.bpp = bpp
-        img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
-        npalpha = None
-
-        if bpp != self.bpp:
-            print(f'Sprite {self.file.path} {self.x},{self.y} {self.w}x{self.h} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
-            if bpp == BPP_8:
-                img = img.convert('RGB')
-            else:
-                p_img = Image.new('P', (16, 16))
-                p_img.putpalette(PALETTE)
-                img = img.quantize(palette=p_img, dither=0)
-        else:
-            if bpp == BPP_8:
-                img = fix_palette(img, f'{self.file.path} {self.x},{self.y} {self.w}x{self.h}')
-
-        npimg = np.asarray(img)
-        if self.file.colourkey is not None:
-            if self.bpp == BPP_24 and self.file.colourkey is not None:
-                npalpha = 255 * np.all(np.not_equal(npimg, self.file.colourkey), axis=2)
-                npalpha = npalpha.astype(np.uint8, copy=False)
-            else:
-                print(f'Colour key on 8bpp sprites is not supported')
-
-        info_byte = 0x40
-        if self.bpp == BPP_24:
-            npimg.shape = (self.w * self.h, 3)
-            stack = [npimg]
-            info_byte |= 0x1  # rgb
-            rbpp = 3
-
-            if npalpha is not None:
-                npalpha.shape = (self.w * self.h, 1)
-                stack.append(npalpha)
-                rbpp += 1
-                info_byte |= 0x2  # alpha
-
-            if self.mask is not None:
-                mask_file, xofs, yofs = self.mask
-                mask_img, mask_bpp = mask_file.get_image()
-                if mask_bpp != BPP_8:
-                    raise RuntimeError(f'Mask {mask_file.path} is not an 8bpp image')
-                xofs, yofs = self.x + xofs, self.y + yofs
-                mask_img = mask_img.crop((xofs, yofs, xofs + self.w, yofs + self.h))
-                mask_img = fix_palette(mask_img, f'{mask_file.path} {xofs},{yofs} {self.w}x{self.h}')
-                npmask = np.asarray(mask_img)
-                npmask.shape = (self.w * self.h, 1)
-                stack.append(npmask)
-                rbpp += 1
-                info_byte |= 0x4  # mask
-
-            if len(stack) > 1:
-                raw_data = np.concatenate(stack, axis=1)
-            else:
-                raw_data = stack[0]
-            raw_data.shape = self.w * self.h * rbpp
-        else:
-            info_byte |= 0x4  # pal/mask
-            raw_data = npimg
-            raw_data.shape = self.w * self.h
-
-        data = encoder.sprite_compress(raw_data)
-        return struct.pack(
-            '<IIBBHHhh',
-            self.sprite_id,
-            len(data) + 10, info_byte,
-            self.zoom,
-            self.h,
-            self.w,
-            self.xofs,
-            self.yofs,
-        ) + data
 
 
 class SpriteSheet:
@@ -1488,7 +1352,7 @@ class Action6(LazyBaseSprite):
 
 
 EXPORT_CLASSES = [
-    FileSprite, Action0, Action1, Action3, Action4, Map,
+    Action0, Action1, Action3, Action4, Map,
     SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, VarAction2,
     SetProperties, ReplaceOldSprites, ReplaceNewSprites, SetDescription,
     Comment, ActionC, Label, Action10, If,
