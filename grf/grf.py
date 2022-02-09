@@ -469,7 +469,7 @@ class ReplaceNewSprites(LazyBaseSprite):
 
 
 class SpriteGenerator:
-    def get_sprites(self):
+    def get_sprites(self, grf):
         return NotImplementedError
 
 
@@ -1411,7 +1411,7 @@ class BaseNewGRF:
         res = []
         for g in self.generators:
             if isinstance(g, SpriteGenerator):
-                for s in g.get_sprites():
+                for s in g.get_sprites(self):
                     self._add(res, s)
             else:
                 res.append(g)
