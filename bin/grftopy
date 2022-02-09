@@ -605,8 +605,8 @@ def decode_action4(data):
     feature, lang, num, offset = struct.unpack_from(fmt, data)
     feature = grf.Feature(feature)
 
-    # strings = [s.decode('utf-8') for s in data[struct.calcsize(fmt):].split(b'\0')[:-1]]
-    strings = [s for s in data[struct.calcsize(fmt):].split(b'\0')[:-1]]
+    str_data = data[struct.calcsize(fmt):-1]
+    strings = [s for s in str_data.split(b'\0')] if str_data else []
     assert len(strings) == num, (len(strings), num,)
     return [grf.Action4(
         feature=feature,
