@@ -2,7 +2,7 @@ import struct
 import numpy as np
 from PIL import Image
 
-from .grf import BaseSprite, ZOOM_4X, convert_image, BPP_8, BPP_24, RealSprite, fix_palette
+from .grf import BaseSprite, ZOOM_4X, convert_image, BPP_8, BPP_24, BPP_32, RealSprite, fix_palette
 
 
 class NMLFileSpriteWrapper:
@@ -53,9 +53,11 @@ class BaseImageSprite(RealSprite):
 
         if bpp != self.bpp:
             print(f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
-            if bpp == BPP_8:
+            if self.bpp == BPP_24:
                 img = img.convert('RGB')
-            else:
+            elif self.bpp == BPP_32:
+                img = img.convert('RGBA')
+            elif self.bpp == BPP_8:
                 p_img = Image.new('P', (16, 16))
                 p_img.putpalette(PALETTE)
                 img = img.quantize(palette=p_img, dither=0)
@@ -66,24 +68,41 @@ class BaseImageSprite(RealSprite):
         npimg = np.asarray(img)
         colourkey = self.get_colourkey()
         if colourkey is not None:
-            if self.bpp == BPP_24 and colourkey is not None:
+            if self.bpp == BPP_24:
+                npalpha = 255 * np.all(np.not_equal(npimg, colourkey), axis=2)
+                npalpha = npalpha.astype(np.uint8, copy=False)
+            elif self.bpp == BPP_32:
+                if len(colourkey) == 3:
+                    colourkey = (*colourkey, 255)
                 npalpha = 255 * np.all(np.not_equal(npimg, colourkey), axis=2)
                 npalpha = npalpha.astype(np.uint8, copy=False)
             else:
                 print(f'Colour key on 8bpp sprites is not supported')
 
         info_byte = 0x40
-        if self.bpp == BPP_24:
-            npimg.shape = (self.w * self.h, 3)
+        if self.bpp == BPP_24 or self.bpp == BPP_32:
             stack = [npimg]
-            info_byte |= 0x1  # rgb
-            rbpp = 3
 
-            if npalpha is not None:
-                npalpha.shape = (self.w * self.h, 1)
-                stack.append(npalpha)
-                rbpp += 1
-                info_byte |= 0x2  # alpha
+            if self.bpp == BPP_32:
+                npimg.shape = (self.w * self.h, 4)
+                rbpp = 4
+                info_byte |= 0x1 | 0x2  # rgb, alph
+
+                if npalpha is not None:
+                    npimg = npimg[:, :3]
+                    npalpha.shape = (self.w * self.h, 1)
+                    stack = [npimg, npalpha]
+            else:
+                npimg.shape = (self.w * self.h, 3)
+                rbpp = 3
+                info_byte = 0x1  # rgb
+
+                if npalpha is not None:
+                    npalpha.shape = (self.w * self.h, 1)
+                    stack.append(npalpha)
+                    rbpp += 1
+                    info_byte |= 0x2  # alpha
+
 
             if self.mask is not None:
                 mask_file, xofs, yofs = self.mask
@@ -104,6 +123,7 @@ class BaseImageSprite(RealSprite):
             else:
                 raw_data = stack[0]
             raw_data.shape = self.w * self.h * rbpp
+
         else:
             info_byte |= 0x4  # pal/mask
             raw_data = npimg
@@ -147,13 +167,14 @@ class ImageFile:
         if self._image:
             return self._image
         img = Image.open(self.path)
-        # TODO alpha channel
         if img.mode == 'P':
             self._image = (img, BPP_8)
-        else:
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
+        elif img.mode == 'RGB':
             self._image = (img, BPP_24)
+        else:
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+            self._image = (img, BPP_32)
         return self._image
 
 
