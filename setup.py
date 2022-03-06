@@ -4,7 +4,7 @@ from distutils.core import setup
 
 
 install_requires = [
-    'nml==0.5.3',
+    'nml==0.6.1',
     'numpy==1.22.0',
     'Pillow==8.4.0',
     'spectra==0.0.11',
