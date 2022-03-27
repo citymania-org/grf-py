@@ -1,6 +1,7 @@
 import datetime
 import functools
 import heapq
+import inspect
 import math
 import pprint
 import struct
@@ -485,41 +486,41 @@ ACTION0_COMMON_VEHICLE_PROPS = {
 
 ACTION0_TRAIN_PROPS = {
     **ACTION0_COMMON_VEHICLE_PROPS,
-    0x05: ('railtype', 'B'),  # Track type (see below)  should be same as front
-    0x08: ('ai_flag', 'B'),  # AI special flag: set to 1 if engine is 'optimized' for passenger service (AI won't use it for other cargo), 0 otherwise     no
-    0x09: ('speed', 'W'),  # Speed in mph*1.6 (see below)    no
+    0x05: ('track_type', 'B'),  # Track type (see below)  should be same as front
+    0x08: ('ai_special_flag', 'B'),  # AI special flag: set to 1 if engine is 'optimized' for passenger service (AI won't use it for other cargo), 0 otherwise     no
+    0x09: ('max_speed', 'W'),  # Speed in mph*1.6 (see below)    no
     0x0B: ('power', 'W'),  # Power (0 for wagons)    should be zero
     0x0D: ('running_cost_factor', 'B'),  # Running cost factor (0 for wagons)  should be zero
-    0x0E: ('running_cost', 'D'),  # Running cost base, see below    should be zero
+    0x0E: ('running_cost_base', 'D'),  # Running cost base, see below    should be zero
     0x12: ('sprite_id', 'B'),  # Sprite ID (FD for new graphics)     yes
     0x13: ('is_dual_headed', 'B'),  # Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
     0x14: ('cargo_capacity', 'B'),  # Cargo capacity  yes
     0x15: ('default_cargo_type', 'B'),  # Cargo type, see CargoTypes
     0x16: ('weight', 'B'),  # Weight in tons  should be zero
     0x17: ('cost_factor', 'B'),  # Cost factor     should be zero
-    0x18: ('engine_rank', 'B'),  # Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
-    0x19: ('engine_traction', 'B'),  # Engine traction type (see below)    no
+    0x18: ('ai_engine_rank', 'B'),  # Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
+    0x19: ('engine_class', 'B'),  # Engine traction type (see below)    no
     0x1A: ('sort_purchase_list', 'B*'), # Not a property, but an action: sort the purchase list.  no
-    0x1B: ('wagon_power', 'W'),  # Power added by each wagon connected to this engine, see below   should be zero
+    0x1B: ('extra_power_per_wagon', 'W'),  # Power added by each wagon connected to this engine, see below   should be zero
     0x1C: ('refit_cost', 'B'),  # Refit cost, using 50% of the purchase price cost base   yes
     0x1D: ('refittable_cargo_types', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes     yes
     0x1E: ('cb_flags', 'B'),  # Callback flags bit mask, see below  yes
-    0x1F: ('tractive_effort', 'B'),  # Coefficient of tractive effort  should be zero
-    0x20: ('air_drag', 'B'),  # Coefficient of air drag     should be zero
+    0x1F: ('tractive_effort_coefficient', 'B'),  # Coefficient of tractive effort  should be zero
+    0x20: ('air_drag_coefficient', 'B'),  # Coefficient of air drag     should be zero
     0x21: ('shorten_by', 'B'),  # Make vehicle shorter by this amount, see below  yes
-    0x22: ('visual_effect', 'B'),  # Set visual effect type (steam/smoke/sparks) as well as position, see below  yes
-    0x23: ('powered_weight', 'B'),  # Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
-    0x24: ('weight_hi', 'B'),  # High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
-    0x25: ('bitmask', 'B'),  # User-defined bit mask to set when checking veh. var. 42     yes
+    0x22: ('visual_effect_and_powered', 'B'),  # Set visual effect type (steam/smoke/sparks) as well as position, see below  yes
+    0x23: ('extra_weight_per_wagon_low', 'B'),  # Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
+    0x24: ('extra_weight_per_wagon_high', 'B'),  # High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
+    0x25: ('bitmask_vehicle_info', 'B'),  # User-defined bit mask to set when checking veh. var. 42     yes
     0x26: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
-    0x27: ('flags', 'B'),  # Miscellaneous flags     partly
+    0x27: ('misc_flags', 'B'),  # Miscellaneous flags     partly
     0x28: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes    yes
-    0x29: ('non_refit_classes', 'W'),  # Non-refittable cargo classes    yes
-    0x2A: ('non_refittable_cargo_classes', 'D'),  # Long format introduction date   no
+    0x29: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes    yes
+    0x2A: ('introduction_date', 'D'),  # Long format introduction date   no
     0x2B: ('cargo_age_period', 'W'),  # period  yes
     0x2C: ('cargo_allow_refit', 'n*B'), # refittable cargo types   yes
     0x2D: ('cargo_disallow_refit', 'n*B'),  # refittable cargo types    yes
-    0x2E: ('speed_mod', 'W'),  # speed modifier    yes
+    0x2E: ('curve_speed_mod', 'W'),  # speed modifier    yes
 }
 
 ACTION0_RV_PROPS = {
@@ -1580,11 +1581,19 @@ class BaseNewGRF:
         return wrapper
 
     def bind(self, cls):
+
         @functools.wraps(cls)
         def wrapper(*args, **kw):
             gen = cls(*args, **kw)
             self.add(gen)
             return gen
+
+        # Expose nested classes on the wrapper
+        for name in dir(cls):
+            obj = getattr(cls, name)
+            if not name.startswith('__') and inspect.isclass(obj):
+                setattr(wrapper, name, obj)
+
         return wrapper
 
 
