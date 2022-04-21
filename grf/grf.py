@@ -330,7 +330,7 @@ class If(LazyBaseSprite):
 
 # Action 8
 class SetDescription(BaseSprite):
-    def __init__(self, version, grfid, name, description):
+    def __init__(self, format_version, grfid, name, description):
         assert isinstance(grfid, bytes)
         assert isinstance(name, (bytes, str))
         assert isinstance(description, (bytes, str))
@@ -340,11 +340,11 @@ class SetDescription(BaseSprite):
         if isinstance(description, str):
             description = description.encode('utf-8')
 
-        self.version = version
+        self.format_version = format_version
         self.grfid = grfid
         self.name = name
         self.description = description
-        self._data = bytes((0x08, self.version))
+        self._data = bytes((0x08, self.format_version))
         self._data += self.grfid + self.name + b'\x00' + self.description + b'\x00'
 
     def get_data(self):
@@ -356,7 +356,7 @@ class SetDescription(BaseSprite):
     def py(self):
         return f'''
         SetDescription(
-            version={self.version},
+            version={self.format_version},
             grfid={self.grfid},
             name={self.name},
             description={self.description},
@@ -379,34 +379,47 @@ class Label(LazyBaseSprite):
 Action10 = Label
 
 
-# Action 14
-class InformationSprite(BaseSprite):
-    def __init__(self, palette):  # TODO everything else
-        # self.palette = {'D': b'\x00', 'W': b'\x01', 'A': b'\x02'}[palette]
-        self.palette = palette.encode('utf-8')
-        self._data = b'\x14CINFOBPALS\x01\x00' + self.palette + b'\x00\x00'
-
-    def get_data(self):
-        return self._data
-
-    def get_data_size(self):
-        return len(self._data)
-
-
 # Action 14 - take 2
-class SetProperties(BaseSprite):
+class SetProperties(LazyBaseSprite):
     def __init__(self, props):
-        self.palette = 'D'.encode('utf-8')
-        self._data = b'\x14CINFOBPALS\x01\x00' + self.palette + b'\x00\x00'
+        super().__init__()
         self.props = props
 
-    def get_data(self):
-        # raise NotImplementedError
-        return self._data
+    def _encode(self):
+        data = b'\x14'
 
-    def get_data_size(self):
-        # raise NotImplementedError
-        return len(self._data)
+        def rec(k, v):
+            nonlocal data
+            assert k is not None or isinstance(v, dict), (k, v)
+
+            if k is not None and isinstance(k, str):
+                k = k.encode('utf-8')
+            if isinstance(v, dict):
+                if k is not None:
+                    data += b'C' + k
+                for ck, cv in v.items():
+                    rec(ck, cv)
+                data += b'\0'
+            elif isinstance(v, tuple):
+                # TOOD move checks to construction
+                if len(v) != 2:
+                    raise ValueError(f'Expected a pair, found: {v}')
+                lang_id, text = v
+                assert isinstance(lang_id, int) and isinstance(text, (bytes, str))
+                if isinstance(text, str):
+                    text = text.encode('utf-8')
+                data += b'T' + k + bytes((lang_id)) + text + b'\0'
+            elif isinstance(v, str):
+                data += b'T' + k + b'\0' + v.encode('utf-8') + b'\0'
+            elif isinstance(v, int):
+                data += b'B' + k + b'\x04\x00' + struct.pack('<I', v)
+            elif isinstance(v, bytes):
+                data += b'B' + k + struct.pack('<H', len(v)) + v
+            else:
+                raise ValueError(f'Unexpected property value type {type(v)}: {v}')
+
+        rec(None, self.props)
+        return data
 
     def py(self):
         return f'SetProperties(\n' + pformat(self.props) + '\n)'
@@ -1598,10 +1611,31 @@ class BaseNewGRF:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, grfid, version, name, description):
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None):
         super().__init__()
-        self.generators.append(SetProperties('D'))
-        self.generators.append(SetDescription(version, grfid, name, description))
+
+        if isinstance(grfid, str):
+            grfid = grfid.encode('utf-8')
+
+        if len(grfid) != 4:
+            raise ValueError(f'Expected 4 symbols for GRFID, found {len(grfid)}: {grfid}')
+
+        props = {'INFO': {'PALS': b'D'}}
+
+        if version is not None:
+            assert isinstance(version, int), type(version)
+            props['INFO']['VRSN'] = version
+
+        if min_compatible_version is not None:
+            assert isinstance(min_compatible_version, int), type(min_compatible_version)
+            props['INFO']['MINV'] = min_compatible_version
+
+        if url is not None:
+            assert isinstance(url, str), type(url)
+            props['INFO']['URL_'] = url
+
+        self.generators.append(SetProperties(props))
+        self.generators.append(SetDescription(format_version, grfid, name, description))
 
 
 

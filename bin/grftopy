@@ -663,16 +663,16 @@ def decode_action7(data):
 
 
 def decode_action8(data):
-    version = data[0]
+    format_version = data[0]
     grfid = data[1: 5]
     pos = data.find(b'\0', 5)
     name = data[5: pos]
     description = data[pos + 1: -1]
     return [grf.SetDescription(
-        version=version,
         grfid=grfid,
         name=name,
         description=description,
+        format_version=format_version,
     )]
 
 
@@ -754,6 +754,7 @@ def decode_action14(data):
             lang = data[ofs]
             text_end = data.find(b'\0', ofs + 1)
             text = data[ofs + 1 : text_end]
+            res[chunk_id] = (lang, text)
             ofs = text_end + 1
         else:
             assert False, chunk_type
