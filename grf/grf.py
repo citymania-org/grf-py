@@ -392,8 +392,11 @@ class SetProperties(LazyBaseSprite):
             nonlocal data
             assert k is not None or isinstance(v, dict), (k, v)
 
-            if k is not None and isinstance(k, str):
-                k = k.encode('utf-8')
+            if k is not None:
+                if isinstance(k, str):
+                    k = k.encode('utf-8')
+                elif isinstance(k, int):
+                    k = struct.pack('<I', k)
             if isinstance(v, dict):
                 if k is not None:
                     data += b'C' + k
@@ -410,6 +413,7 @@ class SetProperties(LazyBaseSprite):
                     text = text.encode('utf-8')
                 data += b'T' + k + bytes((lang_id)) + text + b'\0'
             elif isinstance(v, str):
+                print(v, k)
                 data += b'T' + k + b'\0' + v.encode('utf-8') + b'\0'
             elif isinstance(v, int):
                 data += b'B' + k + b'\x04\x00' + struct.pack('<I', v)
@@ -1634,9 +1638,61 @@ class NewGRF(BaseNewGRF):
             assert isinstance(url, str), type(url)
             props['INFO']['URL_'] = url
 
-        self.generators.append(SetProperties(props))
-        self.generators.append(SetDescription(format_version, grfid, name, description))
+        self._props = props
+        self._params = []
+        self.grfid = grfid
+        self.name = name
+        self.description = description
+        self.format_version = format_version
 
+    def generate_sprites(self):
+        if self._params:
+            self._props['INFO']['NPAR'] = bytes((len(self._params),))
+            self._props['INFO']['PARA'] = {}
+            for i, p in enumerate(self._params):
+                self._props['INFO']['PARA'][i] = p
+
+        return [
+            SetProperties(self._props),
+            SetDescription(self.format_version, self.grfid, self.name, self.description)
+        ] + super().generate_sprites()
+
+    def add_bool_parameter(self, *, name, description, default=None):
+        data = {
+            'NAME': name,
+            'DESC': description,
+            'TYPE': b'\x01',
+        }
+        if default is not None:
+            if not isinstance(default, bool):
+                raise ValueError('Default value for bool parameter should be bool')
+            data['DFLT'] = int(default)
+        self._params.append(data)
+
+    def add_int_parameter(self, *, name, description, default=None, limits=None, enum=None):
+        data = {
+            'NAME': name,
+            'DESC': description,
+            'TYPE': b'\0',
+        }
+
+        if default is not None:
+            if not isinstance(default, int):
+                raise ValueError('Default value int parameter should be int')
+            data['DFLT'] = int(default)
+
+        if limits is not None:
+            if not isinstance(limits, tuple) or len(limits) != 2 or any(not isinstance(x, int) for x in limits):
+                raise ValueError('Limits should be tuple of (int, int)')
+            data['LIMI'] = struct.pack('<II', *limits)
+
+        if enum is not None:
+            if not all(isinstance(k, int) and isinstance(v, str) for k, v in enum.items()):
+                raise ValueError('Enum should be a dict of {int: str}')
+
+            data['VALU'] = enum
+
+        self._params.append(data)
 
 
 for cls in EXPORT_CLASSES:
