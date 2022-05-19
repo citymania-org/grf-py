@@ -922,9 +922,17 @@ class Action1(LazyBaseSprite):
             sprite_count={self.sprite_count},
         )'''
 
+
 class SpriteSet(Action1):
     def __init__(self, feature, sprite_count):
         super().__init__(feature, 1, sprite_count)
+
+    def py(self):
+        return f'''
+        SpriteSet(
+            feature={self.feature},
+            sprite_count={self.sprite_count},
+        )'''
 
 
 class Sprite:
@@ -1378,7 +1386,7 @@ class Action6(LazyBaseSprite):
         return f'Action6(\n' + pformat(self.params) + '\n)'
 
 
-class NewSound(LazyBaseSprite):
+class SoundEffects(LazyBaseSprite):
     def __init__(self, number):
         super().__init__()
         self.number = number
@@ -1387,9 +1395,24 @@ class NewSound(LazyBaseSprite):
         return struct.pack('<BH', 0x06, self.number)
 
     def py(self):
-        return f'NewSound({self.number})'
+        return f'SoundEffecs({self.number})'
 
-Action11 = NewSound
+Action11 = SoundEffects
+
+
+class ImportSound(LazyBaseSprite):
+    def __init__(self, grfid, number):
+        super().__init__()
+        self.grfid = grfid
+        self.number = number
+
+    def _encode(self):
+        return b'\xFE\x00' + self.grfid + struct.pack('<H', self.number)
+
+    def py(self):
+        return f'ImportSound({self.grfid!r}, {self.number})'
+
+ActionFE = ImportSound
 
 
 EXPORT_CLASSES = [

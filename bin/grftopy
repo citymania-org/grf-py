@@ -148,11 +148,19 @@ def decode_action0(data):
 
 def decode_action1(data):
     sprite_count, _ = read_extended_byte(data, 2)
-    return [grf.Action1(
-        feature=grf.Feature(data[0]),
-        set_count=data[1],
-        sprite_count=sprite_count
-    )]
+    feature = grf.Feature(data[0])
+    set_count = data[1]
+    if set_count == 1:
+        return [grf.SpriteSet(
+            feature=feature,
+            sprite_count=sprite_count
+        )]
+    else:
+        return [grf.Action1(
+            feature=feature,
+            set_count=set_count,
+            sprite_count=sprite_count
+        )]
 
 
 SPRITE_GROUP_OP = [
@@ -740,7 +748,7 @@ def decode_action10(data):
 
 def decode_action11(data):
     number, _ = read_word(data, 0)
-    return [grf.Action11(number)]
+    return [grf.SoundEffects(number)]
 
 
 def decode_action14(data):
@@ -778,6 +786,12 @@ def decode_action14(data):
     return [grf.SetProperties(res)]
 
 
+def decode_actionFE(data):
+    grfid = data[1:5]
+    number, _ = read_word(data, 5)
+    return [grf.ImportSound(grfid, number)]
+
+
 ACTIONS = {
     0x00: decode_action0,
     0x01: decode_action1,
@@ -795,6 +809,7 @@ ACTIONS = {
     0x10: decode_action10,
     0x11: decode_action11,
     0x14: decode_action14,
+    0xfe: decode_actionFE,
 }
 
 
@@ -808,6 +823,7 @@ class PyComment:
 
 def read_pseudo_sprite(f, nfo_line, container):
     data = f.read(2 if container == 1 else 4)
+
     # if not data and container == 1:
     #     return False, []
     l = struct.unpack('<H' if container == 1 else '<I', data)[0]
