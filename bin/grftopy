@@ -17,6 +17,10 @@ def read_extended_byte(data, offset):
     return data[offset + 1] | (data[offset + 2] << 8), offset + 3
 
 
+def read_word(data, offset):
+    return data[offset] | (data[offset + 1] << 8), offset + 2
+
+
 def read_dword(data, offset):
     return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24), offset + 4
 
@@ -731,7 +735,12 @@ def decode_actionD(data):
 def decode_action10(data):
     label = data[0]
     comment = data[1:]
-    return [grf.Label(label, comment)]
+    return [grf.Action10(label, comment)]
+
+
+def decode_action11(data):
+    number, _ = read_word(data, 0)
+    return [grf.Action11(number)]
 
 
 def decode_action14(data):
@@ -784,6 +793,7 @@ ACTIONS = {
     0x0c: decode_actionC,
     0x0d: decode_actionD,
     0x10: decode_action10,
+    0x11: decode_action11,
     0x14: decode_action14,
 }
 

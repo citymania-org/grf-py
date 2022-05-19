@@ -1378,6 +1378,20 @@ class Action6(LazyBaseSprite):
         return f'Action6(\n' + pformat(self.params) + '\n)'
 
 
+class NewSound(LazyBaseSprite):
+    def __init__(self, number):
+        super().__init__()
+        self.number = number
+
+    def _encode(self):
+        return struct.pack('<BH', 0x06, self.number)
+
+    def py(self):
+        return f'NewSound({self.number})'
+
+Action11 = NewSound
+
+
 EXPORT_CLASSES = [
     Action0, Action1, Action3, Action4, Map,
     SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, VarAction2,
