@@ -572,6 +572,9 @@ def decode_action2(data):
 def decode_action3(data):
     feature = grf.Feature(data[0])
     idcount = data[1]
+    wagon_override = bool(idcount & 0x80)
+    if wagon_override:
+        idcount &= 0x7f
     objs = []
     maps = []
     if data[1] == 0:

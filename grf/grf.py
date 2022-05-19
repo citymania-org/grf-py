@@ -1262,13 +1262,14 @@ class IndustryProductionCallback(LazyBaseSprite):
 
 
 class Action3(LazyBaseSprite, ReferencingAction):
-    def __init__(self, feature, ids, maps, default):
+    def __init__(self, feature, ids, maps, default, wagon_override=False):
         assert isinstance(feature, Feature), feature
         super().__init__()
         self.feature = feature
         self.ids = ids
         self.maps = maps
         self.default = default
+        self.wagon_override = wagon_override  # TODO make a separate class for overrides
 
     def get_refs(self):
         yield from self.maps.values()
@@ -1296,6 +1297,7 @@ class Action3(LazyBaseSprite, ReferencingAction):
         return f'''
         Action3(
             feature={self.feature},
+            wagon_override={self.wagon_override},
             ids={self.ids!r},
             maps={self.maps!r},
             default={self.default},
