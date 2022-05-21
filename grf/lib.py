@@ -159,19 +159,109 @@ class DefaultSound:
     DISTANT_BIRD = 72
 
 class Callback:
-    POWERED_WAGONS = 0x10
-    WAGON_LENGTH = 0x11
-    LOAD_AMOUNT = 0x12
-    REFIT_CAPACITY = 0x15
-    ARTICULATED_PART = 0x16
-    CARGO_SUBTYPE = 0x19
-    PURCHASE_TEXT = 0x23
-    COLOUR_MAPPING = 0x2d
-    SOUND_EFFECT = 0x33
+    class Vehicle:
+        POWERED_WAGONS = 0x10
+        WAGON_LENGTH = 0x11
+        LOAD_AMOUNT = 0x12
+        REFIT_CAPACITY = 0x15
+        ARTICULATED_PART = 0x16
+        CARGO_SUBTYPE = 0x19
+        CAN_ATTACH_WAGON = 0x1d
+        PURCHASE_TEXT = 0x23
+        COLOUR_MAPPING = 0x2d
+        START_STOP_CHECK = 0x31
+        DAY_32 = 0x32
+        SOUND_EFFECT = 0x33  # TODO some other also use it
+        AUTOREPLACE_SELECTION = 0x34
+        CHANGE_PROPERTIES = 0x36
+
+    class Station:
+        AVAILABILITY = 0x13
+        SPRITE_LAYOUT = 0x14
+        CUSTOM_LAYOUT = 0x24
+        ANIMATION_CONTROL = 0x140
+        NEXT_FRAME = 0x141
+        FRAME_LENGTH = 0x142
+
+    class House:
+        CONSTRUCTION_CHECK = 0x17
+        NEXT_FRAME = 0x1a
+        ANIMATION_CONTROL = 0x1b
+        CONSTRUCTION_CHANGE = 0x1c
+        COLOUR = 0x1e
+        CARGO_ACCEPTANCE = 0x1f
+        FRAME_LENGTH = 0x20
+        BUILDING_DESTRUCTION = 0x21
+        ACCEPTED_CARGO = 0x2a
+        PROTECT = 0x143
+        WATCHED_CARGO_ACCEPTED = 0x148
+        NAME = 0x14d
+        DEFAULT_FOUNDATIONS = 0x14e
+        AUTOSLOPING = 0x14f
+        REFIT_COST = 0x15e
+        ADVANCED_EFFECT = 0x160
+
+    class IndustryTile:
+        ANIMATION_CONTROL = 0x25
+        NEXT_FRAME = 0x26
+        FRAME_LENGTH = 0x27
+        CARGO_ACCEPTANCE = 0x2b
+        ACCEPTED_CARGO = 0x2c
+        SHAPE_CHECK = 0x2f
+        DEFAULT_FOUNDATIONS = 0x30
+        AUTOSLOPING = 0x3c
+
+    class Industry:
+        AVAILABILITY = 0x22
+        CHECK_LOCATION = 0x28
+        RANDOM_PRODUCTION = 0x29
+        MONTHLY_PRODUCTION = 0x35
+        CARGO_SUBTYPE_DISPLAY = 0x37
+        ADDITIONAL_FUND_TEXT = 0x38
+        ADDITIONAL_TEXT = 0x3a
+        SPECIAL_EFFECTS = 0x3b
+        OPT_OUT_OF_ACCEPTING = 0x3d
+        COLOUR = 0x14a
+        INPUT_CARGO = 0x14b
+        OUTPUT_CARGO = 0x14c
+        INITIAL_PRODUCTION = 0x15f
+
+    class Cargo:
+        PROFIT_CALCULATION = 0x39
+        STATION_RATING = 0x145
+
+    class Sound:
+        AMBIENT = 0x144
+
+    class Signal:
+        SPRITE = 0x146
+
+    class Canal:
+        SPRITE_OFFSET = 0x147
+
+    class AirportTile:
+        DEFAULT_FOUNDATIONS = 0x150
+        ANIMATION_CONTROL = 0x152
+        NEXT_FRAME = 0x153
+        FRAME_LENGTH = 0x154
+
+    class Airport:
+        EXTRA_INFO = 0x155
+        LAYOUT_NAME = 0x156
+
+    class Object:
+        SLOPE_CHECK = 0x157
+        NEXT_FRAME = 0x158
+        ANIMATION_CONTROL = 0x159
+        FRAME_LENGTH = 0x15a
+        COLOUR = 0x15b
+        ADDITIONAL_TEXT = 0x15c
+        AUTOSLOPING = 0x15d
 
 
 class CallbackManager:
-    def __init__(self):
+    def __init__(self, domain):
+        self._domain = domain
         self._callbacks = {}
 
     def __setattr__(self, name, value):
@@ -180,20 +270,20 @@ class CallbackManager:
         if name.lower() != name:
             raise AttributeError(name)
 
-        cb_id = getattr(Callback, name.upper())
+        cb_id = getattr(self._domain, name.upper())
         self._callbacks[cb_id] = value
 
     def get_flags(self):
-        # TODO checeked only for trains
+        # TODO checeked only for vehicles
         FLAGS = {
-            Callback.POWERED_WAGONS: 0x1,
-            Callback.WAGON_LENGTH: 0x2,
-            Callback.LOAD_AMOUNT: 0x4,
-            Callback.REFIT_CAPACITY: 0x8,
-            Callback.ARTICULATED_PART: 0x10,
-            Callback.CARGO_SUBTYPE: 0x20,
-            Callback.COLOUR_MAPPING: 0x40,
-            Callback.SOUND_EFFECT: 0x80,
+            Callback.Vehicle.POWERED_WAGONS: 0x1,
+            Callback.Vehicle.WAGON_LENGTH: 0x2,
+            Callback.Vehicle.LOAD_AMOUNT: 0x4,
+            Callback.Vehicle.REFIT_CAPACITY: 0x8,
+            Callback.Vehicle.ARTICULATED_PART: 0x10,
+            Callback.Vehicle.CARGO_SUBTYPE: 0x20,
+            Callback.Vehicle.COLOUR_MAPPING: 0x40,
+            Callback.Vehicle.SOUND_EFFECT: 0x80,
         }
         res = 0
         for k in self._callbacks.keys():
@@ -201,8 +291,10 @@ class CallbackManager:
         return res
 
     def make_switch(self, layout):
+        # False - only purchase, True - general + purchase
         PURCHASE = {
-            Callback.PURCHASE_TEXT: False,
+            Callback.Vehicle.PURCHASE_TEXT: False,
+            Callback.Vehicle.CHANGE_PROPERTIES: True,
         }
         callbacks = {}
         purchase_callbacks = {}
@@ -266,13 +358,10 @@ class RoadVehicle(grf.SpriteGenerator):
             self.max_speed = self.Speed(max_speed * 4)
         self.additional_text = additional_text
         self.liveries = liveries
-        self.props = props
+        self._props = props
 
     def get_sprites(self, g):
-        cb_flags = 0
-
-        purchase_callbacks = {}
-        callbacks = {}
+        callbacks = CallbackManager(Callback.Vehicle)
 
         layouts = []
         for i, l in enumerate(self.liveries):
@@ -290,11 +379,10 @@ class RoadVehicle(grf.SpriteGenerator):
 
         if self.additional_text:
             string_id = 0xd000 + self.id
-
-            purchase_callbacks[0x23] = g.strings.add(self.additional_text)
+            callbacks.purchase_text = g.strings.add(self.additional_text)
 
         if self.max_speed.precise_value >= 0x400:
-            callbacks[0x36] = purchase_callbacks[0x36] = grf.VarAction2(
+            callbacks.change_properties = grf.VarAction2(
                 ranges={
                     0x15: self.max_speed.value,
                 },
@@ -303,15 +391,14 @@ class RoadVehicle(grf.SpriteGenerator):
             )
 
         # Liveries
-        callbacks[0x19] = grf.VarAction2(
+        callbacks.cargo_subtype = grf.VarAction2(
             ranges={i: g.strings.add(l['name']) for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
         )
-        cb_flags |= 0x20
 
-        if cb_flags:
-            self.props['cb_flags'] = self.props.get('cb_flags', 0) | cb_flags
+        if callbacks.get_flags():
+            self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
         res = [
             grf.Action4(
@@ -330,7 +417,7 @@ class RoadVehicle(grf.SpriteGenerator):
                 'sprite_id': 0xff,
                 'precise_max_speed': min(self.max_speed.precise_value, 0xff),
                 'max_speed': min(self.max_speed.value, 0xff),
-                **self.props
+                **self._props
             }
         ))
 
@@ -343,7 +430,7 @@ class RoadVehicle(grf.SpriteGenerator):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        default, maps = make_cb_switches(callbacks, {255: purchase_callbacks}, layout)
+        default, maps = callbacks.make_switch(layout)
         res.append(grf.Action3(
             feature=grf.RV,
             ids=[self.id],
@@ -430,7 +517,7 @@ class Train(grf.SpriteGenerator):
         if self._props.get('is_dual_headed') and self._articulated_parts:
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
-        callbacks = CallbackManager()
+        callbacks = CallbackManager(Callback.Vehicle)
 
         layouts = []
         for i, l in enumerate(self.liveries):
