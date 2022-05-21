@@ -2,14 +2,13 @@ from datetime import date
 
 import grf
 
-import lib
-
 g = grf.NewGRF(
     grfid=b'GPE\x00',
     name='grf-py 2cc 32bpp road vehicle example',
     description='grf-py 2cc 32bpp road vehicle example',
 )
-RoadVehicle = g.bind(lib.RoadVehicle)
+g.strings = grf.StringManager()
+RoadVehicle = g.bind(grf.RoadVehicle)
 
 def tmpl_rv(x, y, func):
     return [
@@ -29,9 +28,13 @@ rv_mask_png = grf.ImageFile("sprites/32bpp_rv_mask.png")
 RoadVehicle(
     id=5,
     name='2cc 32bpp road vehicle example',
-    sprites=tmpl_rv(0, 20, lambda *args, **kw: grf.FileSprite(rv_png, *args, **kw, bpp=24,
-                                                              mask=(rv_mask_png, 0, 0))),
+    liveries=[{
+        'name': 'Default',
+        'sprites': tmpl_rv(0, 20, lambda *args, **kw: grf.FileSprite(rv_png, *args, **kw, bpp=24,
+                                                                     mask=(rv_mask_png, 0, 0))),
+    }],
     introduction_date=date(1900, 1, 1),
+    max_speed=RoadVehicle.kmhishph(200),
     vehicle_life=8,
     model_life=144,
     climates_available=grf.ALL_CLIMATES,
@@ -42,5 +45,5 @@ RoadVehicle(
     misc_flags=RoadVehicle.Flags.USE_2CC,
 )
 
-
+g.add(g.strings)
 g.write('grfpy_2cc_32bpp_rv_example.grf')

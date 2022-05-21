@@ -3,7 +3,7 @@ import struct
 import numpy as np
 from PIL import Image
 
-from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32
+from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE
 
 
 def fix_palette(img, sprite_name):

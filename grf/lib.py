@@ -32,14 +32,6 @@ def fake_info_text(props):
     return '{}'.join('{BLACK}' + k + ': {GOLD}' + v for k, v in props.items())
 
 
-def kmhishph(speed):
-    return speed * 2
-
-# TODO doesn't show exact mph in the game
-def mph(speed):
-    return (speed * 16 + 4) // 5
-
-
 def make_cb_switches(callbacks, maps, layout):
     # TODO combine similar switches?
     out_maps = {}
@@ -228,6 +220,33 @@ class CallbackManager:
 
 
 class RoadVehicle(grf.SpriteGenerator):
+
+    class Flags:
+        USE_2CC = 2
+
+    class Speed:
+        def __init__(self, precise_value):
+            self.precise_value = precise_value
+            self.value = (self.precise_value + 2) // 4
+
+        def __int__(self):
+            return self.value
+
+        def __str__(self):
+            return str(self.value)
+
+        def __repr__(self):
+            return f'RoadVehicle.Speed({self.precise_value})'
+
+    @staticmethod
+    def kmhishph(speed):
+        return RoadVehicle.Speed(speed * 2)
+
+    @staticmethod
+    def mph(speed):
+        # TODO doesn't show exact mph in the game
+        return RoadVehicle.Speed((speed * 16 + 4) // 5)
+
     def __init__(self, *, id, name, liveries, max_speed, additional_text=None, livery_refits=None, **props):
         for l in liveries:
             if 'name' not in l:
@@ -240,7 +259,11 @@ class RoadVehicle(grf.SpriteGenerator):
 
         self.id = id
         self.name = name
-        self.max_speed = max_speed
+
+        if isinstance(max_speed, self.Speed):
+            self.max_speed = max_speed
+        else:
+            self.max_speed = self.Speed(max_speed * 4)
         self.additional_text = additional_text
         self.liveries = liveries
         self.props = props
@@ -251,24 +274,29 @@ class RoadVehicle(grf.SpriteGenerator):
         purchase_callbacks = {}
         callbacks = {}
 
-        res = [
-            grf.Action4(
-                feature=grf.RV,
-                offset=self.id,
-                is_generic_offset=False,
-                strings=[self.name.encode('utf-8')]
-            ),
-        ]
+        layouts = []
+        for i, l in enumerate(self.liveries):
+            layouts.append(grf.GenericSpriteLayout(
+                ent1=(i,),
+                ent2=(i,),
+            ))
+
+        layout = grf.VarAction2(
+            related_scope=True,
+            ranges=dict(enumerate(layouts)),
+            default=layouts[0],
+            code='cargo_subtype',
+        )
 
         if self.additional_text:
             string_id = 0xd000 + self.id
 
             purchase_callbacks[0x23] = g.strings.add(self.additional_text)
 
-        if self.max_speed >= 0x400:
+        if self.max_speed.precise_value >= 0x400:
             callbacks[0x36] = purchase_callbacks[0x36] = grf.VarAction2(
                 ranges={
-                    0x15: self.max_speed // 4,
+                    0x15: self.max_speed.value,
                 },
                 default=layout,
                 code='var(16, 0, 255)',
@@ -285,17 +313,27 @@ class RoadVehicle(grf.SpriteGenerator):
         if cb_flags:
             self.props['cb_flags'] = self.props.get('cb_flags', 0) | cb_flags
 
+        res = [
+            grf.Action4(
+                feature=grf.RV,
+                offset=self.id,
+                is_generic_offset=False,
+                strings=[self.name.encode('utf-8')]
+            ),
+        ]
+
         res.append(grf.Action0(
             feature=grf.RV,
             first_id=self.id,
             count=1,
             props={
                 'sprite_id': 0xff,
-                'precise_max_speed': min(self.max_speed, 0xff),
-                'max_speed': min(self.max_speed // 4, 0xff),
+                'precise_max_speed': min(self.max_speed.precise_value, 0xff),
+                'max_speed': min(self.max_speed.value, 0xff),
                 **self.props
             }
         ))
+
         res.append(grf.Action1(
             feature=grf.RV,
             set_count=len(self.liveries),
@@ -304,20 +342,6 @@ class RoadVehicle(grf.SpriteGenerator):
 
         for l in self.liveries:
             res.extend(l['sprites'])
-
-        layouts = []
-        for i, l in enumerate(self.liveries):
-            layouts.append(grf.GenericSpriteLayout(
-                ent1=(i,),
-                ent2=(i,),
-            ))
-
-        layout = grf.VarAction2(
-            related_scope=True,
-            ranges=dict(enumerate(layouts)),
-            default=layouts[0],
-            code='cargo_subtype',
-        )
 
         default, maps = make_cb_switches(callbacks, {255: purchase_callbacks}, layout)
         res.append(grf.Action3(
@@ -336,6 +360,15 @@ class Train(grf.SpriteGenerator):
         ELECTRIC = 0x28
         MONORAIL = 0x32
         MAGLEV = 0x32
+
+    @staticmethod
+    def kmhishph(speed):
+        return speed
+
+    @staticmethod
+    # TODO doesn't show exact mph in the game
+    def mph(speed):
+        return (speed * 16 + 4) // 10
 
     def __init__(self, *, id, name, liveries, max_speed, additional_text=None, sound_effects=None, **props):
         for l in liveries:
@@ -399,15 +432,6 @@ class Train(grf.SpriteGenerator):
 
         callbacks = CallbackManager()
 
-        res = [
-            grf.Action4(
-                feature=grf.TRAIN,
-                offset=self.id,
-                is_generic_offset=False,
-                strings=[self.name.encode('utf-8')]
-            ),
-        ]
-
         layouts = []
         for i, l in enumerate(self.liveries):
             layouts.append(grf.GenericSpriteLayout(
@@ -450,13 +474,22 @@ class Train(grf.SpriteGenerator):
         if callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
+        res = [
+            grf.Action4(
+                feature=grf.TRAIN,
+                offset=self.id,
+                is_generic_offset=False,
+                strings=[self.name.encode('utf-8')]
+            ),
+        ]
+
         res.append(grf.Action0(
             feature=grf.TRAIN,
             first_id=self.id,
             count=1,
             props={
                 'sprite_id': 0xfd,  # magic value for newgrf sprites
-                'max_speed': self.max_speed // 2,
+                'max_speed': self.max_speed,
                 **self._props
             }
         ))

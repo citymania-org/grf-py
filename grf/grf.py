@@ -1651,7 +1651,6 @@ class BaseNewGRF:
                 if not isinstance(sl, tuple):
                     continue
                 for s in sl:
-                    print('outt', s, hex_str(s.get_real_data(self._sprite_encoder)[:100]))
                     f.write(s.get_real_data(self._sprite_encoder))
 
             f.write(b'\x00\x00\x00\x00')
@@ -1671,10 +1670,10 @@ class BaseNewGRF:
             self.add(gen)
             return gen
 
-        # Expose nested classes on the wrapper
+        # Expose attributes on the wrapper
         for name in dir(cls):
             obj = getattr(cls, name)
-            if not name.startswith('__') and inspect.isclass(obj):
+            if not name.startswith('__'):
                 setattr(wrapper, name, obj)
 
         return wrapper
