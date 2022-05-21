@@ -176,18 +176,29 @@ def decode_action0(data):
         ofs += 1
         propdict = grf.ACTION0_PROPS[feature]
         name, fmt, *_ = propdict[prop]
-        res = []
-        for _ in range(num_info):
+        if num_info == 1:
             value, ofs = read_property(data, ofs, fmt)
-            res.append(value)
-        props[name] = res
+            props[name] = value
+        else:
+            res = []
+            for _ in range(num_info):
+                value, ofs = read_property(data, ofs, fmt)
+                res.append(value)
+            props[name] = res
 
-    return [grf.Action0(
-        feature=feature,
-        first_id=first_id,
-        count=num_info,
-        props=props,
-    )]
+    if num_info == 1:
+        return [grf.Define(
+            feature=feature,
+            id=first_id,
+            props=props,
+        )]
+    else:
+        return [grf.DefineMultiple(
+            feature=feature,
+            first_id=first_id,
+            count=num_info,
+            props=props,
+        )]
 
 
 def decode_action1(data):
