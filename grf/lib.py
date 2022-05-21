@@ -78,7 +78,7 @@ class StringManager(grf.SpriteGenerator):
         )]
 
 
-class SoundEffect:
+class SoundEvent:
     START = 1 # Vehicle leaves station or depot, plane takes off
     TUNNEL = 2 #Vehicle enters tunnel
     BREAKDOWN = 3 # Vehicle breaks down (not for planes)
@@ -90,6 +90,81 @@ class SoundEffect:
     LOAD_UNLOAD = 9 #   Consist loads or unloads cargo
     BRIDGE = 10
 
+
+class DefaultSound:
+    SPLAT = 0
+    FACTORY_WHISTLE = 1
+    TRAIN = 2
+    TRAIN_THROUGH_TUNNEL = 3
+    SHIP_HORN = 4
+    FERRY_HORN = 5
+    PLANE_TAKE_OFF = 6
+    JET = 7
+    TRAIN_HORN = 8
+    MINING_MACHINERY = 9
+    ELECTRIC_SPARK = 10
+    STEAM = 11
+    LEVEL_CROSSING = 12
+    VEHICLE_BREAKDOWN = 13
+    TRAIN_BREAKDOWN = 14
+    CRASH = 15
+    EXPLOSION = 16
+    BIG_CRASH = 17
+    CASHTILL = 18
+    BEEP = 19
+    MORSE = 20
+    SKID_PLANE = 21
+    HELICOPTER = 22
+    BUS_START_PULL_AWAY = 23
+    BUS_START_PULL_AWAY_WITH_HORN = 24
+    TRUCK_START = 25
+    TRUCK_START_2 = 26
+    APPLAUSE = 27
+    OOOOH = 28
+    SPLAT = 29
+    SPLAT_2 = 30
+    JACKHAMMER = 31
+    CAR_HORN = 32
+    CAR_HORN_2 = 33
+    SHEEP = 34
+    COW = 35
+    HORSE = 36
+    BLACKSMITH_ANVIL = 37
+    SAWMILL = 38
+    GOOD_YEAR = 39
+    BAD_YEAR = 40
+    RIP = 41
+    EXTRACT_AND_POP = 42
+    COMEDY_HIT = 43
+    MACHINERY = 44
+    RIP_2 = 45
+    EXTRACT_AND_POP = 46
+    POP = 47
+    CARTOON_SOUND = 48
+    EXTRACT = 49
+    POP_2 = 50
+    PLASTIC_MINE = 51
+    WIND = 52
+    COMEDY_BREAKDOWN = 53
+    CARTOON_CRASH = 54
+    BALLOON_SQUEAK = 55
+    CHAINSAW = 56
+    HEAVY_WIND = 57
+    COMEDY_BREAKDOWN_2 = 58
+    JET_OVERHEAD = 59
+    COMEDY_CAR = 60
+    ANOTHER_JET_OVERHEAD = 61
+    COMEDY_CAR_2 = 62
+    COMEDY_CAR_3 = 63
+    COMEDY_CAR_START_AND_PULL_AWAY = 64
+    MAGLEV = 65
+    LOON_BIRD = 66
+    LION = 67
+    MONKEYS = 68
+    PLANE_CRASHING = 69
+    PLANE_ENGINE_SPUTTERING = 70
+    MAGLEV_2 = 71
+    DISTANT_BIRD = 72
 
 class Callback:
     POWERED_WAGONS = 0x10
@@ -333,6 +408,20 @@ class Train(grf.SpriteGenerator):
             ),
         ]
 
+        layouts = []
+        for i, l in enumerate(self.liveries):
+            layouts.append(grf.GenericSpriteLayout(
+                ent1=(i,),
+                ent2=(i,),
+            ))
+
+        layout = grf.Switch(
+            related_scope=True,
+            ranges=dict(enumerate(layouts)),
+            default=layouts[0],
+            code='cargo_subtype',
+        )
+
         if self.additional_text:
             string_id = 0xd000 + self.id
             callbacks.purchase_text = g.strings.add(self.additional_text)
@@ -347,7 +436,7 @@ class Train(grf.SpriteGenerator):
         if self.sound_effects:
             callbacks.sound_effect = grf.Switch(
                 ranges=self.sound_effects,
-                default=0,
+                default=layout,
                 code='extra_callback_info1 & 255',
             )
 
@@ -379,20 +468,6 @@ class Train(grf.SpriteGenerator):
 
         for l in self.liveries:
             res.extend(l['sprites'])
-
-        layouts = []
-        for i, l in enumerate(self.liveries):
-            layouts.append(grf.GenericSpriteLayout(
-                ent1=(i,),
-                ent2=(i,),
-            ))
-
-        layout = grf.Switch(
-            related_scope=True,
-            ranges=dict(enumerate(layouts)),
-            default=layouts[0],
-            code='cargo_subtype',
-        )
 
         default, maps = callbacks.make_switch(layout)
         res.append(grf.Action3(
