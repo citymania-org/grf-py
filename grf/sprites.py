@@ -1,44 +1,91 @@
+import os
 import struct
 import numpy as np
 from PIL import Image
 
-from .grf import BaseSprite, ZOOM_4X, convert_image, BPP_8, BPP_24, BPP_32, RealSprite, fix_palette
+from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32
 
 
-class NMLFileSpriteWrapper:
-    def __init__(self, sprite, file, bit_depth):
-        self.sprite = sprite
-        self.file = type('Filename', (object, ), {'value': file.path})
-        self.bit_depth = bit_depth
-        self.mask_file = type('Filename', (object, ), {'value': file.mask}) if file.mask else None
-        self.mask_pos = None
-        self.flags = type('Flags', (object, ), {'value': 0})
-
-    xpos = property(lambda self: type('XSize', (object, ), {'value': self.sprite.x}))
-    ypos = property(lambda self: type('YSize', (object, ), {'value': self.sprite.y}))
-
-    xsize = property(lambda self: type('XSize', (object, ), {'value': self.sprite.w}))
-    ysize = property(lambda self: type('YSize', (object, ), {'value': self.sprite.h}))
-
-    xrel = property(lambda self: type('XSize', (object, ), {'value': self.sprite.xofs}))
-    yrel = property(lambda self: type('YSize', (object, ), {'value': self.sprite.yofs}))
+def fix_palette(img, sprite_name):
+    assert (img.mode == 'P')  # TODO
+    pal = tuple(img.getpalette())
+    if pal == PALETTE: return img
+    print(f'Custom palette in sprite {sprite_name}, converting...')
+    # for i in range(256):
+    #     if tuple(pal[i * 3: i*3 + 3]) != PALETTE[i * 3: i*3 + 3]:
+    #         print(i, pal[i * 3: i*3 + 3], PALETTE[i * 3: i*3 + 3])
+    remap = PaletteRemap()
+    for i in ALL_COLORS:
+        remap.remap[i] = find_best_color(to_spectra(pal[3 * i], pal[3 * i + 1], pal[3 * i + 2]), in_range=ALL_COLORS)
+    return remap.remap_image(img)
 
 
-class BaseImageSprite(RealSprite):
-    def __init__(self, x, y, w, h, *, bpp=None, mask=None, **kw):
+def open_image(filename, *args, **kw):
+    return fix_palette(Image.open(filename, *args, **kw))
+
+
+def convert_image(image):
+    if image.mode == 'P':
+        return image, BPP_8
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    return img, BPP_24
+
+
+class BaseSprite:
+    def get_data(self):
+        raise NotImplemented
+
+    def get_data_size(self):
+        raise NotImplemented
+
+
+class RealSprite(BaseSprite):
+    def __init__(self):
+        self.sprite_id = None
+
+    def get_data_size(self):
+        return 4
+
+    def get_data(self):
+        return struct.pack('<I', self.sprite_id)
+
+    def get_real_data(self, encoder):
+        raise NotImplementedError
+
+
+class SoundSprite(RealSprite):
+    def __init__(self):
+        super().__init__()
+        self.id = None
+
+    def get_hash(self):
+        raise NotImplemented
+
+
+class GraphicsSprite(RealSprite):
+    def __init__(self, x, y, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
-        super().__init__(w, h, **kw)
-        self.bpp = bpp
-        self.mask = mask
+        super().__init__()
         self.x = x
         self.y = y
+        self.w = w
+        self.h = h
+        self.xofs = xofs
+        self.yofs = yofs
+        self.zoom = zoom
+        self.bpp = bpp
+        self.mask = mask
         self.name = f'{self.x},{self.y} {self.w}x{self.h}'
 
     def get_image(self):
         raise NotImplementedError
 
     def get_mask_image(self):
+        raise NotImplementedError
+
+    def draw(self, img):
         raise NotImplementedError
 
     def get_colourkey(self):
@@ -142,7 +189,7 @@ class BaseImageSprite(RealSprite):
         ) + data
 
 
-class ImageSprite(BaseImageSprite):
+class ImageSprite(GraphicsSprite):
     def __init__(self, image, x, y, w, h, *, mask=None, **kw):
         self._image = convert_image(image)
         if mask:
@@ -178,7 +225,7 @@ class ImageFile:
         return self._image
 
 
-class FileSprite(BaseImageSprite):
+class FileSprite(GraphicsSprite):
     def __init__(self, file, x, y, w, h, *, bpp=None, mask=None, **kw):
         assert(isinstance(file, ImageFile))
         super().__init__(x, y, w, h, bpp=bpp, mask=mask, **kw)
@@ -195,4 +242,39 @@ class FileSprite(BaseImageSprite):
 
     def get_colourkey(self):
         return self.file.colourkey
+
+
+class RAWSound(SoundSprite):
+    def __init__(self, file):
+        super().__init__()
+        self.file = file
+
+    def get_real_data(self, encoder):
+        data = open(self.file, 'rb').read()
+        name = os.path.basename(self.file).encode()
+        if len(name) > 256:
+            name = name[:251] + '_' + name[-4:]
+        return struct.pack('<IIBBB', self.sprite_id, len(name) + len(data) + 4, 0xff, 0xff, len(name)) + name + b'\0' + data
+
+    def get_hash(self):
+        return self.file
+
+
+class NMLFileSpriteWrapper:
+    def __init__(self, sprite, file, bit_depth):
+        self.sprite = sprite
+        self.file = type('Filename', (object, ), {'value': file.path})
+        self.bit_depth = bit_depth
+        self.mask_file = type('Filename', (object, ), {'value': file.mask}) if file.mask else None
+        self.mask_pos = None
+        self.flags = type('Flags', (object, ), {'value': 0})
+
+    xpos = property(lambda self: type('XSize', (object, ), {'value': self.sprite.x}))
+    ypos = property(lambda self: type('YSize', (object, ), {'value': self.sprite.y}))
+
+    xsize = property(lambda self: type('XSize', (object, ), {'value': self.sprite.w}))
+    ysize = property(lambda self: type('YSize', (object, ), {'value': self.sprite.h}))
+
+    xrel = property(lambda self: type('XSize', (object, ), {'value': self.sprite.xofs}))
+    yrel = property(lambda self: type('YSize', (object, ), {'value': self.sprite.yofs}))
 

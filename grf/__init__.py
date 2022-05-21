@@ -5,4 +5,4 @@ from . import parser
 from .grf import *
 from .lib import *
 from .vox import VoxReader, VoxFile
-from .sprites import RealSprite, BaseImageSprite, ImageSprite, ImageFile, FileSprite
+from .sprites import RealSprite, GraphicsSprite, ImageSprite, ImageFile, FileSprite, SoundSprite, RAWSound

@@ -1,10 +1,9 @@
 import grf
 
 g = grf.NewGRF(
-    b'GPE\x02',
-    8,
-    'grf-py VOX house example',
-    'grf-py VOX house example',
+    grfid=b'GPE\x02',
+    name='grf-py VOX house example',
+    description='grf-py VOX house example',
 )
 
 vox = grf.VoxFile("sprites/house1460.vox")

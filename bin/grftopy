@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
+from pathlib import Path
+import re
 import sys
 import struct
+import unicodedata
 from nml import lz77
 
 import grf
 from grf.common import hex_str, utoi8
 from grf.va2vars import VA2_VARS_INV
 from grf.parser import OP_INIT, SPRITE_FLAGS
+
+
+RESOURCE_FOLDER = 'resources'
 
 
 def read_extended_byte(data, offset):
@@ -33,6 +39,41 @@ def str_sprite(sprite):
     sprite_type = sprite >> 31
     ntstr = ['', ' NF'][normal_in_transparent]
     return f'[{sprite_id} {draw}{ntstr} {color_translation}-{sprite_type}]'
+
+
+RESOURCES = set()
+
+
+def find_unique_resource_name(name, extension, tries=100):
+    global RESOURCES
+    for i in range(tries):
+        if i == 0:
+            unique = (name + '.' + extension)
+        else:
+            unique = (name + f'_{i + 1}.' + extension)
+
+        if unique not in RESOURCES:
+            RESOURCES.add(unique)
+            return unique
+
+    raise RuntimeError(f'Exceeded the limit of {tries} tries trying to create unique resource name for "{name}"')
+
+
+def write_resource(name, extension, data, tries=100):
+    folder = Path(RESOURCE_FOLDER)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # cut extension if it's already in the name
+    if name.endswith('.' + extension):
+        name = name[-len(extension) - 1:]
+
+    # generate safe filename
+    name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+    name = re.sub(r'[^\w\s-]', '', name.lower())
+    name = re.sub(r'[-\s]+', '-', name).strip('-_')
+
+    name = find_unique_resource_name(name, extension, tries=tries)
+    open(folder / name, 'wb').write(data)
 
 
 def read_property(data, ofs, fmt):
@@ -62,6 +103,9 @@ def read_property(data, ofs, fmt):
 
     if fmt == '3*B':
         return (data[ofs], data[ofs + 1], data[ofs + 2]), ofs + 3
+
+    if fmt == '2*L':
+        return (data[ofs: ofs + 4], data[ofs + 4: ofs + 8]), ofs + 8
 
     if fmt == 'n*m*W':
         d = DataReader(data, ofs)
@@ -839,6 +883,12 @@ def read_pseudo_sprite(f, nfo_line, container):
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
         decoder = ACTIONS.get(data[0])
+        # TODO
+        # <frosch123> _dp_: btw. when you get to it: a recolour sprite is not an action0 :p
+        # <frosch123> action1/5/A tell you how many recolor/realsprite follow
+        # <frosch123> there is no other reliable method to thell them apart
+        # <frosch123> it's kind of the same for sounds
+        # <frosch123> if you also want to support basesets, they have no action1/5/A, all pseudo sprites are recolor sprites
         if decoder:
             res.extend(decoder(data[1:]))
         else:
@@ -885,7 +935,8 @@ def read_real_sprite(f, nfo_line):
     start_pos = f.tell()
     s = f'{nfo_line}: Real sprite({sprite_id}): ({num}, {t:02x}): '
     if t == 0xff:
-        s += 'non-real (skipped)'
+        s += 'non-image'
+        print('non-image:', sprite_id, num, t, hex_str(f.read(100)))
         f.seek(start_pos + num - 1, 0)
         return True, [PyComment(s)]
     zoom, height, width, x_offs, y_offs = struct.unpack('<BHHhh', f.read(9))
@@ -897,7 +948,7 @@ def read_real_sprite(f, nfo_line):
     decomp_size = struct.unpack('<I', f.read(4))[0] if t & 0x08 else width * height * bpp
     s += f'{fmt} {width}x{height} zoom={zoom} x_offs={x_offs} y_offs={y_offs} decomp_size={decomp_size}'
     # data = decode_sprite(f, decomp_size)
-    # print('Data: ', hex_str(data[:40]))
+    # write_resource(f'sprite_{sprite_id}', 'dat', data)
     f.seek(start_pos + num - 1, 0)
     return True, [PyComment(s)]
 

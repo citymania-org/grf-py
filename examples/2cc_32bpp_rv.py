@@ -5,10 +5,9 @@ import grf
 import lib
 
 g = grf.NewGRF(
-    b'GPE\x00',
-    8,
-    'grf-py 2cc 32bpp road vehicle example',
-    'grf-py 2cc 32bpp road vehicle example',
+    grfid=b'GPE\x00',
+    name='grf-py 2cc 32bpp road vehicle example',
+    description='grf-py 2cc 32bpp road vehicle example',
 )
 RoadVehicle = g.bind(lib.RoadVehicle)
 

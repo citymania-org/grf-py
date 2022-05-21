@@ -2,8 +2,9 @@ import struct
 import numpy as np
 from PIL import Image
 
-from .sprites import ImageSprite
-from .grf import convert_image, find_best_color, to_spectra, PaletteRemap, ZOOM_4X, ZOOM_2X, ZOOM_NORMAL, PALETTE
+from .common import to_spectra, ZOOM_4X, ZOOM_2X, ZOOM_NORMAL, PALETTE
+from .sprites import ImageSprite, convert_image
+from .grf import find_best_color, PaletteRemap
 
 
 VOX_SIDE_RIGHT, VOX_SIDE_BOTTOM = 0x100, 0x200

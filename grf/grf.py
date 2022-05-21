@@ -10,27 +10,15 @@ from collections import defaultdict
 
 from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
-import spectra
 import numpy as np
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32
+from .common import PALETTE, SAFE_COLOURS, ALL_COLOURS, WATER_COLOURS
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE
-
-
-to_spectra = lambda r, g, b: spectra.rgb(float(r) / 255., float(g) / 255., float(b) / 255.)
-# working with DOS palette only
-PALETTE = (0, 0, 255, 16, 16, 16, 32, 32, 32, 48, 48, 48, 64, 64, 64, 80, 80, 80, 100, 100, 100, 116, 116, 116, 132, 132, 132, 148, 148, 148, 168, 168, 168, 184, 184, 184, 200, 200, 200, 216, 216, 216, 232, 232, 232, 252, 252, 252, 52, 60, 72, 68, 76, 92, 88, 96, 112, 108, 116, 132, 132, 140, 152, 156, 160, 172, 176, 184, 196, 204, 208, 220, 48, 44, 4, 64, 60, 12, 80, 76, 20, 96, 92, 28, 120, 120, 64, 148, 148, 100, 176, 176, 132, 204, 204, 168, 72, 44, 4, 88, 60, 20, 104, 80, 44, 124, 104, 72, 152, 132, 92, 184, 160, 120, 212, 188, 148, 244, 220, 176, 64, 0, 4, 88, 4, 16, 112, 16, 32, 136, 32, 52, 160, 56, 76, 188, 84, 108, 204, 104, 124, 220, 132, 144, 236, 156, 164, 252, 188, 192, 252, 208, 0, 252, 232, 60, 252, 252, 128, 76, 40, 0, 96, 60, 8, 116, 88, 28, 136, 116, 56, 156, 136, 80, 176, 156, 108, 196, 180, 136, 68, 24, 0, 96, 44, 4, 128, 68, 8, 156, 96, 16, 184, 120, 24, 212, 156, 32, 232, 184, 16, 252, 212, 0, 252, 248, 128, 252, 252, 192, 32, 4, 0, 64, 20, 8, 84, 28, 16, 108, 44, 28, 128, 56, 40, 148, 72, 56, 168, 92, 76, 184, 108, 88, 196, 128, 108, 212, 148, 128, 8, 52, 0, 16, 64, 0, 32, 80, 4, 48, 96, 4, 64, 112, 12, 84, 132, 20, 104, 148, 28, 128, 168, 44, 28, 52, 24, 44, 68, 32, 60, 88, 48, 80, 104, 60, 104, 124, 76, 128, 148, 92, 152, 176, 108, 180, 204, 124, 16, 52, 24, 32, 72, 44, 56, 96, 72, 76, 116, 88, 96, 136, 108, 120, 164, 136, 152, 192, 168, 184, 220, 200, 32, 24, 0, 56, 28, 0, 72, 40, 4, 88, 52, 12, 104, 64, 24, 124, 84, 44, 140, 108, 64, 160, 128, 88, 76, 40, 16, 96, 52, 24, 116, 68, 40, 136, 84, 56, 164, 96, 64, 184, 112, 80, 204, 128, 96, 212, 148, 112, 224, 168, 128, 236, 188, 148, 80, 28, 4, 100, 40, 20, 120, 56, 40, 140, 76, 64, 160, 100, 96, 184, 136, 136, 36, 40, 68, 48, 52, 84, 64, 64, 100, 80, 80, 116, 100, 100, 136, 132, 132, 164, 172, 172, 192, 212, 212, 224, 40, 20, 112, 64, 44, 144, 88, 64, 172, 104, 76, 196, 120, 88, 224, 140, 104, 252, 160, 136, 252, 188, 168, 252, 0, 24, 108, 0, 36, 132, 0, 52, 160, 0, 72, 184, 0, 96, 212, 24, 120, 220, 56, 144, 232, 88, 168, 240, 128, 196, 252, 188, 224, 252, 16, 64, 96, 24, 80, 108, 40, 96, 120, 52, 112, 132, 80, 140, 160, 116, 172, 192, 156, 204, 220, 204, 240, 252, 172, 52, 52, 212, 52, 52, 252, 52, 52, 252, 100, 88, 252, 144, 124, 252, 184, 160, 252, 216, 200, 252, 244, 236, 72, 20, 112, 92, 44, 140, 112, 68, 168, 140, 100, 196, 168, 136, 224, 200, 176, 248, 208, 184, 255, 232, 208, 252, 60, 0, 0, 92, 0, 0, 128, 0, 0, 160, 0, 0, 196, 0, 0, 224, 0, 0, 252, 0, 0, 252, 80, 0, 252, 108, 0, 252, 136, 0, 252, 164, 0, 252, 192, 0, 252, 220, 0, 252, 252, 0, 204, 136, 8, 228, 144, 4, 252, 156, 0, 252, 176, 48, 252, 196, 100, 252, 216, 152, 8, 24, 88, 12, 36, 104, 20, 52, 124, 28, 68, 140, 40, 92, 164, 56, 120, 188, 72, 152, 216, 100, 172, 224, 92, 156, 52, 108, 176, 64, 124, 200, 76, 144, 224, 92, 224, 244, 252, 200, 236, 248, 180, 220, 236, 132, 188, 216, 88, 152, 172, 244, 0, 244, 245, 0, 245, 246, 0, 246, 247, 0, 247, 248, 0, 248, 249, 0, 249, 250, 0, 250, 251, 0, 251, 252, 0, 252, 253, 0, 253, 254, 0, 254, 255, 0, 255, 76, 24, 8, 108, 44, 24, 144, 72, 52, 176, 108, 84, 210, 146, 126, 252, 60, 0, 252, 84, 0, 252, 104, 0, 252, 124, 0, 252, 148, 0, 252, 172, 0, 252, 196, 0, 64, 0, 0, 255, 0, 0, 48, 48, 0, 64, 64, 0, 80, 80, 0, 255, 255, 0, 32, 68, 112, 36, 72, 116, 40, 76, 120, 44, 80, 124, 48, 84, 128, 72, 100, 144, 100, 132, 168, 216, 244, 252, 96, 128, 164, 68, 96, 140, 255, 255, 255)
-SAFE_COLORS = set(range(1, 0xD7))
-ALL_COLORS = set(range(256))
-SPECTRA_PALETTE = {i:to_spectra(PALETTE[i * 3], PALETTE[i * 3 + 1], PALETTE[i * 3 + 2]) for i in range(256)}
-WATER_COLORS = set(range(0xF5, 0xFF))
-
-# ZOOM_OUT_4X, ZOOM_NORMAL, ZOOM_OUT_2X, ZOOM_OUT_8X, ZOOM_OUT_16X, ZOOM_OUT_32X = range(6)
-ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
-BPP_8, BPP_24, BPP_32 = 8, 24, 32
+from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite
 
 TEMPERATE, ARCTIC, TROPICAL, TOYLAND = 1, 2, 4, 8
 NO_CLIMATE, ALL_CLIMATES = 0, TEMPERATE | ARCTIC | TROPICAL | TOYLAND
@@ -124,7 +112,7 @@ def color_distance(c1, c2):
         (3 - rmean) * b * b)
 
 
-def find_best_color(x, in_range=SAFE_COLORS):
+def find_best_color(x, in_range=SAFE_COLOURS):
     mj, md = 0, 1e100
     for j in in_range:
         c = SPECTRA_PALETTE[j]
@@ -132,32 +120,6 @@ def find_best_color(x, in_range=SAFE_COLORS):
         if d < md:
             mj, md = j, d
     return mj
-
-
-def fix_palette(img, sprite_name):
-    assert (img.mode == 'P')  # TODO
-    pal = tuple(img.getpalette())
-    if pal == PALETTE: return img
-    print(f'Custom palette in sprite {sprite_name}, converting...')
-    # for i in range(256):
-    #     if tuple(pal[i * 3: i*3 + 3]) != PALETTE[i * 3: i*3 + 3]:
-    #         print(i, pal[i * 3: i*3 + 3], PALETTE[i * 3: i*3 + 3])
-    remap = PaletteRemap()
-    for i in ALL_COLORS:
-        remap.remap[i] = find_best_color(to_spectra(pal[3 * i], pal[3 * i + 1], pal[3 * i + 2]), in_range=ALL_COLORS)
-    return remap.remap_image(img)
-
-
-def open_image(filename, *args, **kw):
-    return fix_palette(Image.open(filename, *args, **kw))
-
-
-def convert_image(image):
-    if image.mode == 'P':
-        return image, BPP_8
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    return img, BPP_24
 
 
 def pformat(data, indent=4, indent_first=None):
@@ -172,13 +134,6 @@ def pformat(data, indent=4, indent_first=None):
 # def map_rgb_image(self, im):
 #     assert im.mode == 'RGB', im.mode
 #     data = np.array(im)
-
-class BaseSprite:
-    def get_data(self):
-        raise NotImplemented
-
-    def get_data_size(self):
-        raise NotImplemented
 
 
 class LazyBaseSprite(BaseSprite):
@@ -197,27 +152,26 @@ class LazyBaseSprite(BaseSprite):
     def get_data_size(self):
         return len(self.get_data())
 
+# class ImageSprite(BaseSprite):
+#     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X):
+#         self.sprite_id = None
+#         self.w = w
+#         self.h = h
+#         self.xofs = xofs
+#         self.yofs = yofs
+#         self.zoom = zoom
 
-class RealSprite(BaseSprite):
-    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X):
-        self.sprite_id = None
-        self.w = w
-        self.h = h
-        self.xofs = xofs
-        self.yofs = yofs
-        self.zoom = zoom
+#     def get_data_size(self):
+#         return 4
 
-    def get_data_size(self):
-        return 4
+#     def get_data(self):
+#         return struct.pack('<I', self.sprite_id)
 
-    def get_data(self):
-        return struct.pack('<I', self.sprite_id)
+#     def get_real_data(self, encoder):
+#         raise NotImplementedError
 
-    def get_real_data(self, encoder):
-        raise NotImplementedError
-
-    def draw(self, img):
-        raise NotImplementedError
+#     def draw(self, img):
+#         raise NotImplementedError
 
 
 class PaletteRemap(BaseSprite):
@@ -235,10 +189,10 @@ class PaletteRemap(BaseSprite):
     @classmethod
     def from_function(cls, color_func, remap_water=False):
         res = cls()
-        for i in SAFE_COLORS:
+        for i in SAFE_COLOURS:
             res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
         if remap_water:
-            for i in WATER_COLORS:
+            for i in WATER_COLOURS:
                 res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
         return res
 
@@ -635,7 +589,7 @@ ACTION0_GLOBAL_PROPS = {
     0x0D: ('currency_symbols', '0E'),  # Currency symbols
     0x0F: ('currency_euro_date', 'W'),  # Euro introduction dates
     0x10: ('snowline_table', '12*32*B'),  # Snow line height table
-    0x11: ('grfid_overrides', '2*D'),  # GRFID overrides for engines
+    0x11: ('grfid_overrides', '2*L'),  # GRFID overrides for engines
     0x12: ('railtype_table', 'D'),  # Railtype translation table
     0x13: ('gender_table1', '(BV)+'),  # Gender/case translation table
     0x14: ('gender_table2', '(BV)+'),  # Gender/case translation table
@@ -981,6 +935,8 @@ def get_ref_id(ref_obj):
         return ref_obj.value
     if isinstance(ref_obj, int):
         return ref_obj | 0x8000
+    if isinstance(ref_obj, SoundSprite):
+        return ref_obj.id | 0x8000
     return ref_obj.ref_id
 
 
@@ -1155,7 +1111,7 @@ class ReferencingAction:
         return NotImplementedError
 
 
-class VarAction2(LazyBaseSprite, ReferenceableAction, ReferencingAction):
+class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
     def __init__(self, ranges, default, code, feature=None, ref_id=None, related_scope=False):
         super().__init__()
         self.feature = feature
@@ -1218,7 +1174,7 @@ class VarAction2(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             for r in self.ranges
         }, indent_first=0, indent=19)
         return f'''
-        VarAction2(
+        Switch(
             feature={self.feature},
             ref_id={self.ref_id},
             related_scope={self.related_scope},
@@ -1226,6 +1182,8 @@ class VarAction2(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             default={self.default},
             code={code_str},
         )'''
+
+VarAction2 = Switch
 
 
 class IndustryProductionCallback(LazyBaseSprite):
@@ -1392,7 +1350,7 @@ class SoundEffects(LazyBaseSprite):
         self.number = number
 
     def _encode(self):
-        return struct.pack('<BH', 0x06, self.number)
+        return struct.pack('<BH', 0x11, self.number)
 
     def py(self):
         return f'SoundEffecs({self.number})'
@@ -1426,6 +1384,24 @@ class BaseNewGRF:
     def __init__(self):
         self.generators = []
         self._sprite_encoder = SpriteEncoder(True, False, None)
+        self._next_sound_id = 73
+        self._sounds = {}
+
+    def _add_sound(self, s):
+        assert isinstance(s, SoundSprite)
+
+        if s.id is not None:
+            return
+
+        h = s.get_hash()
+        if h in self._sounds:
+            s.id = self._sounds[h].id
+        else:
+            if self._next_sound_id > 0xff:
+                raise RuntimeError('Too many sound effects (max 183)')
+            s.id = self._next_sound_id
+            self._next_sound_id += 1
+            self._sounds[h] = s
 
     def _add(self, l, *sprites):
         if not sprites:
@@ -1436,10 +1412,14 @@ class BaseNewGRF:
             assert len(sprites) == 1
             sprites = sprites[0]
             assert len(sprites) >= 1
-            assert isinstance(sprites[0], RealSprite)
+            assert isinstance(sprites[0], GraphicsSprite)
 
         if isinstance(sprites[0], RealSprite):
-            assert(all(isinstance(s, RealSprite) for s in sprites))
+            if isinstance(sprites[0], SoundSprite):
+                for s in sprites:
+                    self._add_sound(s)
+                return
+            assert(all(isinstance(s, GraphicsSprite) for s in sprites))
             assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites)), sprites
 
             l.append(tuple(sprites))
@@ -1500,6 +1480,8 @@ class BaseNewGRF:
                             raise RuntimeError(f'Unresolved direct reference {r} in action {s}')
 
                     if not isinstance(r, ReferenceableAction):
+                        if isinstance(r, SoundSprite):
+                            self._add_sound(r)
                         continue
 
                     if r is s:
@@ -1602,6 +1584,12 @@ class BaseNewGRF:
     def write(self, filename):
         sprites = self.generate_sprites()
         sprites = self.resolve_refs(sprites)
+
+        if self._sounds:
+            sprites.append(SoundEffects(len(self._sounds)))
+            for s in self._sounds.values():
+                sprites.append((s,))
+
         data_offset = 14
 
         next_sprite_id = 1
@@ -1632,6 +1620,7 @@ class BaseNewGRF:
                 if not isinstance(sl, tuple):
                     continue
                 for s in sl:
+                    print('outt', s, hex_str(s.get_real_data(self._sprite_encoder)[:100]))
                     f.write(s.get_real_data(self._sprite_encoder))
 
             f.write(b'\x00\x00\x00\x00')

@@ -78,6 +78,80 @@ class StringManager(grf.SpriteGenerator):
         )]
 
 
+class SoundEffect:
+    START = 1 # Vehicle leaves station or depot, plane takes off
+    TUNNEL = 2 #Vehicle enters tunnel
+    BREAKDOWN = 3 # Vehicle breaks down (not for planes)
+    RUNNING = 4 #   Once per engine tick, but no more than once per vehicle motion
+    TOUCHDOWN = 5 # Aircraft touches down
+    VISUAL_EFFECT = 6 # Visual effect is generated (steam plume, diesel smoke, electric spark)
+    RUNNING_16 = 7 #Every 16 engine ticks if in motion
+    STOPPED = 8 #   Every 16 engine ticks if stopped
+    LOAD_UNLOAD = 9 #   Consist loads or unloads cargo
+    BRIDGE = 10
+
+
+class Callback:
+    POWERED_WAGONS = 0x10
+    WAGON_LENGTH = 0x11
+    LOAD_AMOUNT = 0x12
+    REFIT_CAPACITY = 0x15
+    ARTICULATED_PART = 0x16
+    CARGO_SUBTYPE = 0x19
+    PURCHASE_TEXT = 0x23
+    COLOUR_MAPPING = 0x2d
+    SOUND_EFFECT = 0x33
+
+
+class CallbackManager:
+    def __init__(self):
+        self._callbacks = {}
+
+    def __setattr__(self, name, value):
+        if name.startswith('_'):
+            return super().__setattr__(name, value)
+        if name.lower() != name:
+            raise AttributeError(name)
+
+        cb_id = getattr(Callback, name.upper())
+        self._callbacks[cb_id] = value
+
+    def get_flags(self):
+        # TODO checeked only for trains
+        FLAGS = {
+            Callback.POWERED_WAGONS: 0x1,
+            Callback.WAGON_LENGTH: 0x2,
+            Callback.LOAD_AMOUNT: 0x4,
+            Callback.REFIT_CAPACITY: 0x8,
+            Callback.ARTICULATED_PART: 0x10,
+            Callback.CARGO_SUBTYPE: 0x20,
+            Callback.COLOUR_MAPPING: 0x40,
+            Callback.SOUND_EFFECT: 0x80,
+        }
+        res = 0
+        for k in self._callbacks.keys():
+            res |= FLAGS.get(k, 0)
+        return res
+
+    def make_switch(self, layout):
+        PURCHASE = {
+            Callback.PURCHASE_TEXT: False,
+        }
+        callbacks = {}
+        purchase_callbacks = {}
+        for k, c in self._callbacks.items():
+            pdata = PURCHASE.get(k)
+            if not pdata:
+                callbacks[k] = c
+            if pdata is not None:
+                purchase_callbacks[k] = c
+
+        if purchase_callbacks:
+            return make_cb_switches(callbacks, {255: purchase_callbacks}, layout)
+
+        return make_cb_switches(callbacks, {}, layout)
+
+
 class RoadVehicle(grf.SpriteGenerator):
     def __init__(self, *, id, name, liveries, max_speed, additional_text=None, livery_refits=None, **props):
         for l in liveries:
@@ -188,8 +262,7 @@ class Train(grf.SpriteGenerator):
         MONORAIL = 0x32
         MAGLEV = 0x32
 
-
-    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, livery_refits=None, **props):
+    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, sound_effects=None, **props):
         for l in liveries:
             if 'name' not in l:
                 raise ValueError(f'Train livery is missing the name')
@@ -204,6 +277,7 @@ class Train(grf.SpriteGenerator):
         self.max_speed = max_speed
         self.additional_text = additional_text
         self.liveries = liveries
+        self.sound_effects = sound_effects
         REQUIRED_PROPS = ('engine_class', )
         missing_props = [p for p in REQUIRED_PROPS if p not in props]
         if missing_props:
@@ -248,10 +322,7 @@ class Train(grf.SpriteGenerator):
         if self._props.get('is_dual_headed') and self._articulated_parts:
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
-        cb_flags = 0
-
-        purchase_callbacks = {}
-        callbacks = {}
+        callbacks = CallbackManager()
 
         res = [
             grf.Action4(
@@ -264,28 +335,31 @@ class Train(grf.SpriteGenerator):
 
         if self.additional_text:
             string_id = 0xd000 + self.id
-
-            purchase_callbacks[0x23] = g.strings.add(self.additional_text)
+            callbacks.purchase_text = g.strings.add(self.additional_text)
 
         # Liveries
-        callbacks[0x19] = grf.VarAction2(
+        callbacks.cargo_subtype = grf.Switch(
             ranges={i: g.strings.add(l['name']) for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
         )
-        cb_flags |= 0x20
+
+        if self.sound_effects:
+            callbacks.sound_effect = grf.Switch(
+                ranges=self.sound_effects,
+                default=0,
+                code='extra_callback_info1 & 255',
+            )
 
         if self._articulated_parts:
-            callbacks[0x16] = grf.VarAction2(
+            callbacks.articulated_part = grf.Switch(
                 ranges={i + 1: ap[0] for i, ap in enumerate(self._articulated_parts)},
                 default=0x7fff,
                 code='extra_callback_info1 & 255',
             )
-            cb_flags |= 0x10
 
-
-        if cb_flags:
-            self._props['cb_flags'] = self._props.get('cb_flags', 0) | cb_flags
+        if callbacks.get_flags():
+            self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
         res.append(grf.Action0(
             feature=grf.TRAIN,
@@ -313,14 +387,14 @@ class Train(grf.SpriteGenerator):
                 ent2=(i,),
             ))
 
-        layout = grf.VarAction2(
+        layout = grf.Switch(
             related_scope=True,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
             code='cargo_subtype',
         )
 
-        default, maps = make_cb_switches(callbacks, {255: purchase_callbacks}, layout)
+        default, maps = callbacks.make_switch(layout)
         res.append(grf.Action3(
             feature=grf.TRAIN,
             ids=[self.id],

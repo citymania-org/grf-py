@@ -3,10 +3,9 @@ import grf
 WATER_SPRITE_ID = 4061
 
 g = grf.NewGRF(
-    b'GPE\x01',
-    8,
-    'grf-py Palette-animated 32bpp water example',
-    'grf-py Palette-animated 32bpp water example',
+    grfid=b'GPE\x01',
+    name='grf-py Palette-animated 32bpp water example',
+    description='grf-py Palette-animated 32bpp water example',
 )
 
 water_png = grf.ImageFile("sprites/water_noise.png", colourkey=(0, 0, 255))
