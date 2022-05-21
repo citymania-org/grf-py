@@ -1,4 +1,7 @@
+import datetime
+
 import spectra
+
 
 ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X = range(6)
 # ZOOM_OUT_4X, ZOOM_NORMAL, ZOOM_OUT_2X, ZOOM_OUT_8X, ZOOM_OUT_16X, ZOOM_OUT_32X = range(6)
@@ -10,6 +13,74 @@ SPECTRA_PALETTE = {i:to_spectra(PALETTE[i * 3], PALETTE[i * 3 + 1], PALETTE[i * 
 SAFE_COLOURS = set(range(1, 0xD7))
 ALL_COLOURS = set(range(256))
 WATER_COLOURS = set(range(0xF5, 0xFF))
+
+
+af_ZA = 0x1b  # afrikaans,True,Afrikaans,Afrikaans,0,male,
+ar_EG = 0x14  # arabic_egypt,True,Arabic (Egypt),Arabic (Egypt),1,,
+be_BY = 0x10  # belarusian,True,Belarusian,Беларуская,6,n m f p,n nom m abl gen pre p dat acc f
+bg_BG = 0x18  # bulgarian,True,Bulgarian,Български,0,n m f p,n m f p
+ca_ES = 0x22  # catalan,True,Catalan,Català,0,Femenin Masculin,
+cs_CZ = 0x15  # czech,True,Czech,Čeština,10,n m fp mnp map np f,small ins nom big loc gen voc dat acc
+cv_RU = 0x0b  # chuvash,True,Chuvash,Чӑвашла,0,,
+cy_GB = 0x0f  # welsh,True,Welsh,Cymraeg,0,,
+da_DK = 0x2d  # danish,True,Danish,Dansk,0,,
+de_DE = 0x02  # german,True,German,Deutsch,0,n m w p,
+el_GR = 0x1e  # greek,True,Greek,Ελληνικά,2,n m f,geniki date subs
+en_AU = 0x3d  # english_AU,True,English (AU),English (AU),0,,
+en_GB = 0x01  # english,True,English (UK),English (UK),0,,
+en_US = 0x00  # english_US,True,English (US),English (US),0,,
+eo_EO = 0x05  # esperanto,True,Esperanto,Esperanto,0,,n
+es_ES = 0x04  # spanish,True,Spanish,Español (ES),0,m f,
+es_MX = 0x55  # spanish_MX,True,Spanish (Mexican),Español (MX),0,m f,
+et_EE = 0x34  # estonian,True,Estonian,Eesti keel,0,,in sü g
+eu_ES = 0x21  # basque,True,Basque,Euskara,0,,
+fa_IR = 0x62  # persian,True,Persian,فارسی,0,,
+fi_FI = 0x35  # finnish,True,Finnish,Suomi,0,,
+fo_FO = 0x12  # faroese,True,Faroese,Føroyskt,0,n m f,
+fr_FR = 0x03  # french,True,French,Français,2,m2 m f,
+fy_NL = 0x32  # frisian,True,Frisian,Frysk,0,,
+ga_IE = 0x08  # irish,True,Irish,Gaeilge,4,,
+gd_GB = 0x13  # gaelic,True,Scottish Gaelic,Gàidhlig,13,m f,dat nom voc gen
+gl_ES = 0x31  # galician,True,Galician,Galego,0,n m f,
+he_IL = 0x61  # hebrew,True,Hebrew,עברית,0,m f,gen plural singular
+hi_IN = 0x17  # hindi,True,Hindi,हिन्दी,0,,
+hr_HR = 0x38  # croatian,True,Croatian,Hrvatski,6,female male middle,lok ins nom aku gen dat vok
+hu_HU = 0x24  # hungarian,True,Hungarian,Magyar,2,,ba t
+id_ID = 0x5a  # indonesian,True,Indonesian,Bahasa Indonesia,1,,
+io_IO = 0x06  # ido,True,Ido,Ido,0,,
+is_IS = 0x29  # icelandic,True,Icelandic,Íslenska,0,kvenkyn karlkyn hvorugkyn,
+it_IT = 0x27  # italian,True,Italian,Italiano,0,m ma f,fp fs ms mp
+ja_JP = 0x39  # japanese,True,Japanese,日本語,1,,
+ko_KR = 0x3a  # korean,True,Korean,한국어,11,m f,
+la_VA = 0x66  # latin,True,Latin,Latina,0,n m fp mp np f,dat abl acc gen
+lb_LU = 0x23  # luxembourgish,True,Luxembourgish,Lëtzebuergesch,0,,
+lt_LT = 0x2b  # lithuanian,True,Lithuanian,Lietuvių,5,mot vyr,kam ka ko kur kreip kas kuo
+lv_LV = 0x2a  # latvian,True,Latvian,Latviešu,3,m f,kas
+mk_MK = 0x26  # macedonian,True,Macedonian,Македонски,0,,
+mr_IN = 0x11  # marathi,True,Marathi,मराठी,0,,
+ms_MY = 0x3c  # malay,True,Malay,Melayu,0,,
+mt_MT = 0x09  # maltese,True,Maltese,Malti,12,,
+nb_NO = 0x2f  # norwegian_bokmal,True,Norwegian (Bokmal),Norsk (bokmål),0,masculine neuter feminine,small
+nl_NL = 0x1f  # dutch,True,Dutch,Nederlands,0,,
+nn_NO = 0x0e  # norwegian_nynorsk,True,Norwegian (Nynorsk),Norsk (nynorsk),0,masculine neuter feminine,small
+pl_PL = 0x30  # polish,True,Polish,Polski,7,n m f,n m w c d b
+pt_BR = 0x37  # brazilian_portuguese,True,Portuguese (Brazilian),Português (BR),2,m f,
+pt_PT = 0x36  # portuguese,True,Portuguese,Português,0,n m fp mp f,
+ro_RO = 0x28  # romanian,True,Romanian,Română,14,,
+ru_RU = 0x07  # russian,True,Russian,Русский,6,n m f p,n nom m abl gen pre p dat acc f
+sk_SK = 0x16  # slovak,True,Slovak,Slovenčina,10,m z s,g
+sl_SI = 0x2c  # slovenian,True,Slovenian,Slovenščina,8,,t d r
+sr_RS = 0x0d  # serbian,True,Serbian,Srpski,6,srednji ženski muški,lok ins nom aku big gen dat vok
+sv_SE = 0x2e  # swedish,True,Swedish,Svenska,0,,
+ta_IN = 0x0a  # tamil,True,Tamil,தமிழ்,0,,
+th_TH = 0x42  # thai,True,Thai,Thai,1,,
+tr_TR = 0x3e  # turkish,True,Turkish,Türkçe,1,,tamlanan
+uk_UA = 0x33  # ukrainian,True,Ukrainian,Українська,6,m mn s f,z d r
+ur_PK = 0x5c  # urdu,True,Urdu,Urdu,0,m f,
+vi_VN = 0x54  # vietnamese,True,Vietnamese,Tiếng Việt,1,,
+zh_CN = 0x56  # simplified_chinese,True,Chinese (Simplified),简体中文,1,,
+zh_TW = 0x0c  # traditional_chinese,True,Chinese (Traditional),繁體中文,1,,
+ANY_LANGUAGE = 0x7f
 
 
 def hex_str(s, n=None):
@@ -28,6 +99,15 @@ def utoi8(value):
 
 def utoi32(value):
     return value | -(value & 0x80000000)
+
+
+def is_leap_year(year):
+    return yr % 4 == 0 and (yr % 100 != 0 or yr % 400 == 0)
+
+
+def date_to_days(d):
+    return (d - datetime.date(1, 1, 1)).days + 366
+
 
 
 class FeatureMeta(type):
@@ -73,3 +153,5 @@ TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, BRIDGE, HOUSE, GLOBAL_VAR, INDUSTRY_T
 SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE = FeatureMeta.FEATURES
 
 CANAL = RIVER
+
+VEHICLE_FEATURES = (TRAIN, RV, SHIP, AIRCRAFT)

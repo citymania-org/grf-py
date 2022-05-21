@@ -7,7 +7,6 @@ g = grf.NewGRF(
     name='grf-py example of a train with sounds',
     description='grf-py example of a train with sounds',
 )
-g.strings = grf.StringManager()
 Train = g.bind(grf.Train)
 
 def tmpl_rv(x, y, func):
@@ -58,5 +57,4 @@ Train(
     refittable_cargo_types=1,
 )
 
-g.add(g.strings)
 g.write('grfpy_train_sound_example.grf')

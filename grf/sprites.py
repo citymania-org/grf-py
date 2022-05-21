@@ -40,6 +40,23 @@ class BaseSprite:
         raise NotImplemented
 
 
+class LazyBaseSprite(BaseSprite):
+    def __init__(self):
+        super().__init__()
+        self._data = None
+
+    def _encode(self):
+        raise NotImplemented
+
+    def get_data(self):
+        if self._data is None:
+            self._data = self._encode()
+        return self._data
+
+    def get_data_size(self):
+        return len(self.get_data())
+
+
 class RealSprite(BaseSprite):
     def __init__(self):
         self.sprite_id = None

@@ -1,73 +1,26 @@
-from nml.grfstrings import NewGRFString, default_lang
-
 import grf
-
-# b'test\\UE08FTEST\\0D\\UE098hi: \\UE08Etest'
-# b'test\xee\x82\x8fTEST\r\xee\x82\x98hi: \xee\x82\x8etest'
-
-def grf_compile_string(s):
-    nstr = NewGRFString(s, default_lang, '')
-    value = nstr.parse_string('ascii', default_lang, 1, {}).encode('utf-8')
-    res = b''
-
-    i = 0
-    while i < len(value):
-        if value[i] == 92:  # /
-            if value[i + 1] in (92, 34):  # / and "
-                res += value[i + 1: i + 2]
-                i += 2
-            elif value[i + 1] == 85:  # U
-                res += chr(int(value[i + 2 : i + 6], 16)).encode("utf8")
-                i += 6
-            else:
-                res += bytes((int(value[i + 1 : i + 3], 16),))
-                i += 3
-        else:
-            res += value[i: i + 1]
-            i += 1
-    return res
-
 
 def fake_info_text(props):
     return '{}'.join('{BLACK}' + k + ': {GOLD}' + v for k, v in props.items())
-
 
 def make_cb_switches(callbacks, maps, layout):
     # TODO combine similar switches?
     out_maps = {}
     for k, cblist in maps.items():
         if not cblist: continue
-        out_maps[k] = grf.VarAction2(
+        out_maps[k] = grf.Switch(
             ranges={0: layout, **cblist},
             default=layout,
             code='current_callback',
         )
     default = layout
     if callbacks:
-        default = grf.VarAction2(
+        default = grf.Switch(
             ranges={0: layout, **callbacks},
             default=layout,
             code='current_callback',
         )
     return default, out_maps
-
-
-class StringManager(grf.SpriteGenerator):
-    def __init__(self):
-        self.strings = []
-
-    def add(self, string):
-        string_id = len(self.strings)
-        self.strings.append(grf_compile_string(string))
-        return string_id
-
-    def get_sprites(self, g):
-        return [grf.Action4(
-            feature=grf.TRAIN,
-            offset=0xd000,
-            is_generic_offset=True,
-            strings=self.strings,
-        )]
 
 
 class SoundEvent:
@@ -379,7 +332,7 @@ class RoadVehicle(grf.SpriteGenerator):
 
         if self.additional_text:
             string_id = 0xd000 + self.id
-            callbacks.purchase_text = g.strings.add(self.additional_text)
+            callbacks.purchase_text = g.add_string(self.additional_text)
 
         if self.max_speed.precise_value >= 0x400:
             callbacks.change_properties = grf.VarAction2(
@@ -392,7 +345,7 @@ class RoadVehicle(grf.SpriteGenerator):
 
         # Liveries
         callbacks.cargo_subtype = grf.VarAction2(
-            ranges={i: g.strings.add(l['name']) for i, l in enumerate(self.liveries)},
+            ranges={i: g.add_string(l['name']) for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
         )
@@ -535,11 +488,11 @@ class Train(grf.SpriteGenerator):
 
         if self.additional_text:
             string_id = 0xd000 + self.id
-            callbacks.purchase_text = g.strings.add(self.additional_text)
+            callbacks.purchase_text = g.add_string(self.additional_text)
 
         # Liveries
         callbacks.cargo_subtype = grf.Switch(
-            ranges={i: g.strings.add(l['name']) for i, l in enumerate(self.liveries)},
+            ranges={i: g.add_string(l['name']) for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
         )
@@ -623,7 +576,7 @@ class Train(grf.SpriteGenerator):
                     ent2=(i,),
                 ))
 
-            layout = grf.VarAction2(
+            layout = grf.Switch(
                 related_scope=True,
                 ranges=dict(enumerate(layouts)),
                 default=layouts[0],
@@ -637,3 +590,30 @@ class Train(grf.SpriteGenerator):
                 default=layout,
             ))
         return res
+
+
+class Object(grf.Action0):
+    class Flags:
+        NONE               =       0  # Just nothing.
+        ONLY_IN_SCENEDIT   = 1 <<  0  # Object can only be constructed in the scenario editor.
+        CANNOT_REMOVE      = 1 <<  1  # Object can not be removed.
+        AUTOREMOVE         = 1 <<  2  # Object get automatically removed (like "owned land").
+        BUILT_ON_WATER     = 1 <<  3  # Object can be built on water (not required).
+        CLEAR_INCOME       = 1 <<  4  # When object is cleared a positive income is generated instead of a cost.
+        HAS_NO_FOUNDATION  = 1 <<  5  # Do not display foundations when on a slope.
+        ANIMATION          = 1 <<  6  # Object has animated tiles.
+        ONLY_IN_GAME       = 1 <<  7  # Object can only be built in game.
+        CC2_COLOUR         = 1 <<  8  # Object wants 2CC colour mapping.
+        NOT_ON_LAND        = 1 <<  9  # Object can not be on land, implicitly sets #OBJECT_FLAG_BUILT_ON_WATER.
+        DRAW_WATER         = 1 << 10  # Object wants to be drawn on water.
+        ALLOW_UNDER_BRIDGE = 1 << 11  # Object can built under a bridge.
+        ANIM_RANDOM_BITS   = 1 << 12  # Object wants random bits in "next animation frame" callback.
+        SCALE_BY_WATER     = 1 << 13  # Object count is roughly scaled by water amount at edges.
+
+
+    def __init__(self, id, **props):
+        if 'size' in props:
+            props['size'] = (props['size'][1] << 4) | props['size'][0]
+        super().__init__(OBJECT, id, 1, props)
+
+

@@ -7,7 +7,6 @@ g = grf.NewGRF(
     name='grf-py 2cc 32bpp road vehicle example',
     description='grf-py 2cc 32bpp road vehicle example',
 )
-g.strings = grf.StringManager()
 RoadVehicle = g.bind(grf.RoadVehicle)
 
 def tmpl_rv(x, y, func):
@@ -45,5 +44,4 @@ RoadVehicle(
     misc_flags=RoadVehicle.Flags.USE_2CC,
 )
 
-g.add(g.strings)
 g.write('grfpy_2cc_32bpp_rv_example.grf')
