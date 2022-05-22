@@ -434,6 +434,37 @@ ACTION0_STATION_PROPS = {
     0x1B: ('min_bridge_height', '8*B'),  # Advanced sprite layout with register modifiers
 }
 
+
+def read_bridge_layout(data, ofs):
+    d = DataReader(data, ofs)
+    table_id = d.get_byte()
+    num_tables = d.get_byte()
+    tables = []
+    for _ in range(num_tables):
+        # if tableid >= 7 invalid data
+        tables.append([SpriteRef.from_grf(d.get_dword()) for _ in range(32)])
+    return {
+        'table_id': table_id,
+        'tables': tables,
+    }, d.offset
+
+
+ACTION0_BRIDGE_PROPS = {
+    0x00:  ('fallback_type', 'B'),  # Failback Type, a default TTD Bridge ID
+    0x08:  ('intro_year_since_1920', 'B'),  # Year of availability, counted from 1920 (set to 1920 for first bridge if newstartyear<1930)
+    0x09:  ('min_length', 'B'),  # Minimum length, not counting ramps
+    0x0A:  ('max_length', 'B'),  # Maximum length, not counting ramps
+    0x0B:  ('cost_factor_byte', 'B'),  # Cost factor
+    0x0C:  ('max_speed', 'W'),  # Max. speed
+    0x0D:  ('layout', read_bridge_layout),  # Sprite layout, see below
+    0x0E:  ('flags', 'B'),  # Various flags, bitcoded
+    0x0F:  ('intro_year', 'D'),  # Long format year of availability, counted from year 0
+    0x10:  ('purchase_text', 'W'),  # Purchase text
+    0x11:  ('description_rail', 'W'),  # Description of a rail bridge
+    0x12:  ('description_road', 'W'),  # Description of a road bridge
+    0x13:  ('cost_factor', 'W'),  # Cost factor word access
+}
+
 ACTION0_GLOBAL_PROPS = {
     0x08: ('basecost', 'B'),  # Cost base multipliers
     0x09: ('cargo_table', 'L'),  # Cargo translation table
@@ -619,6 +650,7 @@ ACTION0_PROPS = {
     SHIP: ACTION0_SHIP_PROPS,
     AIRCRAFT: ACTION0_AIRCRAFT_PROPS,
     STATION: ACTION0_STATION_PROPS,
+    BRIDGE: ACTION0_BRIDGE_PROPS,
     HOUSE: ACTION0_HOUSE_PROPS,
     GLOBAL_VAR: ACTION0_GLOBAL_PROPS,
     INDUSTRY_TILE: ACTION0_INDUSTRY_TILE_PROPS,
