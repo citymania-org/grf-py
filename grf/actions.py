@@ -1306,6 +1306,37 @@ class Comment(LazyBaseSprite):
 
 ActionC = Comment
 
+# Action D
+
+class ActionD(LazyBaseSprite):
+    def __init__(self, *, target, operation, if_undefined, source1, source2, value=None):
+            super().__init__()
+            self.target = target
+            self.operation = operation
+            self.if_undefined = if_undefined
+            self.source1 = source1
+            self.source2 = source2
+            self.value = value
+
+    def _encode(self):
+        # return bytes((0x0D)) + self.data
+        raise NotImplementedError
+
+    def py(self):
+        # fmt = OPERATIONS[operation]
+        # sf = lambda x: f'[{x:02x}]' if x != 0xff else str(value)
+        # target_str = f'[{target:02x}]'
+        # op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
+        return f'''
+        ActionD(
+            target={self.target},
+            operation={self.operation},
+            if_undefined={self.if_undefined},
+            source1={self.source1},
+            source2={self.source2},
+            value={self.value},
+        )'''
+
 
 # Action 10
 

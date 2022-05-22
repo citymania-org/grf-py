@@ -15,7 +15,7 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, VarAction2, \
                      IndustryProductionCallback, Action3, Map, Action4, ReplaceNewSprites, Action5, \
                      Action6, If, SetDescription, ReplaceOldSprites, ActionA, Comment, ActionC, \
-                     Label, Action10, SoundEffects, Action11, ImportSound, SetProperties, Action14
+                     Label, Action10, SoundEffects, Action11, ImportSound, SetProperties, Action14, ActionD
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32
 from .common import PALETTE, SAFE_COLOURS, ALL_COLOURS, WATER_COLOURS

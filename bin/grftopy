@@ -770,15 +770,24 @@ def decode_actionD(data):
     operation &= 0x7f
     source1 = data[2]
     source2 = data[3]
+    value = None
     if source1 == 0xff or source2 == 0xff:
         value, _ = read_dword(data, 4)
     fmt = OPERATIONS[operation]
     sf = lambda x: f'[{x:02x}]' if x != 0xff else str(value)
     target_str = f'[{target:02x}]'
     op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
-    # print(f'    <A>OP {op_str}')
-    # raise NotImplementedError
-    return []
+    return [
+        PyComment(op_str),
+        grf.ActionD(
+            target=target,
+            operation=operation,
+            if_undefined=if_undefined,
+            source1=source1,
+            source2=source2,
+            value=value,
+        )
+    ]
 
 
 def decode_action10(data):
