@@ -881,7 +881,7 @@ class ExtendedSpriteLayout(AdvancedSpriteLayout):
 
 
 class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
-    def __init__(self, ranges, default, code, feature=None, ref_id=None, related_scope=False):
+    def __init__(self, ranges, default, code, *, feature=None, ref_id=None, related_scope=False):
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -953,6 +953,51 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         )'''
 
 VarAction2 = Switch
+
+
+class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
+    def __init__(self, scope, triggers, cmp_all, lowest_bit, groups, *, feature=None, ref_id=None, count=None):
+        if scope == 'relative' and feature in VEHICLE_FEATURES:
+            assert count is not None
+        else:
+            assert count is None
+        super().__init__()
+        self.feature = feature
+        self.ref_id = ref_id
+        self.scope = scope
+        self.triggers = triggers
+        self.cmp_all = cmp_all
+        self.lowest_bit = lowest_bit
+        self.groups = groups
+
+    def get_refs(self):
+        yield from self.groups.values()
+
+    def _encode(self):
+        atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[scope]
+        res = bytes((0x02, self.feature.id, self.ref_id, atype))
+        if self.scope == 'relative' and self.feature not in VEHICLE_FEATURES:
+            res += bytes((self.count, ))
+        res += struct.pack(
+            '<BBB' + 'H' * len(self.groups),
+            self.triggers | (int(self.cmp_all) * 0x80),
+            self.lowest_bit,
+            len(self.groups),
+            *map(get_ref_id, self.groups)
+        )
+        return res
+
+    def py(self):
+        return f'''
+        RandomSwitch(
+            feature={self.feature},
+            ref_id={self.ref_id},
+            scope={self.scope!r},
+            triggers={self.triggers},
+            cmp_all={self.cmp_all},
+            lowest_bit={self.lowest_bit},
+            groups={self.groups!r},
+        )'''
 
 
 class IndustryProductionCallback(LazyBaseSprite):

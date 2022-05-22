@@ -459,6 +459,28 @@ def get_var_node(feature, root, var, param, shift, and_mask, node_type, add_val=
     return grf.GenericVar(var, shift, and_mask, 0, None, None, param=param)
 
 
+def read_random_switch(d, feature, atype, ref_id):
+    scope = {0x80: 'self', 0x83: 'parent', 0x84: 'relative'}[atype]
+    count = None
+    if scope == 'relative' and feature not in VEHICLE_FEATURES:
+        count = d.get_byte()
+    triggers_byte = d.get_byte()
+    triggers = triggers_byte & 0x7f
+    cmp_all = bool(triggers_byte & 0x80)
+    lowest_bit = d.get_byte()
+    num_groups = d.get_byte()
+    groups = [grf.Ref(d.get_word()) for _ in range(num_groups)]
+    return [grf.RandomSwitch(
+        feature=feature,
+        ref_id=ref_id,
+        scope=scope,
+        triggers=triggers,
+        cmp_all=cmp_all,
+        lowest_bit=lowest_bit,
+        groups=groups,
+    )]
+
+
 def decode_action2(data):
     feature = grf.Feature(data[0])
     ref_id = data[1]
@@ -535,8 +557,7 @@ def decode_action2(data):
 
     # Random switch
     if atype in (0x80, 0x83, 0x84):
-        return []
-        raise NotImplementedError
+        return read_random_switch(d, feature, atype, ref_id)
 
     if feature in (grf.HOUSE, grf.INDUSTRY_TILE, grf.OBJECT, grf.AIRPORT_TILE):
         num_ent1 = atype

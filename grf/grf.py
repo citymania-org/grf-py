@@ -11,7 +11,7 @@ from nml.spriteencoder import SpriteEncoder
 import numpy as np
 
 from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, \
-                     Define, DefineMultiple, Action0, Action1, SpriteSet, GenericSpriteLayout, \
+                     Define, DefineMultiple, Action0, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, VarAction2, \
                      IndustryProductionCallback, Action3, Map, Action4, ReplaceNewSprites, Action5, \
                      Action6, If, SetDescription, ReplaceOldSprites, ActionA, Comment, ActionC, \
