@@ -436,7 +436,7 @@ ACTION0_STATION_PROPS = {
 
 ACTION0_GLOBAL_PROPS = {
     0x08: ('basecost', 'B'),  # Cost base multipliers
-    0x09: ('cargo_table', 'D'),  # Cargo translation table
+    0x09: ('cargo_table', 'L'),  # Cargo translation table
     0x0A: ('currency_name', 'W'),  # Currency display names
     0x0B: ('currency_mult', 'D'),  # Currency multipliers
     0x0C: ('currency_options', 'W'),  # Currency options
