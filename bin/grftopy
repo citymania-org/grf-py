@@ -8,27 +8,13 @@ import unicodedata
 from nml import lz77
 
 import grf
-from grf.common import hex_str, utoi8
+from grf.common import hex_str, utoi8, DataReader, read_extended_byte, read_dword, read_word
 from grf.va2vars import VA2_VARS_INV
 from grf.parser import OP_INIT, SPRITE_FLAGS
+from grf.actions import ACTION0_PROPS, SpriteRef, Property
 
 
 RESOURCE_FOLDER = 'resources'
-
-
-def read_extended_byte(data, offset):
-    res = data[offset]
-    if res != 0xff:
-        return res, offset + 1
-    return data[offset + 1] | (data[offset + 2] << 8), offset + 3
-
-
-def read_word(data, offset):
-    return data[offset] | (data[offset + 1] << 8), offset + 2
-
-
-def read_dword(data, offset):
-    return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24), offset + 4
 
 
 def str_sprite(sprite):
@@ -77,6 +63,10 @@ def write_resource(name, extension, data, tries=100):
 
 
 def read_property(data, ofs, fmt):
+    if not isinstance(fmt, str):
+        assert callable(fmt), fmt
+        return fmt(data, ofs)
+
     if fmt == 'B':
         return data[ofs], ofs + 1
 
@@ -162,7 +152,7 @@ def read_property(data, ofs, fmt):
 
         return res, d.offset
 
-    assert False, fmt
+    raise ValueError(fmt)
 
 
 def decode_action0(data):
@@ -174,10 +164,13 @@ def decode_action0(data):
     for _ in range(num_props):
         prop = data[ofs]
         ofs += 1
-        propdict = grf.ACTION0_PROPS[feature]
+        propdict = ACTION0_PROPS[feature]
         name, fmt, *_ = propdict[prop]
         if num_info == 1:
-            value, ofs = read_property(data, ofs, fmt)
+            try:
+                value, ofs = read_property(data, ofs, fmt)
+            except ValueError:
+                raise RuntimeError(f'No reader for property {name} format {fmt}')
             props[name] = value
         else:
             res = []
@@ -244,34 +237,6 @@ SPRITE_GROUP_OP = [
     'SAR',   # (signed) a >> b
 ]
 
-class DataReader:
-    def __init__(self, data, offset=0):
-        self.data = data
-        self.offset = offset
-
-    def get_byte(self):
-        self.offset += 1
-        return self.data[self.offset - 1]
-
-    def get_extended_byte(self):
-        res, self.offset = read_extended_byte(self.data, self.offset)
-        return res
-
-    def get_word(self):
-        return self.get_byte() | (self.get_byte() << 8)
-
-    def get_dword(self):
-        return self.get_word() | (self.get_word() << 16)
-
-    def get_var(self, n):
-        size = 1 << n
-        res = struct.unpack_from({0: '<B', 1: '<H', 2: '<I'}[n], self.data, offset=self.offset)[0]
-        self.offset += size
-        return res
-
-    def hex_str(self, n):
-        return hex_str(self.data[self.offset: self.offset + n])
-
 
 # TLF_NOTHING           = 0x00
 # TLF_DODRAW            = 0x01  # Only draw sprite if value of register TileLayoutRegisters::dodraw is non-zero.
@@ -329,15 +294,15 @@ def read_sprite_layout_registers(d, flags, is_parent):
 def read_sprite_layout(d, feature, ref_id, num, basic_format):
     assert feature in (grf.HOUSE, grf.INDUSTRY_TILE, grf.OBJECT, grf.INDUSTRY), feature
 
+    # TODO a lot of duplicate code with read_sprite_layout in actions.py
     has_z_position = not basic_format
     has_flags = bool(num & 0x40)
     num &= 0x3f
 
     def read_sprite():
-        sprite = d.get_word()
-        pal = d.get_word()
+        sprite = d.get_dword()
         flags = d.get_word() if has_flags else 0
-        return grf.Sprite.from_grf(sprite, pal), flags
+        return SpriteRef.from_grf(sprite), flags
 
     ground_sprite, ground_flags = read_sprite()
     ground = {'sprite': ground_sprite}

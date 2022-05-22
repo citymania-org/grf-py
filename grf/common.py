@@ -1,4 +1,5 @@
 import datetime
+import struct
 
 import spectra
 
@@ -155,3 +156,47 @@ SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYP
 CANAL = RIVER
 
 VEHICLE_FEATURES = (TRAIN, RV, SHIP, AIRCRAFT)
+
+
+def read_extended_byte(data, offset):
+    res = data[offset]
+    if res != 0xff:
+        return res, offset + 1
+    return data[offset + 1] | (data[offset + 2] << 8), offset + 3
+
+
+def read_word(data, offset):
+    return data[offset] | (data[offset + 1] << 8), offset + 2
+
+
+def read_dword(data, offset):
+    return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24), offset + 4
+
+
+class DataReader:
+    def __init__(self, data, offset=0):
+        self.data = data
+        self.offset = offset
+
+    def get_byte(self):
+        self.offset += 1
+        return self.data[self.offset - 1]
+
+    def get_extended_byte(self):
+        res, self.offset = read_extended_byte(self.data, self.offset)
+        return res
+
+    def get_word(self):
+        return self.get_byte() | (self.get_byte() << 8)
+
+    def get_dword(self):
+        return self.get_word() | (self.get_word() << 16)
+
+    def get_var(self, n):
+        size = 1 << n
+        res = struct.unpack_from({0: '<B', 1: '<H', 2: '<I'}[n], self.data, offset=self.offset)[0]
+        self.offset += size
+        return res
+
+    def hex_str(self, n):
+        return hex_str(self.data[self.offset: self.offset + n])

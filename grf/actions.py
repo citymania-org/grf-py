@@ -1,9 +1,9 @@
 import datetime
 import textwrap
 import struct
+import pprint
 
-
-from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE
+from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE
@@ -66,6 +66,52 @@ def get_ref_id(ref_obj):
     if isinstance(ref_obj, SoundSprite):
         return ref_obj.id | 0x8000
     return ref_obj.ref_id
+
+
+class SpriteRef:
+    def __init__(self, id, pal=0, is_global=True, use_recolour=False, always_transparent=False, no_transparent=False):
+        self.id = id
+        self.pal = pal
+        self.is_global = is_global
+        self.use_recolour = use_recolour
+        self.always_transparent = always_transparent
+        self.no_transparent = no_transparent
+
+    @classmethod
+    def from_grf(cls, data, *, global_if_flagged=True):
+        pal = data >> 16
+        sprite = data & 0xffff
+
+        return cls(
+            id=sprite & 0x3fff,
+            pal=pal & 0x3fff,
+            is_global=(bool(pal & 0x8000) == global_if_flagged),
+            use_recolour=bool(sprite & 0x8000),
+            always_transparent=bool(sprite & 0x4000),
+            no_transparent=bool(pal & 0x4000),
+        )
+
+    def to_grf(self, *, global_if_flagged=True):
+        return (
+            self.id | (self.always_transparent << 14) | (self.use_recolour << 15) |
+            (self.pal | (self.no_transparent << 14) | ((self.is_global == global_if_flagged) << 15)) << 16
+        )
+
+    def __repr__(self):
+        return self.py()
+
+    def py(self):
+        return (
+            f'SpriteRef(id={self.id}, pal={self.pal}, is_global={self.is_global}, '
+            f'use_recolour={self.use_recolour}, always_transparent={self.always_transparent}, '
+            f'no_transparent={self.no_transparent})'
+        )
+
+
+class Property:
+    @classmethod
+    def read(cls, data, ofs):
+        raise NotImplementedError
 
 
 # Action 0
@@ -203,6 +249,189 @@ ACTION0_AIRCRAFT_PROPS = {
     0x1D: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
     0x1E: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
     0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
+}
+
+
+class BaseSpriteData:
+    def __init__(self, sprite, *, flags=None, registers=None):
+        assert isinstance(sprite, SpriteRef)
+        self.sprite = sprite
+        self.flags = flags
+        self.registers = registers
+
+
+class ToplevelSprite(BaseSpriteData):
+    def __init__(self, sprite, *, children=None, **kw):
+        assert isinstance(sprite, SpriteRef)
+        super().__init__(sprite, **kw)
+        self.children = children or []
+
+    def add_child(self, child):
+        self.children.append(child)
+
+
+class GroundSprite(ToplevelSprite):
+    pass
+
+
+class ParentSprite(ToplevelSprite):
+    def __init__(self, *, sprite, extent, offset, **kw):
+        assert isinstance(offset, tuple) and len(offset) == 3
+        assert isinstance(extent, tuple) and len(extent) == 3
+
+        super().__init__(sprite, **kw)
+        self.offset = offset
+        self.extent = extent
+
+
+class ChildSprite(BaseSpriteData):
+    def __init__(self, sprite, xofs, yofs, **kw):
+        assert isinstance(sprite, SpriteRef)
+        assert isinstance(xofs, int) and isinstance(yofs, int)
+        super().__init__(sprite, **kw)
+        self.xofs = xofs
+        self.yofs = yofs
+
+
+class SpriteLayout:
+    def __init__(self, sprites):
+        self.sprites = sprites
+
+
+def read_sprite_layout_registers(d, flags, is_parent):
+    # regs = {'flags': flags & TLF_DRAWING_FLAGS}
+    regs = {}
+    for flag, (fparent, mask, size, conversion) in SPRITE_FLAGS.items():
+        if flags & mask == 0:
+            continue
+        if fparent is not None and fparent != is_parent:
+            continue
+
+        if size == 0:
+            value = True
+        elif size == 1:
+            value = d.get_byte()
+        elif size == 2:
+            value = (d.get_byte(), d.get_byte())
+        else:
+            raise RuntimeError(f'Incorrect size of sprite register {flag}: {size}')
+
+        if conversion:
+            value = conversion(value)
+        regs[flag] = value
+
+    return regs
+
+
+def read_sprite_layout(d, num, basic_format):
+    has_z_position = not basic_format
+    has_flags = bool(num & 0x40)
+    num &= 0x3f
+
+    def read_sprite():
+        sprite = d.get_dword()
+        flags = d.get_word() if has_flags else 0
+        return SpriteRef.from_grf(sprite), flags
+
+    sprites = []
+
+    #read ground sprite
+    ground_sprite, ground_flags = read_sprite()
+    ground_registers = read_sprite_layout_registers(d, ground_flags, False)
+    cur_parent = GroundSprite(ground_sprite, flags=ground_flags, registers=ground_registers)
+    sprites.append(cur_parent)
+
+    for _ in range(num):
+        sprite, flags = read_sprite()
+        offset = (d.get_byte(), d.get_byte(), d.get_byte() if has_z_position else 0)
+        if offset[2] == 0x80:
+            # read child sprite
+            registers = read_sprite_layout_registers(d, flags, False)
+            cur_parent.add_child(ChildSprite(sprite, offset[0], offset[1],
+                                             flags=flags, registers=registers))
+        else:
+            # read parent sprite
+            extent = (d.get_byte(), d.get_byte(), d.get_byte())
+            registers = read_sprite_layout_registers(d, flags, True)
+            cur_parent = ParentSprite(sprite=sprite, extent=extent, offset=offset,
+                                      flags=flags, registers=registers)
+            sprites.append(cur_parent)
+
+    return SpriteLayout(sprites)
+
+
+class SpriteLayoutList:
+    def __init__(self, layouts):
+        self.layouts = layouts
+
+
+class StationLayout(Property):
+    @classmethod
+    def read_action0_old(cls, data, ofs):
+        d = DataReader(data, ofs)
+        num = d.get_extended_byte()
+        res = []
+        for i in range(num):
+            ground_data = d.get_dword()
+            if ground_data == 0:
+                res.append(None)
+                continue
+
+            sprites = []
+            cur_parent = GroundSprite(SpriteRef.from_grf(ground_data, global_if_flagged=False))
+            sprites.append(cur_parent)
+            while True:
+                sprite = {}
+                xofs = d.get_byte()
+                if xofs == 0x80:
+                    break
+                # TODO somewhat replicates action2 layout
+                offset = (xofs, d.get_byte(), d.get_byte())
+                extent = (d.get_byte(), d.get_byte(), d.get_byte())
+                sprite = SpriteRef.from_grf(d.get_dword(), global_if_flagged=False)
+                if offset[2] == 0x80:
+                    cur_parent.add_child(ChildSprite(sprite, offset[0], offset[1]))
+                else:
+                    cur_parent = ParentSprite(sprite=sprite, extent=extent, offset=offset)
+                    sprites.append(cur_parent)
+            res.append(SpriteLayout(sprites))
+
+        return SpriteLayoutList(res), d.offset
+
+    @classmethod
+    def read_action0_new(cls, data, ofs):
+        d = DataReader(data, ofs)
+        num = d.get_extended_byte()
+        res = []
+        for i in range(num):
+            num = d.get_byte()
+            # var10 flags allowed
+            res.append(read_sprite_layout(d, num, False))
+
+        return SpriteLayoutList(res), d.offset
+
+
+ACTION0_STATION_PROPS = {
+    0x08: ('class', 'L'),  # Class ID, see below
+    0x09: ('layout', StationLayout.read_action0_old),  # Sprite layout, see below
+    0x0A: ('copy_layout', 'B'),  # Copy sprite layout
+    0x0B: ('cb_flags', 'B'),  # Callback flags
+    0x0C: ('disabled_platforms', 'B'),  # Bit mask of disabled numbers of platforms
+    0x0D: ('disabled_length', 'B'),  # Bit mask of disabled platform lengths
+    0x0E: ('custom_layout', 'V'),  # Define custom layout, see below
+    0x0F: ('copy_custom_layout', 'B'),  # Copy custom layout from stationid given by argument
+    0x10: ('cargo_threshold', 'W'),  # Little/lots threshold
+    0x11: ('draw_pylon_tiles', 'B'),  # Pylon placement
+    0x12: ('cargo_random_triggers', 'D'),  # Bit mask of cargo type triggers for random sprites
+    0x13: ('general_flags', 'B'),  # General flags
+    0x14: ('hide_wire_tiles', 'B'),  # Overhead wire placement
+    0x15: ('non_traversable_tiles', 'B'),  # Can train enter tile
+    0x16: ('animation_info', 'W'),  # Animation information
+    0x17: ('animation_speed', 'B'),  # Animation speed
+    0x18: ('animation_triggers', 'W'),  # Animation triggers
+    0x19: ('road_routing', 'V'),  # Road routing (reserved for future use)
+    0x1A: ('advanced_layout', StationLayout.read_action0_new),  # Advanced sprite layout with register modifiers
+    0x1B: ('min_bridge_height', '8*B'),  # Advanced sprite layout with register modifiers
 }
 
 ACTION0_GLOBAL_PROPS = {
@@ -389,6 +618,7 @@ ACTION0_PROPS = {
     RV: ACTION0_RV_PROPS,
     SHIP: ACTION0_SHIP_PROPS,
     AIRCRAFT: ACTION0_AIRCRAFT_PROPS,
+    STATION: ACTION0_STATION_PROPS,
     HOUSE: ACTION0_HOUSE_PROPS,
     GLOBAL_VAR: ACTION0_GLOBAL_PROPS,
     INDUSTRY_TILE: ACTION0_INDUSTRY_TILE_PROPS,
@@ -1127,3 +1357,97 @@ class SetProperties(LazyBaseSprite):
         return f'SetProperties(\n' + pformat(self.props) + '\n)'
 
 Action14 = SetProperties
+
+
+class PrettyPrinter(pprint.PrettyPrinter):
+
+    def __init__(self, **kw):
+        self._compact_copy = kw.get('compact', False)
+        super().__init__(**kw)
+
+    # def _format_items_no_compact(self, *args, **kw):
+    #     self._compact = False
+    #     super()._format_items(*args, **kw)
+    #     self._compact = self._compact_copy
+
+    def _format_items_no_compact(self, items, stream, indent, allowance, context, level):
+        write = stream.write
+        indent += self._indent_per_level
+        if self._indent_per_level > 1:
+            write((self._indent_per_level - 1) * ' ')
+        delimnl = ',\n' + ' ' * indent
+        delim = ''
+        width = max_width = self._width - indent + 1
+        it = iter(items)
+        try:
+            next_ent = next(it)
+        except StopIteration:
+            return
+        last = False
+        while not last:
+            ent = next_ent
+            try:
+                next_ent = next(it)
+            except StopIteration:
+                last = True
+                max_width -= allowance
+                width -= allowance
+            write(delim)
+            delim = delimnl
+            self._format(ent, stream, indent,
+                         allowance if last else 1,
+                         context, level)
+
+    def _format_list_object(self, name, items, stream, indent, allowance, context, level):
+        if not len(items):
+            stream.write(f'{name}([])')
+            return
+        stream.write(f'{name}([\n')
+        stream.write(' ' * indent)
+        self._format_items_no_compact(items, stream, indent, allowance + 2, context, level)
+        stream.write('\n')
+        stream.write(' ' * indent)
+        stream.write('])')
+
+    def _format(self, obj, stream, indent, allowance, context, level):
+        if isinstance(obj, SpriteLayoutList):
+            self._format_list_object(obj.__class__.__name__, obj.layouts, stream, indent, allowance, context, level)
+        elif isinstance(obj, SpriteLayout):
+            self._format_list_object(obj.__class__.__name__, obj.sprites, stream, indent, allowance, context, level)
+        elif isinstance(obj, BaseSpriteData):
+            name = obj.__class__.__name__
+            stream.write(f'{name}(\n')
+            indent += self._indent_per_level
+            stream.write(' ' * indent)
+            stream.write(f'sprite={obj.sprite!r},\n')
+            if obj.flags is not None:
+                stream.write(' ' * indent)
+                stream.write(f'flags={obj.flags!r},\n')
+            if obj.registers is not None:
+                stream.write(' ' * indent)
+                stream.write(f'registers={obj.registers!r},\n')
+            if isinstance(obj, ToplevelSprite) and obj.children:
+                stream.write(' ' * indent)
+                stream.write(f'children=[\n ')
+                stream.write(' ' * indent)
+                self._format_items_no_compact(obj.children, stream, indent, allowance + 1, context, level)
+                stream.write(f'\n')
+                stream.write(' ' * indent)
+                stream.write(f']\n')
+
+            indent -= self._indent_per_level
+            stream.write(' ' * indent)
+            stream.write(')')
+        else:
+            super()._format(obj, stream, indent, allowance, context, level)
+
+
+def pformat(data, indent=4, indent_first=None):
+    INDENTATION = ' '
+    if indent_first is None:
+        indent_first = indent
+    pp = PrettyPrinter(indent=4, compact=True, sort_dicts=False)
+    res = textwrap.indent(pp.pformat(data), INDENTATION * indent)
+    if indent_first != indent:
+        res = res.lstrip() + INDENTATION * indent_first
+    return res

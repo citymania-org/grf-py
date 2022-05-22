@@ -2,15 +2,15 @@ import functools
 import heapq
 import inspect
 import math
-import pprint
 import struct
+import textwrap
 from collections import defaultdict
 
 from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
 import numpy as np
 
-from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, \
+from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, \
                      Define, DefineMultiple, Action0, Action1, SpriteSet, GenericSpriteLayout, \
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, VarAction2, \
                      IndustryProductionCallback, Action3, Map, Action4, ReplaceNewSprites, Action5, \
@@ -47,15 +47,6 @@ def find_best_color(x, in_range=SAFE_COLOURS):
             mj, md = j, d
     return mj
 
-
-def pformat(data, indent=4, indent_first=None):
-    INDENTATION = ' '
-    if indent_first is None:
-        indent_first = indent
-    res = textwrap.indent(pprint.pformat(data, compact=True, sort_dicts=False), INDENTATION * indent)
-    if indent_first != indent:
-        res = res.lstrip() + INDENTATION * indent_first
-    return res
 
 # def map_rgb_image(self, im):
 #     assert im.mode == 'RGB', im.mode
@@ -168,43 +159,6 @@ class DummySprite(BaseSprite):
 class SpriteGenerator:
     def get_sprites(self, grf):
         return NotImplementedError
-
-
-class Sprite:
-    def __init__(self, id, pal=0, is_global=True, use_recolour=False, always_transparent=False, no_transparent=False):
-        self.id = id
-        self.pal = pal
-        self.is_global = is_global
-        self.use_recolour = use_recolour
-        self.always_transparent = always_transparent
-        self.no_transparent = no_transparent
-
-    @classmethod
-    def from_grf(cls, sprite, pal):
-        return cls(
-            id=sprite & 0x3fff,
-            pal=pal & 0x3ffff,
-            is_global=not bool(pal & 0x8000),
-            use_recolour=bool(sprite & 0x8000),
-            always_transparent=bool(sprite & 0x4000),
-            no_transparent=bool(pal & 0x4000),
-        )
-
-    def to_grf(self):
-        return (
-            self.id | (self.always_transparent << 14) | (self.use_recolour << 15) |
-            (self.pal | (self.no_transparent << 14) | ((not self.is_global) << 15)) << 16
-        )
-
-    def __repr__(self):
-        return self.py()
-
-    def py(self):
-        return (
-            f'Sprite(id={self.id}, pal={self.pal}, is_global={self.is_global}, '
-            f'use_recolour={self.use_recolour}, always_transparent={self.always_transparent}, '
-            f'no_transparent={self.no_transparent})'
-        )
 
 
 # TODO just export the used classes

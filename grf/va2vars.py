@@ -131,6 +131,51 @@ NML_VA2_AIRCRAFT = {
     'vehicle_is_in_depot' : {'var': 0xE6, 'start': 0, 'size':  8, 'value_function': value_equals(0)},
 }
 
+
+NML_VA2_BASE_STATIONS = {
+    # Var 48 doesn't work with newcargos, do not use
+    'had_vehicle_of_type' : {'var': 0x8A, 'start': 1, 'size': 5}, # Only read bits 1-5
+    'is_waypoint'         : {'var': 0x8A, 'start': 6, 'size': 1},
+    'facilities'          : {'var': 0xF0, 'start': 0, 'size': 8},
+    'airport_type'        : {'var': 0xF1, 'start': 0, 'size': 8},
+    # Variables F2, F3, F6 (roadstop, airport flags) are next to useless
+    # Also, their values are not the same as in TTDP / spec
+    # Therefore, these are not implemented
+    'build_date'          : {'var': 0xFA, 'start': 0, 'size': 16, 'value_function': value_add_constant(701265)},
+    'cargo_amount_waiting'      : {'var': 0x60, 'start': 0, 'size': 32},
+    'cargo_time_since_pickup'   : {'var': 0x61, 'start': 0, 'size': 32},
+    'cargo_rating'              : {'var': 0x62, 'start': 0, 'size': 32, 'value_function': value_mul_div(101, 256)},
+    'cargo_time_en_route'       : {'var': 0x63, 'start': 0, 'size': 32},
+    'cargo_last_vehicle_speed'  : {'var': 0x64, 'start': 0, 'size':  8},
+    'cargo_last_vehicle_age'    : {'var': 0x64, 'start': 8, 'size':  8},
+    'cargo_accepted'            : {'var': 0x65, 'start': 3, 'size':  1},
+    'cargo_accepted_ever'       : {'var': 0x69, 'start': 0, 'size':  1},
+    'cargo_accepted_last_month' : {'var': 0x69, 'start': 1, 'size':  1},
+    'cargo_accepted_this_month' : {'var': 0x69, 'start': 2, 'size':  1},
+    'cargo_accepted_bigtick'    : {'var': 0x69, 'start': 3, 'size':  1},
+}
+
+
+NML_VA2_STATIONS = {
+    **NML_VA2_BASE_STATIONS,
+    # Vars 40, 41, 46, 47, 49 are implemented as 60+x vars,
+    # except for the 'tile type' part which is always the same anyways
+    'tile_type'                : {'var': 0x40, 'start': 24, 'size': 4},
+    'terrain_type'             : {'var': 0x42, 'start':  0, 'size': 8},
+    'track_type'               : {'var': 0x42, 'start':  8, 'size': 8},
+    'company_num'              : {'var': 0x43, 'start':  0, 'size': 8},
+    'company_type'             : {'var': 0x43, 'start': 16, 'size': 2},
+    'company_colour1'          : {'var': 0x43, 'start': 24, 'size': 4},
+    'company_colour2'          : {'var': 0x43, 'start': 28, 'size': 4},
+    'pbs_reserved'             : {'var': 0x44, 'start':  0, 'size': 1},
+    'pbs_reserved_or_disabled' : {'var': 0x44, 'start':  1, 'size': 1},
+    'pbs_enabled'              : {'var': 0x44, 'start':  2, 'size': 1},
+    'rail_continuation'        : {'var': 0x45, 'start':  0, 'size': 8},
+    'rail_present'             : {'var': 0x45, 'start':  8, 'size': 8},
+    'animation_frame'          : {'var': 0x4A, 'start':  0, 'size': 8},
+}
+
+
 NML_VA2_OBJECTS = {
     'relative_x'             : {'var': 0x40, 'start':  0, 'size':  8},
     'relative_y'             : {'var': 0x40, 'start':  8, 'size':  8},
@@ -237,6 +282,7 @@ VA2_VARS = {
         (RV, NML_VA2_RV),
         (SHIP, NML_VA2_SHIP),
         (AIRCRAFT, NML_VA2_AIRCRAFT),
+        (STATION, NML_VA2_STATIONS),
         (INDUSTRY, NML_VA2_INDUSTRIES),
         (OBJECT, NML_VA2_OBJECTS)
     )
