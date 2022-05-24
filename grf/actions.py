@@ -114,6 +114,14 @@ class Property:
         raise NotImplementedError
 
 
+class PyComment:
+    def __init__(self, text):
+        self.text = text
+
+    def py(self):
+        return f'# {self.text}'
+
+
 # Action 0
 
 ACTION0_COMMON_VEHICLE_PROPS = {
@@ -691,8 +699,8 @@ class Action0(LazyBaseSprite):
             return struct.pack('<I', value)
         if fmt == 'L':
             if isinstance(value, int): return struct.pack('<I', value)
-            assert isinstance(value, bytes)
-            assert len(value) == 4, len(value)
+            assert isinstance(value, bytes), (type(value), value)
+            assert len(value) == 4, (len(value), value)
             return value
         if fmt == 'B*': return struct.pack('<BH', 255, value)
         if fmt == 'n*B':
@@ -706,7 +714,9 @@ class Action0(LazyBaseSprite):
         pdict = ACTION0_PROP_DICT[self.feature]
         for prop, value in self.props.items():
             code, fmt = pdict[prop]
-            res += bytes((code,)) + self._encode_value(value, fmt)
+            res += bytes((code,))
+            for i in range(self.count):
+                res += self._encode_value(value[i], fmt)
         return res
 
     def py(self):
@@ -958,10 +968,16 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
                 high = r.high
             else:
                 set_obj = r[1]
-                low = r[0]
-                high = r[0]
-            # TODO split (or validate) negative-positive ranges
-            res += struct.pack('<Hii', get_ref_id(set_obj), low, high)
+                if isinstance(r[0], tuple):
+                    low, high = r[0]
+                else:
+                    low = high = r[0]
+            if low < 0 and high >= 0:
+                # Split negative-positive range in two
+                res += struct.pack('<Hii', get_ref_id(set_obj), low, -1)
+                res += struct.pack('<Hii', get_ref_id(set_obj), 0, high)
+            else:
+                res += struct.pack('<Hii', get_ref_id(set_obj), low, high)
         res += struct.pack('<H', get_ref_id(self.default))
         return res
 
@@ -1234,6 +1250,7 @@ class Action6(LazyBaseSprite):
 
 class If(LazyBaseSprite):
     def __init__(self, is_static, variable, varsize, condition, value, skip):
+        super().__init__()
         self.is_static = is_static
         self.variable = variable
         self.varsize = varsize
@@ -1246,6 +1263,7 @@ class If(LazyBaseSprite):
         for i in range(self.varsize):
             res += bytes(((self.value >> (8 * i)) & 0xff,))
         res += bytes((self.skip,))
+        return res
 
     def py(self):
         return f'''
@@ -1264,7 +1282,7 @@ class If(LazyBaseSprite):
 # Action 8
 
 class SetDescription(BaseSprite):
-    def __init__(self, format_version, grfid, name, description):
+    def __init__(self, *, format_version, grfid, name, description):
         assert isinstance(grfid, bytes)
         assert isinstance(name, (bytes, str))
         assert isinstance(description, (bytes, str))
@@ -1290,7 +1308,7 @@ class SetDescription(BaseSprite):
     def py(self):
         return f'''
         SetDescription(
-            version={self.format_version},
+            format_version={self.format_version},
             grfid={self.grfid},
             name={self.name},
             description={self.description},
@@ -1397,7 +1415,7 @@ class SoundEffects(LazyBaseSprite):
         return struct.pack('<BH', 0x11, self.number)
 
     def py(self):
-        return f'SoundEffecs({self.number})'
+        return f'SoundEffects({self.number})'
 
 Action11 = SoundEffects
 

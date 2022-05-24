@@ -10,14 +10,14 @@ from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
 import numpy as np
 
-from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, \
+from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, \
                      Define, DefineMultiple, Action0, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, VarAction2, \
                      IndustryProductionCallback, Action3, Map, Action4, ReplaceNewSprites, Action5, \
                      Action6, If, SetDescription, ReplaceOldSprites, ActionA, Comment, ActionC, \
                      Label, Action10, SoundEffects, Action11, ImportSound, SetProperties, Action14, ActionD
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
-from .common import Feature, hex_str, utoi32
+from .common import Feature, hex_str, utoi32, FeatureMeta
 from .common import PALETTE, SAFE_COLOURS, ALL_COLOURS, WATER_COLOURS
 from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite
 from .strings import StringManager
@@ -161,14 +161,6 @@ class SpriteGenerator:
         return NotImplementedError
 
 
-# TODO just export the used classes
-EXPORT_CLASSES = [
-    Define, DefineMultiple, Action1, Action3, Action4, Map,
-    SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, Switch,
-    SetProperties, ReplaceOldSprites, ReplaceNewSprites, SetDescription,
-    Comment, ActionC, Label, Action10, SoundEffects, ImportSound, If,
-]
-
 class BaseNewGRF:
     def __init__(self):
         self.generators = []
@@ -226,13 +218,16 @@ class BaseNewGRF:
         f.write(struct.pack('<IB', len(data), grf_type))
         f.write(data)
 
-    def generate_python(self):
-        cn = [c.__name__ for c in EXPORT_CLASSES]
-        res = (
-            'import grf\n\n'
-            'g = grf.BaseNewGRF()\n\n'
-        )
-        res += ', '.join(cn) + ' = ' + ', '.join('g.' + x for x in cn) + '\n\n'
+    def generate_python(self, grf_filename):
+        res = 'import grf\n'
+        make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
+        res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
+        res += 'from grf import Ref, CB\n\n'
+        res += 'g = grf.BaseNewGRF()\n\n'
+        used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, RealSprite, PyComment)))
+        res += '# Bind all the used classes to current grf so they can be used declaratively\n'
+        res += ', '.join(used_classes) + ' = ' +  ', '.join(f'g.bind(grf.{c})' for c in used_classes)
+        res += '\n\n'
 
         for s in self.generators:
             if isinstance(s, tuple):
@@ -241,7 +236,7 @@ class BaseNewGRF:
             res += code + '\n'
             if '\n' in code: res += '\n'
 
-        res += '\ng.write("some.grf")'
+        res += f'\ng.write({grf_filename!r})'
         return res
 
     def generate_sprites(self):
@@ -524,11 +519,19 @@ class NewGRF(BaseNewGRF):
         self._params.append(data)
 
 
-for cls in EXPORT_CLASSES:
+# Defines g.Class for newgrf binding
+# EXPORT_CLASSES = [
+#     Define, DefineMultiple, Action3, Action4, Map,
+#     SpriteSet, BasicSpriteLayout, AdvancedSpriteLayout, Switch,
+#     SetProperties, ReplaceOldSprites, ReplaceNewSprites, SetDescription,
+#     Comment, ActionC, Label, Action10, SoundEffects, ImportSound, If,
+# ]
 
-    def func(self, *args, _cls=cls, **kw):
-        obj = _cls(*args, **kw)
-        self.add(obj)
-        return obj
+# for cls in EXPORT_CLASSES:
 
-    setattr(BaseNewGRF, cls.__name__, func)
+#     def func(self, *args, _cls=cls, **kw):
+#         obj = _cls(*args, **kw)
+#         self.add(obj)
+#         return obj
+
+#     setattr(BaseNewGRF, cls.__name__, func)
