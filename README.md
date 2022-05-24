@@ -21,3 +21,12 @@ Idea is to provide two levels of api:
 GRF decompiler into a low-level grf.py api.
 
 A tool to inspect the grf files. It's main goal is to provite a readable representation, not to be a fully functional decompiler. I.e. don't expect the generated py files to work and generate the grf back, even though it's not that hard to achieve it's not a priority atm.
+
+Installation on linux with a clean virtualenv:
+```
+python3 -m venv grfenv
+source grfenv/bin/activate
+pip install --upgrade pip
+pip install --upgrade setuptools
+python setup.py install
+```
