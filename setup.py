@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
-
+from setuptools import setup, find_packages
 
 install_requires = [
     'nml==0.6.1',
@@ -15,7 +14,7 @@ setup(
     version='0.1',
     description='Framework for making OpenTTD NewGRF files',
     author='dP',
-    packages=['grf'],
+    packages=find_packages(include=['grf']),
     scripts=['bin/grftopy'],
     install_requires=install_requires,
     python_requires=">=3.8",
