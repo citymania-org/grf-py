@@ -942,7 +942,6 @@ def read_real_sprite(f, nfo_line):
     s = f'{nfo_line}: Real sprite({sprite_id}): ({num}, {t:02x}): '
     if t == 0xff:
         s += 'non-image'
-        print('non-image:', sprite_id, num, t, hex_str(f.read(100)))
         f.seek(start_pos + num - 1, 0)
         return True, [PyComment(s)]
     zoom, height, width, x_offs, y_offs = struct.unpack('<BHHhh', f.read(9))
