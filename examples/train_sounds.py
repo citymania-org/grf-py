@@ -29,7 +29,7 @@ diesel_effects = {
     grf.SoundEvent.VISUAL_EFFECT: grf.RAWSound('sounds/modern_diesel_run.wav'),
     grf.SoundEvent.RUNNING_16: grf.RAWSound('sounds/modern_diesel_coast.wav'),
     grf.SoundEvent.START: grf.RAWSound('sounds/horn_4.wav'),
-    grf.SoundEvent.BREAKDOWN: grf.DefaultSound.TRAIN_BREAKDOWN,
+    grf.SoundEvent.BREAKDOWN: grf.DefaultSound.BREAKDOWN_TRAIN_SHIP,
     grf.SoundEvent.TUNNEL: grf.RAWSound('sounds/horn_4.wav'),  # sounds are cached by filename so horn_4 will only be added once
 }
 
