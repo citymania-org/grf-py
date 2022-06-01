@@ -1,9 +1,33 @@
+import math
 import os
 import struct
+
 import numpy as np
 from PIL import Image
 
-from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE
+from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE, ALL_COLOURS, SAFE_COLOURS, \
+    to_spectra, SPECTRA_PALETTE
+
+
+def color_distance(c1, c2):
+    rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
+    r = c1.rgb[0] - c2.rgb[0]
+    g = c1.rgb[1] - c2.rgb[1]
+    b = c1.rgb[2] - c2.rgb[2]
+    return math.sqrt(
+        ((2 + rmean) * r * r) +
+        4 * g * g +
+        (3 - rmean) * b * b)
+
+
+def find_best_color(x, in_range=SAFE_COLOURS):
+    mj, md = 0, 1e100
+    for j in in_range:
+        c = SPECTRA_PALETTE[j]
+        d = color_distance(x, c)
+        if d < md:
+            mj, md = j, d
+    return mj
 
 
 def fix_palette(img, sprite_name):
@@ -15,8 +39,8 @@ def fix_palette(img, sprite_name):
     #     if tuple(pal[i * 3: i*3 + 3]) != PALETTE[i * 3: i*3 + 3]:
     #         print(i, pal[i * 3: i*3 + 3], PALETTE[i * 3: i*3 + 3])
     remap = PaletteRemap()
-    for i in ALL_COLORS:
-        remap.remap[i] = find_best_color(to_spectra(pal[3 * i], pal[3 * i + 1], pal[3 * i + 2]), in_range=ALL_COLORS)
+    for i in ALL_COLOURS:
+        remap.remap[i] = find_best_color(to_spectra(pal[3 * i], pal[3 * i + 1], pal[3 * i + 2]), in_range=ALL_COLOURS)
     return remap.remap_image(img)
 
 
@@ -57,7 +81,11 @@ class LazyBaseSprite(BaseSprite):
         return len(self.get_data())
 
 
-class RealSprite(BaseSprite):
+class IntermediateSprite:
+    pass
+
+
+class RealSprite(BaseSprite, IntermediateSprite):
     def __init__(self):
         self.sprite_id = None
 
@@ -78,6 +106,42 @@ class SoundSprite(RealSprite):
 
     def get_hash(self):
         raise NotImplemented
+
+
+class PaletteRemap(BaseSprite):
+    def __init__(self, ranges=None):
+        self.remap = np.arange(256, dtype=np.uint8)
+        if ranges:
+            self.set_ranges(ranges)
+
+    def get_data(self):
+        return b'\x00' + self.remap.tobytes()
+
+    def get_data_size(self):
+        return 257
+
+    @classmethod
+    def from_function(cls, color_func, remap_water=False):
+        res = cls()
+        for i in SAFE_COLOURS:
+            res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
+        if remap_water:
+            for i in WATER_COLOURS:
+                res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
+        return res
+
+    def set_ranges(self, ranges):
+        for r in ranges:
+            f, t, v = r
+            self.remap[f: t + 1] = v
+
+    def remap_image(self, im):
+        assert im.mode == 'P', im.mode
+        data = np.array(im)
+        data = self.remap[data]
+        res = Image.fromarray(data)
+        res.putpalette(PALETTE)
+        return res
 
 
 class GraphicsSprite(RealSprite):

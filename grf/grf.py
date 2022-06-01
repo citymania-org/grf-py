@@ -1,7 +1,6 @@
 import functools
 import heapq
 import inspect
-import math
 import struct
 import textwrap
 from collections import defaultdict
@@ -10,7 +9,7 @@ from PIL import Image, ImageDraw
 from nml.spriteencoder import SpriteEncoder
 import numpy as np
 
-from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, \
+from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, SpriteRef, \
                      Define, DefineMultiple, Action0, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, VarAction2, \
                      IndustryProductionCallback, Action3, Map, Action4, ReplaceNewSprites, Action5, \
@@ -18,34 +17,13 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      Label, Action10, SoundEffects, Action11, ImportSound, SetProperties, Action14, ActionD
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta
-from .common import PALETTE, SAFE_COLOURS, ALL_COLOURS, WATER_COLOURS
-from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite
+from .common import PALETTE
+from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite
 from .strings import StringManager
 
 
 TEMPERATE, ARCTIC, TROPICAL, TOYLAND = 1, 2, 4, 8
 NO_CLIMATE, ALL_CLIMATES = 0, TEMPERATE | ARCTIC | TROPICAL | TOYLAND
-
-
-def color_distance(c1, c2):
-    rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
-    r = c1.rgb[0] - c2.rgb[0]
-    g = c1.rgb[1] - c2.rgb[1]
-    b = c1.rgb[2] - c2.rgb[2]
-    return math.sqrt(
-        ((2 + rmean) * r * r) +
-        4 * g * g +
-        (3 - rmean) * b * b)
-
-
-def find_best_color(x, in_range=SAFE_COLOURS):
-    mj, md = 0, 1e100
-    for j in in_range:
-        c = SPECTRA_PALETTE[j]
-        d = color_distance(x, c)
-        if d < md:
-            mj, md = j, d
-    return mj
 
 
 # def map_rgb_image(self, im):
@@ -73,42 +51,6 @@ def find_best_color(x, in_range=SAFE_COLOURS):
 
 #     def draw(self, img):
 #         raise NotImplementedError
-
-
-class PaletteRemap(BaseSprite):
-    def __init__(self, ranges=None):
-        self.remap = np.arange(256, dtype=np.uint8)
-        if ranges:
-            self.set_ranges(ranges)
-
-    def get_data(self):
-        return b'\x00' + self.remap.tobytes()
-
-    def get_data_size(self):
-        return 257
-
-    @classmethod
-    def from_function(cls, color_func, remap_water=False):
-        res = cls()
-        for i in SAFE_COLOURS:
-            res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
-        if remap_water:
-            for i in WATER_COLOURS:
-                res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
-        return res
-
-    def set_ranges(self, ranges):
-        for r in ranges:
-            f, t, v = r
-            self.remap[f: t + 1] = v
-
-    def remap_image(self, im):
-        assert im.mode == 'P', im.mode
-        data = np.array(im)
-        data = self.remap[data]
-        res = Image.fromarray(data)
-        res.putpalette(PALETTE)
-        return res
 
 
 class SpriteSheet:
@@ -159,6 +101,11 @@ class DummySprite(BaseSprite):
 class SpriteGenerator:
     def get_sprites(self, grf):
         return NotImplementedError
+
+
+class PythonGenerationContext:
+    def __init__(self):
+        self.resources = {}
 
 
 class BaseNewGRF:
@@ -219,12 +166,14 @@ class BaseNewGRF:
         f.write(data)
 
     def generate_python(self, grf_filename):
+        context = PythonGenerationContext()
         res = 'import grf\n'
         make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
         res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
-        res += 'from grf import Ref, CB\n\n'
+        res += 'from grf import Ref, CB, ImageFile, FileSprite, RAWSound\n\n'
         res += 'g = grf.BaseNewGRF()\n\n'
-        used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, RealSprite, PyComment)))
+        used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, IntermediateSprite)))
+        # used_classes.update(('ImageFile', 'ImageSprite', 'RAWSound'))  # TODO check usage of IntermediateSprite
         res += '# Bind all the used classes to current grf so they can be used declaratively\n'
         res += ', '.join(used_classes) + ' = ' +  ', '.join(f'g.bind(grf.{c})' for c in used_classes)
         res += '\n\n'
@@ -232,7 +181,7 @@ class BaseNewGRF:
         for s in self.generators:
             if isinstance(s, tuple):
                 s = s[0]
-            code = textwrap.dedent(s.py()).strip()
+            code = textwrap.dedent(s.py(context)).strip()
             res += code + '\n'
             if '\n' in code: res += '\n'
 
@@ -266,6 +215,8 @@ class BaseNewGRF:
                         r = refids.get(r.ref_id)
                         if r is None:
                             raise RuntimeError(f'Unresolved direct reference {r} in action {s}')
+                        ref_count[id(r)] += 1
+                        continue
 
                     if not isinstance(r, ReferenceableAction):
                         if isinstance(r, SoundSprite):
@@ -478,7 +429,12 @@ class NewGRF(BaseNewGRF):
 
         return [
             SetProperties(self._props),
-            SetDescription(self.format_version, self.grfid, self.name, self.description)
+            SetDescription(
+                format_version=self.format_version,
+                grfid=self.grfid,
+                name=self.name,
+                description=self.description
+            )
         ] + super().generate_sprites()
 
     def add_bool_parameter(self, *, name, description, default=None):

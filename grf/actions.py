@@ -9,7 +9,7 @@ from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HO
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
-from .sprites import BaseSprite, LazyBaseSprite, SoundSprite
+from .sprites import BaseSprite, LazyBaseSprite, SoundSprite, IntermediateSprite
 
 
 class Ref:
@@ -35,18 +35,18 @@ class CB(Ref):
 
 
 class Range:
-    def __init__(self, low, high, set):
-        self.set = set
+    def __init__(self, low, high, ref):
+        self.ref = ref
         self.low = low
         self.high = high
 
     def __str__(self):
         if self.low == self.high:
-            return f'{self.low} -> {self.set}'
-        return f'{self.low}..{self.high} -> {self.set}'
+            return f'{self.low} -> {self.ref}'
+        return f'{self.low}..{self.high} -> {self.ref}'
 
     def __repr__(self):
-        return f'Range({self.low}, {self.high}, {self.set})'
+        return f'Range({self.low}, {self.high}, {self.ref})'
 
 
 class ReferenceableAction:
@@ -78,7 +78,7 @@ class SpriteRef:
         self.no_transparent = no_transparent
 
     @classmethod
-    def from_grf(cls, data, *, global_if_flagged=True):
+    def from_grf(cls, data, *, global_if_flagged):
         pal = data >> 16
         sprite = data & 0xffff
 
@@ -91,16 +91,16 @@ class SpriteRef:
             no_transparent=bool(pal & 0x4000),
         )
 
-    def to_grf(self, *, global_if_flagged=True):
+    def to_grf(self, *, global_if_flagged):
         return (
             self.id | (self.always_transparent << 14) | (self.use_recolour << 15) |
             (self.pal | (self.no_transparent << 14) | ((self.is_global == global_if_flagged) << 15)) << 16
         )
 
     def __repr__(self):
-        return self.py()
+        return self.py(None)
 
-    def py(self):
+    def py(self, context):
         return (
             f'SpriteRef(id={self.id}, pal={self.pal}, is_global={self.is_global}, '
             f'use_recolour={self.use_recolour}, always_transparent={self.always_transparent}, '
@@ -109,17 +109,30 @@ class SpriteRef:
 
 
 class Property:
-    @classmethod
+    def validate(cls, value):
+        raise NotImplementedError
+
     def read(cls, data, ofs):
         raise NotImplementedError
 
+    def encode(cls, value):
+        raise NotImplementedError
 
-class PyComment:
+
+class PyComment(IntermediateSprite):
     def __init__(self, text):
         self.text = text
 
-    def py(self):
+    def py(self, context):
         return f'# {self.text}'
+
+
+class PyCode(IntermediateSprite):
+    def __init__(self, code):
+        self.code = code
+
+    def py(self, context):
+        return f'{self.code}'
 
 
 # Action 0
@@ -339,7 +352,7 @@ def read_sprite_layout(d, num, basic_format):
     def read_sprite():
         sprite = d.get_dword()
         flags = d.get_word() if has_flags else 0
-        return SpriteRef.from_grf(sprite), flags
+        return SpriteRef.from_grf(sprite, global_if_flagged=True), flags
 
     sprites = []
 
@@ -604,12 +617,31 @@ ACTION0_SOUND_EFFECT_PROPS = {
     0x0A: ('override', 'B'),  # Override old sound
 }
 
+
+class SizeTupleProperty(Property):
+    def validate(cls, value):
+        if isinstance(value, int) and 0 <= value < 256:
+            return
+        if (isinstance(value, (tuple, list)) and len(value) == 2
+                and 0 <= value[0] < 16 and 0 <= value[1] < 16):
+            return
+        raise ValueError(f'Expected integer 0-255 or a tuple (x, y) both in range 0-15')
+
+    def read(cls, data, ofs):
+        return (data[ofs] & 0xf, data[ofs] >> 4), ofs + 1
+
+    def encode(cls, value):
+        if isinstance(value, tuple):
+            value = (value[1] << 4) | value[0]
+        return bytes((value, ))
+
+
 ACTION0_OBJECT_PROPS = {
     0x08: ('label', 'L'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Class label, see below
     0x09: ('class_name_id', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Text ID for class
     0x0A: ('name_id', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Text ID for this object
     0x0B: ('climate', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Climate availability
-    0x0C: ('size', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Byte representing size, see below
+    0x0C: ('size', SizeTupleProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Byte representing size, see below
     0x0D: ('build_cost_factor', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Object build cost factor (sets object removal cost factor as well)
     0x0E: ('intro_date', 'D'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Introduction date, see below
     0x0F: ('eol_date', 'D'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   End of life date, see below
@@ -691,6 +723,8 @@ class Action0(LazyBaseSprite):
                 raise ValueError(f'Unknown property `{x}` for a feature {feature}')
 
     def _encode_value(self, value, fmt):
+        if isinstance(fmt, Property):
+            return fmt.encode(value)
         if fmt == 'B': return struct.pack('<B', value)
         if fmt == 'W': return struct.pack('<H', value)
         if fmt == 'D':
@@ -716,10 +750,13 @@ class Action0(LazyBaseSprite):
             code, fmt = pdict[prop]
             res += bytes((code,))
             for i in range(self.count):
-                res += self._encode_value(value[i], fmt)
+                try:
+                    res += self._encode_value(value[i], fmt)
+                except struct.error as e:
+                    raise RuntimeError(f'Error encoding value {value} for property {prop}: {e}')
         return res
 
-    def py(self):
+    def py(self, context):
         return f'''
         Action0(
             feature={self.feature},
@@ -734,7 +771,7 @@ class Define(Action0):
         multi_props = {k: [v] for k, v in props.items()}
         super().__init__(feature=feature, first_id=id, count=1, props=multi_props)
 
-    def py(self):
+    def py(self, context):
         flat_props = {k: v[0] for k, v in self.props.items()}
         return f'''
         Define(
@@ -750,7 +787,7 @@ class DefineMultiple(Action0):
             raise ValueError(f'Use Define for a single feature')
         super().__init__(feature=feature, first_id=first_id, count=count, props=props)
 
-    def py(self):
+    def py(self, context):
         return f'''
         DefineMultiple(
             feature={self.feature},
@@ -774,7 +811,7 @@ class Action1(LazyBaseSprite):
         return struct.pack('<BBBBH', 0x01,
                            self.feature.id, self.set_count, 0xFF, self.sprite_count)
 
-    def py(self):
+    def py(self, context):
         return f'''
         Action1(
             feature={self.feature},
@@ -787,7 +824,7 @@ class SpriteSet(Action1):
     def __init__(self, feature, sprite_count):
         super().__init__(feature, 1, sprite_count)
 
-    def py(self):
+    def py(self, context):
         return f'''
         SpriteSet(
             feature={self.feature},
@@ -818,7 +855,7 @@ class GenericSpriteLayout(LazyBaseSprite, ReferenceableAction):
             *self.ent2,
         )
 
-    def py(self):
+    def py(self, context):
         return f''' \
         GenericSpriteLayout(
             feature={self.feature},
@@ -840,12 +877,12 @@ class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
     def _encode(self):
         return struct.pack('<BBBBIIbbBBB', 0x02, self.feature.id, self.ref_id, 0,
-                           self.ground['sprite'].to_grf(),
-                           self.building['sprite'].to_grf(),
+                           self.ground['sprite'].to_grf(global_if_flagged=False),
+                           self.building['sprite'].to_grf(global_if_flagged=False),
                            *self.building['offset'],
                            *self.building['extent'])
 
-    def py(self):
+    def py(self, context):
         return f''' \
         BasicSpriteLayout(
             feature={self.feature},
@@ -875,7 +912,7 @@ class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
                 continue
             if key in sprite:
                 flags |= mask
-        res = struct.pack('<IH', sprite['sprite'].to_grf(), flags)
+        res = struct.pack('<IH', sprite['sprite'].to_grf(global_if_flagged=False), flags)
 
         if aux:
             is_parent = 'extent' in sprite or 'offset' in sprite
@@ -906,7 +943,7 @@ class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
         return res
 
-    def py(self):
+    def py(self, context):
         return f'''
         {self.__class__.__name__}(
             feature={self.feature},
@@ -928,13 +965,27 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         self.feature = feature
         self.ref_id = ref_id
         self.related_scope = related_scope
-        self.ranges = ranges
+
+        self._ranges = []
+        if isinstance(ranges, dict):
+            ranges = ranges.items()
+        for r in ranges:
+            if isinstance(r, Range):
+                self._ranges.append(r)
+            else:
+                set_obj = r[1]
+                if isinstance(r[0], tuple):
+                    low, high = r[0]
+                else:
+                    low = high = r[0]
+                self._ranges.append(Range(low, high, set_obj))
+
         self.default = default
         self.code = code
         self._parsed_code = None
 
     def get_refs(self):
-        yield from self.ranges.values()
+        yield from (r.ref for r in self._ranges)
         yield self.default
 
     @property
@@ -957,38 +1008,30 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         res += code[:-5]
         res += bytes((code[-5] & ~0x20,))  # mark the end of a chain
         res += code[-4:]
-        res += bytes((len(self.ranges),))
-        ranges = self.ranges
-        if isinstance(ranges, dict):
-            ranges = self.ranges.items()
-        for r in ranges:
-            if isinstance(r, Range):
-                set_obj = r.set
-                low = r.low
-                high = r.high
-            else:
-                set_obj = r[1]
-                if isinstance(r[0], tuple):
-                    low, high = r[0]
-                else:
-                    low = high = r[0]
-            if low < 0 and high >= 0:
+
+        ranges = b''
+        for r in self._ranges:
+            ref_id = get_ref_id(r.ref)
+            if r.low < 0 and r.high >= 0:
                 # Split negative-positive range in two
-                res += struct.pack('<Hii', get_ref_id(set_obj), low, -1)
-                res += struct.pack('<Hii', get_ref_id(set_obj), 0, high)
+                ranges += struct.pack('<Hii', ref_id, r.low, -1)
+                ranges += struct.pack('<Hii', ref_id, 0, r.high)
             else:
-                res += struct.pack('<Hii', get_ref_id(set_obj), low, high)
+                ranges += struct.pack('<Hii', ref_id, r.low, r.high)
+        res += bytes((len(ranges) // 10,))
+        res += ranges
+
         res += struct.pack('<H', get_ref_id(self.default))
         return res
 
-    def py(self):
+    def py(self, context):
         if '\n' not in self.code:
             code_str = repr(self.code)
         else:
             code_str = textwrap.indent("'''\n" + self.code + "'''", ' ' * 16).lstrip()
         ranges_str = pformat({
-            utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high)): r.set
-            for r in self.ranges
+            utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high)): r.ref
+            for r in self._ranges
         }, indent_first=0, indent=19)
         return f'''
         Switch(
@@ -1019,7 +1062,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         self.groups = groups
 
     def get_refs(self):
-        yield from self.groups.values()
+        yield from self.groups
 
     def _encode(self):
         atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[scope]
@@ -1035,7 +1078,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         )
         return res
 
-    def py(self):
+    def py(self, context):
         return f'''
         RandomSwitch(
             feature={self.feature},
@@ -1086,7 +1129,7 @@ class IndustryProductionCallback(LazyBaseSprite):
                self.do_again
             )
 
-    def py(self):
+    def py(self, context):
         return f'''
         {self.__class__.__name__}(
             version={self.version},
@@ -1099,7 +1142,7 @@ class IndustryProductionCallback(LazyBaseSprite):
 # Action 3
 
 class Action3(LazyBaseSprite, ReferencingAction):
-    def __init__(self, feature, ids, maps, default, wagon_override=False):
+    def __init__(self, *, feature, ids, maps, default, wagon_override=False):
         assert isinstance(feature, Feature), feature
         super().__init__()
         self.feature = feature
@@ -1131,7 +1174,7 @@ class Action3(LazyBaseSprite, ReferencingAction):
                 *idlist, mcount, *sum(((k, get_ref_id(x)) for k, x in self.maps.items()), ()),
                 get_ref_id(self.default))
 
-    def py(self):
+    def py(self, context):
         return f'''
         Action3(
             feature={self.feature},
@@ -1144,9 +1187,14 @@ class Action3(LazyBaseSprite, ReferencingAction):
 
 class Map(Action3):
     def __init__(self, object, maps, default):
-        super().__init__(object.feature, [object.first_id], maps, default)
+        super().__init__(
+            feature=object.feature,
+            ids=[object.first_id],
+            maps=maps,
+            default=default
+        )
 
-    def py(self):
+    def py(self, context):
         return f'''
         Action3(
             feature={self.feature},
@@ -1192,7 +1240,7 @@ class Action4(LazyBaseSprite):
         else:
             return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
 
-    def py(self):
+    def py(self, context):
         offset_str = f'0x{self.offset:04x}' if self.is_generic_offset else self.offset
         return f'''
         Action4(
@@ -1221,7 +1269,7 @@ class ReplaceNewSprites(LazyBaseSprite):
             return bytes((0x5,)) + struct.pack('<BBH', self.set_type, 0xff, self.num)
         return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0xf0, 0xff, self.num, 0xff, self.offset)
 
-    def py(self):
+    def py(self, context):
         return f'ReplaceNewSprites(set_type={self.set_type}, num={self.num}, offset={self.offset})'
 
 Action5 = ReplaceNewSprites
@@ -1238,11 +1286,11 @@ class Action6(LazyBaseSprite):
         return struct.pack(
             '<B' + 'BBBH' * len(self.params) + 'B',
             0x06,
-            *sum(((p['num'], p['size'], 0xff, p['offset']) for p in self.param), ()),
+            *sum(((p['num'], p['size'], 0xff, p['offset']) for p in self.params), ()),
             0xff
         )
 
-    def py(self):
+    def py(self, context):
         return f'Action6(\n' + pformat(self.params) + '\n)'
 
 
@@ -1265,7 +1313,7 @@ class If(LazyBaseSprite):
         res += bytes((self.skip,))
         return res
 
-    def py(self):
+    def py(self, context):
         return f'''
             If(
                 is_static={self.is_static},
@@ -1305,7 +1353,7 @@ class SetDescription(BaseSprite):
     def get_data_size(self):
         return len(self._data)
 
-    def py(self):
+    def py(self, context):
         return f'''
         SetDescription(
             format_version={self.format_version},
@@ -1335,7 +1383,7 @@ class ReplaceOldSprites(BaseSprite):
     def get_data_size(self):
         return 2 + 3 * len(self.sets)
 
-    def py(self):
+    def py(self, context):
         return f'ReplaceOldSprites(sets={self.sets!r})'
 
 ActionA = ReplaceOldSprites
@@ -1351,7 +1399,7 @@ class Comment(LazyBaseSprite):
     def _encode(self):
         return bytes((0x0C)) + self.data
 
-    def py(self):
+    def py(self, context):
         return f'Comment({self.data!r})'
 
 ActionC = Comment
@@ -1369,10 +1417,13 @@ class ActionD(LazyBaseSprite):
             self.value = value
 
     def _encode(self):
-        # return bytes((0x0D)) + self.data
-        raise NotImplementedError
+        operation_byte = self.operation | 0x80 * self.if_undefined
+        res = bytes((0x0D, self.target, operation_byte, self.source1, self.source2))
+        if self.source1 == 0xff or self.source2 == 0xff:
+            res += struct.pack('<I', self.value)
+        return res
 
-    def py(self):
+    def py(self, context):
         # fmt = OPERATIONS[operation]
         # sf = lambda x: f'[{x:02x}]' if x != 0xff else str(value)
         # target_str = f'[{target:02x}]'
@@ -1392,13 +1443,14 @@ class ActionD(LazyBaseSprite):
 
 class Label(LazyBaseSprite):
     def __init__(self, label, comment):
+        super().__init__()
         self.label = label
         self.comment = comment
 
     def _encode(self):
-        return bytes((0x10, self.label)) + data
+        return bytes((0x10, self.label)) + self.comment
 
-    def py(self):
+    def py(self, context):
         return f'Label({self.label}, {self.comment!r})'
 
 Action10 = Label
@@ -1414,7 +1466,7 @@ class SoundEffects(LazyBaseSprite):
     def _encode(self):
         return struct.pack('<BH', 0x11, self.number)
 
-    def py(self):
+    def py(self, context):
         return f'SoundEffects({self.number})'
 
 Action11 = SoundEffects
@@ -1428,7 +1480,7 @@ class ImportSound(LazyBaseSprite):
     def _encode(self):
         return b'\xFE\x00' + self.grfid + struct.pack('<H', self.number)
 
-    def py(self):
+    def py(self, context):
         return f'ImportSound({self.grfid!r}, {self.number})'
 
 
@@ -1467,7 +1519,6 @@ class SetProperties(LazyBaseSprite):
                     text = text.encode('utf-8')
                 data += b'T' + k + bytes((lang_id)) + text + b'\0'
             elif isinstance(v, str):
-                print(v, k)
                 data += b'T' + k + b'\0' + v.encode('utf-8') + b'\0'
             elif isinstance(v, int):
                 data += b'B' + k + b'\x04\x00' + struct.pack('<I', v)
@@ -1479,7 +1530,7 @@ class SetProperties(LazyBaseSprite):
         rec(None, self.props)
         return data
 
-    def py(self):
+    def py(self, context):
         return f'SetProperties(\n' + pformat(self.props) + '\n)'
 
 Action14 = SetProperties
@@ -1572,7 +1623,7 @@ def pformat(data, indent=4, indent_first=None):
     INDENTATION = ' '
     if indent_first is None:
         indent_first = indent
-    pp = PrettyPrinter(indent=4, compact=True, sort_dicts=False)
+    pp = PrettyPrinter(indent=4, compact=True, sort_dicts=False, width=120)
     res = textwrap.indent(pp.pformat(data), INDENTATION * indent)
     if indent_first != indent:
         res = res.lstrip() + INDENTATION * indent_first

@@ -363,10 +363,9 @@ class RoadVehicle(grf.SpriteGenerator):
             ),
         ]
 
-        res.append(grf.Action0(
+        res.append(grf.Define(
             feature=grf.RV,
-            first_id=self.id,
-            count=1,
+            id=self.id,
             props={
                 'sprite_id': 0xff,
                 'precise_max_speed': min(self.max_speed.precise_value, 0xff),
@@ -524,10 +523,9 @@ class Train(grf.SpriteGenerator):
             ),
         ]
 
-        res.append(grf.Action0(
+        res.append(grf.Define(
             feature=grf.TRAIN,
-            first_id=self.id,
-            count=1,
+            id=self.id,
             props={
                 'sprite_id': 0xfd,  # magic value for newgrf sprites
                 'max_speed': self.max_speed,
@@ -552,10 +550,9 @@ class Train(grf.SpriteGenerator):
         ))
 
         for apid, liveries, props in self._articulated_parts:
-            res.append(grf.Action0(
+            res.append(grf.Define(
                 feature=grf.TRAIN,
-                first_id=apid,
-                count=1,
+                id=apid,
                 props={
                     'sprite_id': 0xfd,  # magic value for newgrf sprites
                     'engine_class': self._props.get('engine_class'),
@@ -593,7 +590,7 @@ class Train(grf.SpriteGenerator):
         return res
 
 
-class Object(grf.Action0):
+class Object(grf.Define):
     class Flags:
         NONE               =       0  # Just nothing.
         ONLY_IN_SCENEDIT   = 1 <<  0  # Object can only be constructed in the scenario editor.

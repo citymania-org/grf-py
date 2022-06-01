@@ -69,9 +69,9 @@ OPERATORS = {
     OP_AND: ('AND', '{a} & {b}', 4, True),
     OP_OR: ('OR', '{a} | {b}', 4, True),
     OP_XOR: ('XOR', '{a} ^ {b}', 4, True),
-    OP_TSTO: ('TSTO', 'TEMP[{b}] = {a}', 2, True),
+    OP_TSTO: ('TSTO', 'TEMP[0x{b:02x}] = {a}', 2, True),
     OP_INIT: ('INIT', None, 1, False),
-    OP_PSTO: ('PSTO', 'PERM[{b}] = {a}', 2, True),
+    OP_PSTO: ('PSTO', 'PERM[0x{b:02x}] = {a}', 2, True),
     OP_ROT: ('ROT', 'rot({a}, {b})', 7, False),
     OP_CMP: ('CMP', 'cmp({a}, {b})', 7, False),
     OP_CMPU: ('CMPU', 'cmpu({a}, {b})', 7, False),
@@ -154,7 +154,10 @@ class Expr(Node):
         _, fmt, prio, bracket = OPERATORS[self.op]
 
         ares = self.a.format(prio - 1)
-        bres = self.b.format(prio - int(not bracket))
+        if self.op in (OP_TSTO, OP_PSTO):
+            bres = self.b.value
+        else:
+            bres = self.b.format(prio - int(not bracket))
 
         assert self.op != OP_INIT
 
@@ -314,7 +317,7 @@ class Temp(Node):
 
     def format(self, parent_priority=0):
         if isinstance(self.register, int):
-            return  f'TEMP[{self.register}]'
+            return  f'TEMP[0x{self.register:02x}]'
         return  f'TEMP[{self.register.format()}]'
 
     def compile(self, register, shift=0, and_mask=0xffffffff):
@@ -404,13 +407,29 @@ t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 
 def t_NUMBER(t):
-    r'\d+'
+    r'0x[0-9a-fA-F]+|0b[01]+|\d+'
+    # r'0x[0-9a-fA-F]+'
     try:
-        t.value = int(t.value)
+        if t.value.startswith('0x'):
+            t.value = int(t.value, 16)
+        elif t.value.startswith('0b'):
+            t.value = int(t.value, 2)
+        else:
+            t.value = int(t.value)
     except ValueError:
         print("Integer value too large %d", t.value)
         t.value = 0
     return t
+
+
+# def t_HEX_NUMBER(t):
+#     r'0x[0-9a-fA-F]+'
+#     try:
+#         t.value = int(t.value, 16)
+#     except ValueError:
+#         print("Integer value too large %d", t.value)
+#         t.value = 0
+#     return t
 
 
 # Ignored characters
@@ -558,9 +577,22 @@ def p_expression_call2(t):
 
 
 def p_expression_call3(t):
-    'expression : NAME LPAREN NUMBER COMMA NUMBER COMMA NUMBER RPAREN'
-    assert t[1] == 'var'
-    t[0] = GenericVar(var=int(t[3]), shift=int(t[5]), and_mask=int(t[7]))
+    '''expression : NAME LPAREN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
+                  | NAME LPAREN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
+    '''
+    assert t[1] == 'var' and t[5] == 'shift' and t[9] == 'and'
+    if len(t) > 13:
+        assert t[13] == 'add'
+        if t[17] == 'div':
+            type = 1
+        elif t[17] == 'mod':
+            type = 2
+        else:
+            raise ValueError(t[17])
+        t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]),
+                          type=type, add_val=int(t[15]), divmod_val=int(t[19]))
+    else:
+        t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]))
 
 
 def p_expression_group(t):
@@ -628,8 +660,12 @@ SPRITE_FLAGS = {
 
 
 if __name__ == "__main__":
-    from common import OBJECT
+    from .common import OBJECT
     res = parse_code(OBJECT, '''
+        TEMP[0x7f] = TEMP[0x1]
+        TEMP[0x7f] = var(0x10, shift=11, and=12)
+        TEMP[0x7f] = var(0x12, shift=11, and=12, add=1, div=3)
+        TEMP[0x7f] = var(0x13, shift=11, and=12, add=2, mod=4)
         TEMP[128] = (cmp(tile_slope, 30) & 1) * 18
         TEMP[129] = (cmp(tile_slope, 29) & 1) * 15
         TEMP[130] = (cmp(tile_slope, 27) & 1) * 17
