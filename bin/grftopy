@@ -34,6 +34,8 @@ class ParsingContext:
         self._groups = {}
         self.amount = -1
         self.sprites = {}
+        self.action_count = defaultdict(int)
+        self.action_size = defaultdict(int)
 
     def consume(self, sprite_id=None):
         if sprite_id is not None:
@@ -66,6 +68,28 @@ class ParsingContext:
     def get_sprite_data(self, sprite_id):
         return self.sprites.get(sprite_id, (self.DEFAULT, None))
 
+    def count_action(self, action_id, size):
+        action_type = self.type if action_id > 0xfd else self.DEFAULT
+        action_key = (action_id, action_type)
+        self.action_count[action_key] += 1
+        self.action_size[action_key] += size
+
+    def count_real_sprite(self, sprite_id, size):
+        action_type = self.get_sprite_data(sprite_id)[0]
+        action_key = (0xff, action_type)
+        self.action_count[action_key] += 1
+        self.action_size[action_key] += size
+
+    def print_stats(self):
+        for key in sorted(self.action_count.keys()):
+            count = self.action_count.get(key, '?')
+            size = self.action_size.get(key, '?')
+            prefix = {
+                self.DEFAULT: 'Action',
+                self.GRAPHICS: 'Graphics action',
+                self.SOUND: 'Sound action',
+            }[key[1]]
+            print(f'{prefix} 0x{key[0]:02X}: {count} times, {size} bytes total')
 
 def str_sprite(sprite):
     sprite_id = sprite & 0x1fff
@@ -975,7 +999,8 @@ def decode_pseudo_sprite(data, context):
 
 
 def read_pseudo_sprite(f, nfo_line, container, context):
-    data = f.read(2 if container < 2 else 4)
+    size_bytes = 2 if container < 2 else 4
+    data = f.read(size_bytes)
 
     # if not data and container == 1:
     #     return False, []
@@ -996,16 +1021,19 @@ def read_pseudo_sprite(f, nfo_line, container, context):
         if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
             return True, []
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
+        context.count_action(data[0], l + size_bytes * 2 + 1)
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
         res.extend(decode_pseudo_sprite(data, context))
     elif container >= 2 and grf_type == 0xfd:
         data = f.read(l)
+        context.count_action(0xfd, l + size_bytes * 2 + 1)
         sprite_id = struct.unpack('<I', data)[0]
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data)} ({sprite_id})'))
         res.append(SpritePlaceholder(sprite_id))
         context.consume(sprite_id)
     else:
         if container == 1:
+            context.count_action(0xff, l + size_bytes * 2 + 1)
             height, width, xofs, yofs = struct.unpack('<BHhh', f.read(7))
             zoom = ZOOM_NORMAL
             if grf_type & 0x02:
@@ -1020,6 +1048,7 @@ def read_pseudo_sprite(f, nfo_line, container, context):
             return True, res
         else:
             data = f.read(l)
+            context.count_action(data[0], l + size_bytes * 2 + 1)
             context.consume()
             res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}'))
     return True, res
@@ -1132,6 +1161,7 @@ def read_real_sprite(f, nfo_line, context):
     num, t = struct.unpack('<IB', f.read(5))
     start_pos = f.tell()
     sprite_type, sprite_group = context.get_sprite_data(sprite_id)
+    context.count_real_sprite(sprite_id, 8 + num)
     sprite_type_str = {
         ParsingContext.GRAPHICS: 'image',
         ParsingContext.SOUND: 'sound',
@@ -1334,6 +1364,7 @@ if __name__ == "__main__":
     resource_dir.mkdir()
     print(f'Started decompiling `{in_grf_path}` into directory `{out_dir}`.')
 
+    context = ParsingContext()
     with open(in_grf_path, 'rb') as f:
         first = f.read(1)
         container = None
@@ -1357,7 +1388,6 @@ if __name__ == "__main__":
 
         # print('Magic sprite:', hex_str(f.read(4)))
         nfo_line = 1
-        context = ParsingContext()
         while (res := read_pseudo_sprite(f, nfo_line, container, context))[0]:
             gen.add(*res[1])
             nfo_line += 1
@@ -1393,3 +1423,4 @@ if __name__ == "__main__":
             f.write(gen.generate_python('grfpy_' + in_grf_path.name))
 
     print(f'Finished decompiling `{in_grf_path}` into directory `{out_dir}`.')
+    context.print_stats()
