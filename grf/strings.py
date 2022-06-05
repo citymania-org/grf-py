@@ -40,6 +40,8 @@ class StringManager:
         return string_id
 
     def get_actions(self):
+        if not self._strings:
+            return []
         return [DefineStrings(
             feature=TRAIN,
             offset=0xd000,

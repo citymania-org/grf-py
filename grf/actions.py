@@ -455,6 +455,7 @@ ACTION0_STATION_PROPS = {
     0x1B: ('min_bridge_height', '8*B'),  # Advanced sprite layout with register modifiers
 }
 
+# TODO river
 
 def read_bridge_layout(data, ofs):
     d = DataReader(data, ofs)
@@ -486,24 +487,6 @@ ACTION0_BRIDGE_PROPS = {
     0x13:  ('cost_factor', 'W'),  # Cost factor word access
 }
 
-ACTION0_GLOBAL_PROPS = {
-    0x08: ('basecost', 'B'),  # Cost base multipliers
-    0x09: ('cargo_table', 'L'),  # Cargo translation table
-    0x0A: ('currency_name', 'W'),  # Currency display names
-    0x0B: ('currency_mult', 'D'),  # Currency multipliers
-    0x0C: ('currency_options', 'W'),  # Currency options
-    0x0D: ('currency_symbols', '0E'),  # Currency symbols
-    0x0F: ('currency_euro_date', 'W'),  # Euro introduction dates
-    0x10: ('snowline_table', '12*32*B'),  # Snow line height table
-    0x11: ('grfid_overrides', '2*L'),  # GRFID overrides for engines
-    0x12: ('railtype_table', 'D'),  # Railtype translation table
-    0x13: ('gender_table1', '(BV)+'),  # Gender/case translation table
-    0x14: ('gender_table2', '(BV)+'),  # Gender/case translation table
-    0x15: ('plural_form', 'B'),  # Plural form
-    0x16: ('roadtype_table1', 'B'),  # Road-/tramtype translation table
-    0x17: ('roadtype_table2', 'D'),  # Road-/tramtype translation table
-}
-
 ACTION0_HOUSE_PROPS = {
     0x08: ('substitute', 'B'),  # Substitute building type
     0x09: ('flags', 'B'),  # Building flags
@@ -533,6 +516,24 @@ ACTION0_HOUSE_PROPS = {
     0x21: ('min_year', 'W'),  # Long year (zero based) of minimum appearance
     0x22: ('max_year', 'W'),  # Long year (zero based) of maximum appearance
     0x23: ('tile_acceptance', 'V'), # Tile acceptance list
+}
+
+ACTION0_GLOBAL_PROPS = {
+    0x08: ('basecost', 'B'),  # Cost base multipliers
+    0x09: ('cargo_table', 'L'),  # Cargo translation table
+    0x0A: ('currency_name', 'W'),  # Currency display names
+    0x0B: ('currency_mult', 'D'),  # Currency multipliers
+    0x0C: ('currency_options', 'W'),  # Currency options
+    0x0D: ('currency_symbols', '0E'),  # Currency symbols
+    0x0F: ('currency_euro_date', 'W'),  # Euro introduction dates
+    0x10: ('snowline_table', '12*32*B'),  # Snow line height table
+    0x11: ('grfid_overrides', '2*L'),  # GRFID overrides for engines
+    0x12: ('railtype_table', 'D'),  # Railtype translation table
+    0x13: ('gender_table1', '(BV)+'),  # Gender/case translation table
+    0x14: ('gender_table2', '(BV)+'),  # Gender/case translation table
+    0x15: ('plural_form', 'B'),  # Plural form
+    0x16: ('roadtype_table1', 'B'),  # Road-/tramtype translation table
+    0x17: ('roadtype_table2', 'D'),  # Road-/tramtype translation table
 }
 
 ACTION0_INDUSTRY_TILE_PROPS = {
@@ -617,6 +618,7 @@ ACTION0_SOUND_EFFECT_PROPS = {
     0x0A: ('override', 'B'),  # Override old sound
 }
 
+# TODO signal
 
 class SizeTupleProperty(Property):
     def validate(cls, value):
@@ -683,6 +685,10 @@ ACTION0_RAILTYPE_PROPS = {
     0x19: ('introduces_railtype_list', 'n*L'),  # Introduced rail type list[2]
     0x1D: ('alternative_railtype_list', 'n*L'),  # Alternate rail type labels that shall be "redirected" to this rail type
 }
+
+# TODO airport_tile
+# TODO road_type
+# TODO tram_type
 
 ACTION0_PROPS = {
     TRAIN: ACTION0_TRAIN_PROPS,

@@ -830,8 +830,9 @@ def decode_action9(data, context):
 
 def decode_actionA(data, context):
     num = data[0]
-    sets = [struct.unpack_from('<BH', data, offset=3 * i + 1) for i in range(num)]
-    context.set_graphics(sum(x[0] for x in sets), 'action_a')
+    sets_flipped = [struct.unpack_from('<BH', data, offset=3 * i + 1) for i in range(num)]
+    sets = [(first, num) for num, first in sets_flipped]
+    context.set_graphics(sum(x[1] for x in sets), 'action_a')
     return [grf.ReplaceOldSprites(sets)]
 
 

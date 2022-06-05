@@ -145,12 +145,10 @@ class PaletteRemap(BaseSprite):
 
 
 class GraphicsSprite(RealSprite):
-    def __init__(self, x, y, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None):
+    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
         super().__init__()
-        self.x = x
-        self.y = y
         self.w = w
         self.h = h
         self.xofs = xofs
@@ -158,7 +156,7 @@ class GraphicsSprite(RealSprite):
         self.zoom = zoom
         self.bpp = bpp
         self.mask = mask
-        self.name = f'{self.x},{self.y} {self.w}x{self.h}'
+        self.name = f'{self.w}x{self.h}'
 
     def get_image(self):
         raise NotImplementedError
@@ -271,12 +269,12 @@ class GraphicsSprite(RealSprite):
 
 
 class ImageSprite(GraphicsSprite):
-    def __init__(self, image, x, y, w, h, *, mask=None, **kw):
+    def __init__(self, image, w, h, *, mask=None, **kw):
         self._image = convert_image(image)
         if mask:
             mask_image, xofs, yofs = mask
             mask = convert_image(mask_image), xofs, yofs
-        super().__init__(x, y, w, h, bpp=self._image[1], mask=mask, **kw)
+        super().__init__(w, h, bpp=self._image[1], mask=mask, **kw)
 
     def get_image(self):
         return self._image
@@ -309,8 +307,11 @@ class ImageFile:
 class FileSprite(GraphicsSprite):
     def __init__(self, file, x, y, w, h, *, bpp=None, mask=None, **kw):
         assert(isinstance(file, ImageFile))
-        super().__init__(x, y, w, h, bpp=bpp, mask=mask, **kw)
+        super().__init__(w, h, bpp=bpp, mask=mask, **kw)
+        self.x = x
+        self.y = y
         self.file = file
+        self.name = f'{self.x},{self.y} {self.w}x{self.h}'
 
     def get_image(self):
         img, bpp = self.file.get_image()
