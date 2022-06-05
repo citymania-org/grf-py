@@ -1,6 +1,6 @@
 import grf
 
-def fake_info_text(props):
+def fake_vehicle_info(props):
     return '{}'.join('{BLACK}' + k + ': {GOLD}' + v for k, v in props.items())
 
 def make_cb_switches(callbacks, maps, layout):
