@@ -908,6 +908,23 @@ def decode_action12(data, context):
     return [grf.UnicodeGlyphs(glyphs)]
 
 
+def decode_action13(data, context):
+    grfid = data[:4]
+    # TODO lang only for grf >= 8
+    lang = data[4]
+    count = data[5]
+    offset, _ = read_word(data, 6)
+    str_data = data[8:]
+    strings = [s for s in str_data.split(b'\0')] if str_data else []
+
+    return [grf.Transtations(
+        grfid=grfid,
+        lang=lang,
+        offset=offset,
+        strings=strings,
+    )]
+
+
 def decode_action14(data, context):
     res = {}
     ofs = 0
@@ -973,6 +990,7 @@ ACTIONS = {
     0x10: decode_action10,
     0x11: decode_action11,
     0x12: decode_action12,
+    0x13: decode_action13,
     0x14: decode_action14,
 }
 

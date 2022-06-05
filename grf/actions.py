@@ -1210,10 +1210,10 @@ class DefineStrings(LazyBaseSprite):
         assert isinstance(feature, Feature), feature
         if feature in VEHICLE_FEATURES or is_generic_offset:
             if not 0 <= offset <= 0xffff:
-                raise ValueError(f'Action4 `offset` {offset} is not in range 0..0xffff (for generic offset or vehicles)')
+                raise ValueError(f'{self.__class__.__name__} `offset` {offset} is not in range 0..0xffff (for generic offset or vehicles)')
         else:
             if not 0 <= offset <= 0xff:
-                raise ValueError(f'Action4 `offset` {offset} is not in range 0..0xff (for non-generic non-vehicle offset)')
+                raise ValueError(f'{self.__class__.__name__} `offset` {offset} is not in range 0..0xff (for non-generic non-vehicle offset)')
 
         super().__init__()
         self.feature = feature
@@ -1240,7 +1240,7 @@ class DefineStrings(LazyBaseSprite):
     def py(self, context):
         offset_str = f'0x{self.offset:04x}' if self.is_generic_offset else self.offset
         return f'''
-        Action4(
+        {self.__class__.__name__}(
             feature={self.feature},
             lang={self.lang},
             offset={offset_str},
@@ -1495,14 +1495,38 @@ class UnicodeGlyphs(LazyBaseSprite):
 
 # Action 13
 
-class Translation(LazyBaseSprite):
-    def __init__(self, *, glyphs):
-        assert len(glyphs) < 256
+class Translations(LazyBaseSprite):
+    def __init__(self, *, grfid, offset, is_generic_offset, lang=ANY_LANGUAGE):
+        if not 0xD000 <= offset <= 0xDC00:
+            raise ValueError(f'{self.__class__.__name__} `offset` {offset} is not in range 0xD000..0xDC00')
+
         super().__init__()
-        self.glyphs = []
+        self.grfid = grfid
+        self.lang = lang
+        self.offset = offset
+        self.strings = []
+        for s in strings:
+            if isinstance(s, bytes):
+                self.strings.append(s)
+            else:
+                assert isinstance(s, str), type(s)
+                self.strings.append(s.encode('utf-8'))
 
     def _encode(self):
-        data = bytes((0x12, len(self.glyphs)))
+        res = bytes((0x13,)) + self.grfid
+        str_data = b'\0'.join(self.strings) + b'\0'
+        res += struct.pack('<BBH', self.lang, len(self.strings), self.offset) + str_data
+        return res
+
+    def py(self, context):
+        offset_str = f'0x{self.offset:04x}' if self.is_generic_offset else self.offset
+        return f'''
+        {self.__class__.__name__}(
+            grfid={self.grfid},
+            lang={self.lang},
+            offset={offset_str},
+            strings=''' + pformat(self.strings, indent_first=0, indent=10 + 8) + '''
+        )'''
 
 
 # Action 14

@@ -324,7 +324,7 @@ class RoadVehicle(grf.SpriteGenerator):
                 ent2=(i,),
             ))
 
-        layout = grf.VarAction2(
+        layout = grf.Switch(
             related_scope=True,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
@@ -336,7 +336,7 @@ class RoadVehicle(grf.SpriteGenerator):
             callbacks.purchase_text = g.add_string(self.additional_text)
 
         if self.max_speed.precise_value >= 0x400:
-            callbacks.change_properties = grf.VarAction2(
+            callbacks.change_properties = grf.Switch(
                 ranges={
                     0x15: self.max_speed.value,
                 },
@@ -345,7 +345,7 @@ class RoadVehicle(grf.SpriteGenerator):
             )
 
         # Liveries
-        callbacks.cargo_subtype = grf.VarAction2(
+        callbacks.cargo_subtype = grf.Switch(
             ranges={i: g.add_string(l['name']) for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
@@ -355,7 +355,7 @@ class RoadVehicle(grf.SpriteGenerator):
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
         res = [
-            grf.Action4(
+            grf.DefineStrings(
                 feature=grf.RV,
                 offset=self.id,
                 is_generic_offset=False,
@@ -515,7 +515,7 @@ class Train(grf.SpriteGenerator):
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
         res = [
-            grf.Action4(
+            grf.DefineStrings(
                 feature=grf.TRAIN,
                 offset=self.id,
                 is_generic_offset=False,
