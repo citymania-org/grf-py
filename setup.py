@@ -11,7 +11,7 @@ install_requires = [
 
 setup(
     name='grf',
-    version='0.1.0',
+    version='0.1.1',
     description='Framework for making OpenTTD NewGRF files',
     author='dP',
     packages=find_packages(include=['grf']),
