@@ -821,14 +821,14 @@ class Action1(LazyBaseSprite):
 
 
 class SpriteSet(Action1):
-    def __init__(self, feature, sprite_count):
-        super().__init__(feature, 1, sprite_count)
+    def __init__(self, feature, count):
+        super().__init__(feature, 1, count)
 
     def py(self, context):
         return f'''
         SpriteSet(
             feature={self.feature},
-            sprite_count={self.sprite_count},
+            count={self.sprite_count},
         )'''
 
 
@@ -1043,11 +1043,9 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             code={code_str},
         )'''
 
-VarAction2 = Switch
-
 
 class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
-    def __init__(self, scope, triggers, cmp_all, lowest_bit, groups, *, feature=None, ref_id=None, count=None):
+    def __init__(self, *, scope, triggers, cmp_all, lowest_bit, groups, count=None, feature=None, ref_id=None):
         if scope == 'relative' and feature in VEHICLE_FEATURES:
             assert count is not None
         else:
@@ -1092,7 +1090,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
 
 
 class IndustryProductionCallback(LazyBaseSprite):
-    def __init__(self, inputs, outputs, do_again, version=2):
+    def __init__(self, *, inputs, outputs, do_again, version=2):
         assert isinstance(version, int)
         assert 0 <= version <= 2, version
         if version < 2:
@@ -1207,8 +1205,8 @@ class Map(Action3):
 
 # Action 4
 
-class Action4(LazyBaseSprite):
-    def __init__(self, feature, offset, is_generic_offset, strings, lang=None):
+class DefineStrings(LazyBaseSprite):
+    def __init__(self, *, feature, offset, is_generic_offset, strings, lang=ANY_LANGUAGE):
         assert isinstance(feature, Feature), feature
         if feature in VEHICLE_FEATURES or is_generic_offset:
             if not 0 <= offset <= 0xffff:
@@ -1231,14 +1229,13 @@ class Action4(LazyBaseSprite):
                 self.strings.append(s.encode('utf-8'))
 
     def _encode(self):
-        lang = self.lang if self.lang is not None else ANY_LANGUAGE
         str_data = b'\0'.join(self.strings) + b'\0'
         if self.is_generic_offset:
-            return struct.pack('<BBBBH', 0x04, self.feature.id, lang | 0x80, len(self.strings), self.offset) + str_data
+            return struct.pack('<BBBBH', 0x04, self.feature.id, self.lang | 0x80, len(self.strings), self.offset) + str_data
         elif self.feature in VEHICLE_FEATURES:
-            return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
+            return struct.pack('<BBBBBH', 0x04, self.feature.id, self.lang, len(self.strings), 0xff, self.offset) + str_data
         else:
-            return struct.pack('<BBBBBH', 0x04, self.feature.id, lang, len(self.strings), 0xff, self.offset) + str_data
+            return struct.pack('<BBBBBH', 0x04, self.feature.id, self.lang, len(self.strings), 0xff, self.offset) + str_data
 
     def py(self, context):
         offset_str = f'0x{self.offset:04x}' if self.is_generic_offset else self.offset
@@ -1255,29 +1252,27 @@ class Action4(LazyBaseSprite):
 # Action 5
 
 class ReplaceNewSprites(LazyBaseSprite):
-    def __init__(self, set_type, num, *, offset=None):
+    def __init__(self, set_type, count, *, offset=None):
         assert isinstance(set_type, int)
-        assert isinstance(num, int)
+        assert isinstance(count, int)
 
         super().__init__()
         self.set_type = set_type
-        self.num = num
+        self.count = count
         self.offset = offset
 
     def _encode(self):
         if self.offset is None:
-            return bytes((0x5,)) + struct.pack('<BBH', self.set_type, 0xff, self.num)
-        return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0xf0, 0xff, self.num, 0xff, self.offset)
+            return bytes((0x5,)) + struct.pack('<BBH', self.set_type, 0xff, self.count)
+        return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0xf0, 0xff, self.count, 0xff, self.offset)
 
     def py(self, context):
-        return f'ReplaceNewSprites(set_type={self.set_type}, num={self.num}, offset={self.offset})'
-
-Action5 = ReplaceNewSprites
+        return f'ReplaceNewSprites(set_type={self.set_type}, count={self.count}, offset={self.offset})'
 
 
 # Action 6
 
-class Action6(LazyBaseSprite):
+class ModifySprites(LazyBaseSprite):
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -1291,13 +1286,13 @@ class Action6(LazyBaseSprite):
         )
 
     def py(self, context):
-        return f'Action6(\n' + pformat(self.params) + '\n)'
+        return f'ModifySprites(\n' + pformat(self.params) + '\n)'
 
 
 # Action 7, Action 9
 
 class If(LazyBaseSprite):
-    def __init__(self, is_static, variable, varsize, condition, value, skip):
+    def __init__(self, *, is_static, variable, varsize, condition, value, skip):
         super().__init__()
         self.is_static = is_static
         self.variable = variable
@@ -1330,7 +1325,7 @@ class If(LazyBaseSprite):
 # Action 8
 
 class SetDescription(BaseSprite):
-    def __init__(self, *, format_version, grfid, name, description):
+    def __init__(self, *, grfid, name, description, format_version=8):
         assert isinstance(grfid, bytes)
         assert isinstance(name, (bytes, str))
         assert isinstance(description, (bytes, str))
@@ -1406,7 +1401,7 @@ ActionC = Comment
 
 # Action D
 
-class ActionD(LazyBaseSprite):
+class ComputeParameters(LazyBaseSprite):
     def __init__(self, *, target, operation, if_undefined, source1, source2, value=None):
             super().__init__()
             self.target = target
@@ -1429,7 +1424,7 @@ class ActionD(LazyBaseSprite):
         # target_str = f'[{target:02x}]'
         # op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
         return f'''
-        ActionD(
+        ComputeParameters(
             target={self.target},
             operation={self.operation},
             if_undefined={self.if_undefined},
@@ -1443,6 +1438,8 @@ class ActionD(LazyBaseSprite):
 
 class Label(LazyBaseSprite):
     def __init__(self, label, comment):
+        if 0 <= label <= 255:
+            raise ValueError('label not in range 0..255')
         super().__init__()
         self.label = label
         self.comment = comment
@@ -1453,23 +1450,20 @@ class Label(LazyBaseSprite):
     def py(self, context):
         return f'Label({self.label}, {self.comment!r})'
 
-Action10 = Label
-
 
 # Action 11
 
 class SoundEffects(LazyBaseSprite):
-    def __init__(self, number):
+    def __init__(self, count):
         super().__init__()
-        self.number = number
+        self.count = count
 
     def _encode(self):
-        return struct.pack('<BH', 0x11, self.number)
+        return struct.pack('<BH', 0x11, self.count)
 
     def py(self, context):
-        return f'SoundEffects({self.number})'
+        return f'SoundEffects({self.count})'
 
-Action11 = SoundEffects
 
 class ImportSound(LazyBaseSprite):
     def __init__(self, grfid, number):
@@ -1482,6 +1476,33 @@ class ImportSound(LazyBaseSprite):
 
     def py(self, context):
         return f'ImportSound({self.grfid!r}, {self.number})'
+
+
+# Action 12
+
+class UnicodeGlyphs(LazyBaseSprite):
+    def __init__(self, glyphs):
+        assert len(glyphs) < 256
+        super().__init__()
+        self.glyphs = []
+
+    def _encode(self):
+        data = bytes((0x12, len(self.glyphs)))
+        for g in self.glyphs:
+            data += struct.pack('<BBH', g['font'], g['count'], g['base'])
+        return data
+
+
+# Action 13
+
+class Translation(LazyBaseSprite):
+    def __init__(self, *, glyphs):
+        assert len(glyphs) < 256
+        super().__init__()
+        self.glyphs = []
+
+    def _encode(self):
+        data = bytes((0x12, len(self.glyphs)))
 
 
 # Action 14
@@ -1532,8 +1553,6 @@ class SetProperties(LazyBaseSprite):
 
     def py(self, context):
         return f'SetProperties(\n' + pformat(self.props) + '\n)'
-
-Action14 = SetProperties
 
 
 class PrettyPrinter(pprint.PrettyPrinter):

@@ -290,7 +290,7 @@ def decode_action1(data, context):
     if set_count == 1:
         return [grf.SpriteSet(
             feature=feature,
-            sprite_count=sprite_count
+            count=sprite_count,
         )]
     else:
         return [grf.Action1(
@@ -635,7 +635,7 @@ def decode_action2(data, context):
         for c in code:
             c.simplify()
 
-        return [grf.VarAction2(
+        return [grf.Switch(
             feature=feature,
             ref_id=ref_id,
             related_scope=related_scope,
@@ -753,7 +753,7 @@ def decode_action4(data, context):
     str_data = data[struct.calcsize(fmt):-1]
     strings = [s for s in str_data.split(b'\0')] if str_data else [b'']
     assert len(strings) == num, (len(strings), num,)
-    return [grf.Action4(
+    return [grf.DefineStrings(
         feature=feature,
         lang=lang & 0x7f,
         offset=offset,
@@ -783,7 +783,7 @@ def decode_action6(data, context):
         param_size = d.get_byte()
         offset = d.get_extended_byte()
         params.append({'num': param_num, 'size': param_size, 'offset': offset})
-    return [grf.Action6(params)]
+    return [grf.ModifySprites(params)]
 
 
 def decode_action7or9(data, is_static):
@@ -872,7 +872,7 @@ def decode_actionD(data, context):
     op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
     return [
         PyComment(op_str),
-        grf.ActionD(
+        grf.ComputeParameters(
             target=target,
             operation=operation,
             if_undefined=if_undefined,
@@ -886,13 +886,26 @@ def decode_actionD(data, context):
 def decode_action10(data, context):
     label = data[0]
     comment = data[1:]
-    return [grf.Action10(label, comment)]
+    return [grf.Label(label, comment)]
 
 
 def decode_action11(data, context):
     number, _ = read_word(data, 0)
     context.set_sound(number)
     return [grf.SoundEffects(number)]
+
+
+def decode_action12(data, context):
+    count = data[0]
+    d = DataReader(data, 1)
+    glyphs = []
+    for i in range(count):
+        glyphs.append({
+            'font': d.get_byte(),
+            'count': d.get_byte(),
+            'base': d.get_word(),
+        })
+    return [grf.UnicodeGlyphs(glyphs)]
 
 
 def decode_action14(data, context):
@@ -959,6 +972,7 @@ ACTIONS = {
     0x0d: decode_actionD,
     0x10: decode_action10,
     0x11: decode_action11,
+    0x12: decode_action12,
     0x14: decode_action14,
 }
 

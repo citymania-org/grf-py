@@ -1,7 +1,7 @@
 from nml.grfstrings import NewGRFString, default_lang
 
 from .common import TRAIN
-from .actions import Action4
+from .actions import DefineStrings
 
 
 # b'test\\UE08FTEST\\0D\\UE098hi: \\UE08Etest'
@@ -40,7 +40,7 @@ class StringManager:
         return string_id
 
     def get_actions(self):
-        return [Action4(
+        return [DefineStrings(
             feature=TRAIN,
             offset=0xd000,
             is_generic_offset=True,

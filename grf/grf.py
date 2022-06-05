@@ -10,11 +10,11 @@ from nml.spriteencoder import SpriteEncoder
 import numpy as np
 
 from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, SpriteRef, \
-                     Define, DefineMultiple, Action0, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
-                     BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, VarAction2, \
-                     IndustryProductionCallback, Action3, Map, Action4, ReplaceNewSprites, Action5, \
-                     Action6, If, SetDescription, ReplaceOldSprites, ActionA, Comment, ActionC, \
-                     Label, Action10, SoundEffects, Action11, ImportSound, SetProperties, Action14, ActionD
+                     Define, DefineMultiple, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
+                     BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, \
+                     IndustryProductionCallback, Action3, Map, DefineStrings, ReplaceNewSprites, \
+                     ModifySprites, If, SetDescription, ReplaceOldSprites, Comment, ComputeParameters, \
+                     Label, SoundEffects, ImportSound, Translation, SetProperties
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta
 from .common import PALETTE

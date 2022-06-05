@@ -1,7 +1,9 @@
 # grf-py
-A Python framework for making NewGRFs for OpenTTD
+A Python framework for making NewGRFs for OpenTTD.
 
 Goal is to combine the convenience and power of Python with control and performance of nfo.
+
+Low-level API provides full coverage of the GRF format features, meaning it's possible to make any (modern) GRF with grf-py.
 
 At this point it's mostly just a proof of concept, API, syntax and goals can be changed at any moment.
 
@@ -14,6 +16,7 @@ Out of GRF features it currently only supports objects. But most of actions are 
 Idea is to provide two levels of api:
 
 1) Low level (Action*) - directly mimic the grf capabilites with python syntax.
+[Some documentation of the low-level API classes](docs/low_level.md).
 2) High level - Something convenient to use but still interoperable with low-level api.
 
 ## grftopy 
