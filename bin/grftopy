@@ -1288,12 +1288,13 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
 
     sprite_count = defaultdict(int)
     sprite_size = {}
+    sprite_data_hashes = set()
     by_id = defaultdict(list)
     for group, sprites in by_group.items():
         w = 0
         h = 0
 
-        line_ofs = [0]
+        line_ofs = []
         N = 8
         for i in range(0, len(sprites), N):
             lw = sum(s.width for s, _ in sprites[i: i + N]) + PADDING * 2 * N
@@ -1313,8 +1314,8 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
 
         img_sprites = []
         for i, (s, si) in enumerate(sprites):
-            yofs = PADDING + line_ofs[i // 8]
-            if i % 8 == 0:
+            yofs = PADDING + line_ofs[i // N]
+            if i % N == 0:
                 xofs = PADDING
 
             if s.type & 0x03 == 0x2:
@@ -1322,11 +1323,17 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
                 continue
 
             f.seek(s.offset)
+            duplicate_type = 0
             data, sprite_hash = decode_sprite(f, s, container)
+            if sprite_hash in sprite_data_hashes:
+                duplicate_type = 1
+            else:
+                sprite_data_hashes.add(sprite_hash)
             sprite_hash = hash((sprite_hash, s.xofs, s.yofs))
             sprite_count[sprite_hash] += 1
             sprite_size[sprite_hash] = f.tell() - s.offset + 18
-            is_duplicate = (sprite_count[sprite_hash] > 1)
+            if sprite_count[sprite_hash] > 1:
+                duplicate_type = 2
 
             a = np.frombuffer(data, dtype=np.uint8)
             assert a.size == s.width * s.height * s.bpp, (a.size, s.width, s.height, s.bpp)
@@ -1336,9 +1343,9 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
             if s.type & 0x04 > 0:
                 bpp -= 1
                 im = Image.fromarray(a[:, :, -1], mode='P')
-                if is_duplicate:
+                if duplicate_type > 0:
                     draw = ImageDraw.Draw(m)
-                    draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=0xB9)
+                    draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=[0, 0xBE, 0xB8][duplicate_type])
                 m.paste(im, (xofs, yofs))
 
             if bpp == 3:
