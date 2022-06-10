@@ -747,6 +747,14 @@ class Action0(LazyBaseSprite):
             assert isinstance(value, bytes)
             assert len(value) < 256, len(value)
             return struct.pack('<B', len(value)) + value
+        if fmt == '(BV)+':
+            res = b''
+            for k, v in value.items():
+                res += bytes((k,))
+                res += v
+                res += b'\0'
+            res += b'\0'
+            return res
 
     def _encode(self):
         res = struct.pack('<BBBBBH',
@@ -758,7 +766,7 @@ class Action0(LazyBaseSprite):
             for i in range(self.count):
                 try:
                     res += self._encode_value(value[i], fmt)
-                except struct.error as e:
+                except Exception as e:
                     raise RuntimeError(f'Error encoding value {value} for property {prop}: {e}')
         return res
 
@@ -998,7 +1006,11 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
     def parsed_code(self):
         if self._parsed_code is None:
             # TODO related scope
-            self._parsed_code = parse_code(self.feature, self.code)
+            try:
+                self._parsed_code = parse_code(self.feature, self.code)
+            except Exception as e:
+                print('Failed code: \n', self.code)
+                raise
         return self._parsed_code
 
     def __str__(self):

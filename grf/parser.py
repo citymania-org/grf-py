@@ -76,7 +76,7 @@ OPERATORS = {
     OP_CMP: ('CMP', 'cmp({a}, {b})', 7, False),
     OP_CMPU: ('CMPU', 'cmpu({a}, {b})', 7, False),
     OP_SHL: ('SHL', '{a} << {b}', 4, True),
-    OP_SHRU: ('SHRU', '{a} u>> {b}', 4, True),
+    OP_SHRU: ('SHRU', '{a} +>> {b}', 4, True),
     OP_SHR: ('SHR', '{a} >> {b}', 4, True),
 
     OPE_LT: ('LT', '{a} < {b}', 3, False),
@@ -302,8 +302,10 @@ class GenericVar(Node):
         shift += self.shift
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
-        # TODO dynamic param (var 7B)
         if self.param is not None:
+            # TODO dynamic param (var 7B)
+            if not isinstance(self.param, int):
+                self.param = 0
             return True, struct.pack('<BBBI', self.var, self.param, 0x20 | shift, and_mask)
         else:
             return True, struct.pack('<BBI', self.var, 0x20 | shift, and_mask)
@@ -380,7 +382,7 @@ class Call(Node):
 tokens = (
     'NAME', 'NUMBER', 'NEWLINE',
     'ADD', 'SUB', 'MUL',
-    'BINAND', 'BINOR', 'BINXOR', 'SHR', 'SHL',
+    'BINAND', 'BINOR', 'BINXOR', 'SHR', 'SHL', 'SHRU',
     'ASSIGN', 'COMMA',
     'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
 )
@@ -396,6 +398,7 @@ t_BINAND = r'\&'
 t_BINOR = r'\|'
 t_BINXOR = r'\^'
 t_SHR = r'>>'
+t_SHRU = r'\+>>'
 t_SHL = r'<<'
 t_ASSIGN = r'='
 t_COMMA = r','
@@ -450,7 +453,7 @@ def t_error(t):
 # Parsing rules
 
 precedence = (
-    ('left', 'SHR', 'SHL'),
+    ('left', 'SHRU', 'SHR', 'SHL'),
     ('left', 'BINOR'),
     ('left', 'BINXOR'),
     ('left', 'BINAND'),
@@ -511,8 +514,9 @@ def p_expression_binop(t):
                   | expression BINAND expression
                   | expression BINOR expression
                   | expression BINXOR expression
-                  | expression SHL expression
+                  | expression SHRU expression
                   | expression SHR expression
+                  | expression SHL expression
     '''
     op = {
         '+': OP_ADD,
@@ -521,8 +525,9 @@ def p_expression_binop(t):
         '&': OP_AND,
         '|': OP_OR,
         '^': OP_XOR,
-        '>>': OP_SHL,
-        '<<': OP_SHR,
+        '>>': OP_SHR,
+        '+>>': OP_SHRU,
+        '<<': OP_SHL,
     }.get(t[2])
 
     assert op is not None, t[2]
@@ -577,11 +582,14 @@ def p_expression_call2(t):
 
 
 def p_expression_call3(t):
-    '''expression : NAME LPAREN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
-                  | NAME LPAREN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
+    #                1     2      3     4      5     6         7     8     9     10   11      12   13    14      15     16  17   18      19     20
+    '''expression : NAME LPAREN NUMBER COMMA NAME ASSIGN     NUMBER COMMA NAME ASSIGN NUMBER RPAREN
+                  | NAME LPAREN NUMBER COMMA NAME ASSIGN expression COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
+                  | NAME LPAREN NUMBER COMMA NAME ASSIGN     NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
     '''
-    assert t[1] == 'var' and t[5] == 'shift' and t[9] == 'and'
-    if len(t) > 13:
+    assert t[1] == 'var'
+    if len(t) > 17:
+        assert t[5] == 'shift' and t[9] == 'and'
         assert t[13] == 'add'
         if t[17] == 'div':
             type = 1
@@ -592,7 +600,12 @@ def p_expression_call3(t):
         t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]),
                           type=type, add_val=int(t[15]), divmod_val=int(t[19]))
     else:
-        t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]))
+        if len(t) > 13:
+            assert t[5] == 'param' and t[9] == 'shift' and t[13] == 'and'
+            t[0] = GenericVar(var=int(t[3]), shift=int(t[11]), and_mask=int(t[15]), param=t[7])
+        else:
+            assert t[5] == 'shift' and t[9] == 'and'
+            t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]))
 
 
 def p_expression_group(t):
@@ -642,7 +655,8 @@ def parse_code(feature, code):
     lexer = ply.lex.lex()
     parser = ply.yacc.yacc()
     parser.grf_feature = feature
-    return parser.parse(code)
+    # TODO fix \n
+    return parser.parse(code + '\n')
 
 
 SPRITE_FLAGS = {
@@ -662,17 +676,20 @@ SPRITE_FLAGS = {
 if __name__ == "__main__":
     from .common import OBJECT
     res = parse_code(OBJECT, '''
-        TEMP[0x7f] = TEMP[0x1]
-        TEMP[0x7f] = var(0x10, shift=11, and=12)
-        TEMP[0x7f] = var(0x12, shift=11, and=12, add=1, div=3)
-        TEMP[0x7f] = var(0x13, shift=11, and=12, add=2, mod=4)
-        TEMP[128] = (cmp(tile_slope, 30) & 1) * 18
-        TEMP[129] = (cmp(tile_slope, 29) & 1) * 15
-        TEMP[130] = (cmp(tile_slope, 27) & 1) * 17
-        TEMP[131] = (cmp(tile_slope, 23) & 1) * 16
-        TEMP[132] = min(cmp(tile_slope, 0), 1)
-        TEMP[134] = (min((cmp(tile_slope, 14) ^ 2), 1) & TEMP[132]) * tile_slope + TEMP[131] + TEMP[130] + TEMP[129] + TEMP[128]
-    ''')
+        TEMP[0x00] = var(0x61, param=(198), shift=0, and=0xffff)
+        ''')
+    # res = parse_code(OBJECT, '''
+    #     TEMP[0x7f] = TEMP[0x1]
+    #     TEMP[0x7f] = var(0x10, shift=11, and=12)
+    #     TEMP[0x7f] = var(0x12, shift=11, and=12, add=1, div=3)
+    #     TEMP[0x7f] = var(0x13, shift=11, and=12, add=2, mod=4)
+    #     TEMP[128] = (cmp(tile_slope, 30) & 1) * 18
+    #     TEMP[129] = (cmp(tile_slope, 29) & 1) * 15
+    #     TEMP[130] = (cmp(tile_slope, 27) & 1) * 17
+    #     TEMP[131] = (cmp(tile_slope, 23) & 1) * 16
+    #     TEMP[132] = min(cmp(tile_slope, 0), 1)
+    #     TEMP[134] = (min((cmp(tile_slope, 14) ^ 2), 1) & TEMP[132]) * tile_slope + TEMP[131] + TEMP[130] + TEMP[129] + TEMP[128]
+    # ''')
 
     for line in res:
         print(line.format())

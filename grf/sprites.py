@@ -1,6 +1,7 @@
 import math
 import os
 import struct
+import time
 
 import numpy as np
 from PIL import Image
@@ -172,7 +173,12 @@ class GraphicsSprite(RealSprite):
 
     # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
     def get_real_data(self, encoder):
+        t0 = time.time()
         img, bpp = self.get_image()
+
+        encoder.count_loading(time.time() - t0)
+        t0 = time.time()
+
         if self.bpp is None:
             self.bpp = bpp
         npalpha = None
@@ -190,6 +196,9 @@ class GraphicsSprite(RealSprite):
         else:
             if bpp == BPP_8:
                 img = fix_palette(img, self.name)
+
+        encoder.count_conversion(time.time() - t0)
+        t0 = time.time()
 
         npimg = np.asarray(img)
         colourkey = self.get_colourkey()
@@ -255,6 +264,7 @@ class GraphicsSprite(RealSprite):
             raw_data = npimg
             raw_data.shape = self.w * self.h
 
+        encoder.count_composing(time.time() - t0)
         data = encoder.sprite_compress(raw_data)
         return struct.pack(
             '<IIBBHHhh',

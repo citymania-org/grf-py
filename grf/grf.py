@@ -2,11 +2,12 @@ import functools
 import heapq
 import inspect
 import struct
+import time
 import textwrap
 from collections import defaultdict
 
 from PIL import Image, ImageDraw
-from nml.spriteencoder import SpriteEncoder
+import nml.spriteencoder
 import numpy as np
 
 from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, SpriteRef, \
@@ -108,13 +109,62 @@ class PythonGenerationContext:
         self.resources = {}
 
 
+class Timer:
+    def __init__(self):
+        self.t = 0
+
+    def start(self, s):
+        self.t = time.time()
+        print(f'{s}: ... ', end='', flush=True)
+
+    def log(self, s):
+        t = time.time()
+        print(f'{t - self.t:.02f}')
+        print(f'{s}: ... ', end='', flush=True)
+        self.t = t
+
+    def stop(self):
+        t = time.time()
+        print(f'{t - self.t:.02f}')
+
+
+class SpriteEncoder:
+    def __init__(self):
+        self._nml = nml.spriteencoder.SpriteEncoder(True, False, None)
+        self.loading_time = 0
+        self.conversion_time = 0
+        self.composing_time = 0
+        self.compression_time = 0
+
+    def count_loading(self, t):
+        self.loading_time += t
+
+    def count_conversion(self, t):
+        self.conversion_time += t
+
+    def count_composing(self, t):
+        self.composing_time += t
+
+    def sprite_compress(self, raw_data):
+        t0 = time.time()
+        res = self._nml.sprite_compress(raw_data)
+        self.compression_time += time.time() - t0
+        return res
+
+    def print_time_report(self):
+        print(f'Sprite loading time: {self.loading_time:.02f}')
+        print(f'Sprite conversion time: {self.conversion_time:.02f}')
+        print(f'Sprite composing time: {self.composing_time:.02f}')
+        print(f'Sprite compression time: {self.compression_time:.02f}')
+
+
 class BaseNewGRF:
     def __init__(self):
         self.generators = []
-        self._sprite_encoder = SpriteEncoder(True, False, None)
         self._next_sound_id = 73
         self._sounds = {}
         self._strings = StringManager()
+        self._sprite_encoder = SpriteEncoder()
 
     def add_string(self, s):
         return self._strings.add(s)
@@ -321,18 +371,25 @@ class BaseNewGRF:
 
 
     def write(self, filename):
+        t = Timer()
+        t.start(f'Evaluating sprite generators')
         sprites = self.generate_sprites()
+
+        t.log(f'Resolving action references')
         sprites = self.resolve_refs(sprites)
 
+        t.log(f'Adding sounds')
         if self._sounds:
             sprites.append(SoundEffects(len(self._sounds)))
             for s in self._sounds.values():
                 sprites.append((s,))
 
+        t.log(f'Adding strings')
         sprites.extend(self._strings.get_actions())
 
         data_offset = 14
 
+        t.log(f'Enumerating {len(sprites)} real sprites')
         next_sprite_id = 1
         for s in sprites:
             if isinstance(s, tuple):
@@ -343,6 +400,7 @@ class BaseNewGRF:
             data_offset += s.get_data_size() + 5
 
         with open(filename, 'wb') as f:
+            t.log(f'Writing pseudo sprites')
             f.write(b'\x00\x00GRF\x82\x0d\x0a\x1a\x0a')  # file header
             f.write(struct.pack('<I', data_offset))
             f.write(b'\x00')  # compression(1)
@@ -357,6 +415,8 @@ class BaseNewGRF:
                 else:
                     self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
             f.write(b'\x00\x00\x00\x00')
+
+            t.log(f'Writing real sprites')
             for sl in sprites:
                 if not isinstance(sl, tuple):
                     continue
@@ -364,6 +424,9 @@ class BaseNewGRF:
                     f.write(s.get_real_data(self._sprite_encoder))
 
             f.write(b'\x00\x00\x00\x00')
+
+        t.stop()
+        self._sprite_encoder.print_time_report()
 
     def wrap(self, func):
         def wrapper(*args, **kw):

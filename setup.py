@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'nml==0.6.1',
-    'numpy==1.22.0',
+    'numpy==1.19.5',
     'Pillow==8.4.0',
     'spectra==0.0.11',
 ]
@@ -17,5 +17,5 @@ setup(
     packages=find_packages(include=['grf']),
     scripts=['bin/grftopy'],
     install_requires=install_requires,
-    python_requires=">=3.8",
+    python_requires=">=3.6.9",
 )
