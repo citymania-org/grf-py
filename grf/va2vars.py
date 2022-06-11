@@ -275,6 +275,17 @@ NML_VA2_INDUSTRIES = {
     'last_accept_date'             : {'var': 0xB4, 'start':  0, 'size': 16, 'value_function': value_add_constant(701265)},
 }
 
+NML_VA2_RAILTYPES = {
+    'terrain_type'          : {'var': 0x40, 'start': 0, 'size':  8},
+    'enhanced_tunnels'      : {'var': 0x41, 'start': 0, 'size':  8},
+    'level_crossing_status' : {'var': 0x42, 'start': 0, 'size':  8},
+    'build_date'            : {'var': 0x43, 'start': 0, 'size': 32},
+    'town_zone'             : {'var': 0x44, 'start': 0, 'size':  8},
+    'random_bits'           : {'var': 0x5F, 'start': 8, 'size':  2},
+}
+# Railtypes have no 60+x variables
+
+
 
 VA2_VARS = {
     feature: {**NML_VA2_GLOBALVARS, **d}
@@ -286,7 +297,8 @@ VA2_VARS = {
         (AIRCRAFT, NML_VA2_AIRCRAFT),
         (STATION, NML_VA2_STATIONS),
         (INDUSTRY, NML_VA2_INDUSTRIES),
-        (OBJECT, NML_VA2_OBJECTS)
+        (OBJECT, NML_VA2_OBJECTS),
+        (RAILTYPE, NML_VA2_RAILTYPES),
     )
 }
 
