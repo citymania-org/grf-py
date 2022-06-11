@@ -6,7 +6,8 @@
 - Rename `layout` argument of `CallbackManager.make_switch` to `graphics`.
 - Added optional `purchase_graphics` argument for `CallbackManager.make_switch` to specify different chain for vehicle purchase graphics.
 - Change vehicle `retire_early` Action0 property type to a signed byte.
-- Add `RunningCost` class of constants.
+- Added `RunningCost` class of constants.
+- Added `VEHICLE_FEATURES` constant.
 - grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
 
 ---------

@@ -9,4 +9,4 @@ from .sprites import RealSprite, GraphicsSprite, ImageSprite, ImageFile, FileSpr
 from .common import Feature, TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X, \
-                    BPP_8, BPP_24, BPP_32
+                    BPP_8, BPP_24, BPP_32, VEHICLE_FEATURES
