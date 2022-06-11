@@ -240,10 +240,17 @@ class BaseNewGRF:
 
     def generate_sprites(self):
         res = []
+
+        def run(g):
+            for s in g.get_sprites(self):
+                if isinstance(s, SpriteGenerator):
+                    run(s)
+                else:
+                    self._add(res, s)
+
         for g in self.generators:
             if isinstance(g, SpriteGenerator):
-                for s in g.get_sprites(self):
-                    self._add(res, s)
+                run(g)
             else:
                 res.append(g)
         return res
