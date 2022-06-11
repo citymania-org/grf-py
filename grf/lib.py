@@ -244,7 +244,7 @@ class CallbackManager:
             res |= FLAGS.get(k, 0)
         return res
 
-    def make_switch(self, layout):
+    def make_switch(self, graphics, purchase_graphics=None):
         # False - only purchase, True - general + purchase
         PURCHASE = {
             Callback.Vehicle.PURCHASE_TEXT: False,
@@ -259,10 +259,22 @@ class CallbackManager:
             if pdata is not None:
                 purchase_callbacks[k] = c
 
+        maps = {}
         if purchase_callbacks:
-            return make_cb_switches(callbacks, {255: purchase_callbacks}, layout)
-
-        return make_cb_switches(callbacks, {}, layout)
+            purchase_switch = grf.Switch(
+                ranges=purchase_callbacks,
+                default=purchase_graphics or graphics,
+                code='current_callback',
+            )
+            maps = {255: purchase_switch}
+        default = graphics
+        if callbacks:
+            default = grf.Switch(
+                ranges={**callbacks},
+                default=graphics,
+                code='current_callback',
+            )
+        return default, maps
 
 
 class RoadVehicle(grf.SpriteGenerator):
@@ -332,7 +344,6 @@ class RoadVehicle(grf.SpriteGenerator):
         )
 
         if self.additional_text:
-            string_id = 0xd000 + self.id
             callbacks.purchase_text = g.add_string(self.additional_text)
 
         if self.max_speed.precise_value >= 0x400:
@@ -487,7 +498,6 @@ class Train(grf.SpriteGenerator):
         )
 
         if self.additional_text:
-            string_id = 0xd000 + self.id
             callbacks.purchase_text = g.add_string(self.additional_text)
 
         # Liveries

@@ -158,6 +158,9 @@ def read_property(data, ofs, fmt):
     if fmt == 'B':
         return data[ofs], ofs + 1
 
+    if fmt == 'b':
+        return int.from_bytes((data[ofs],), byteorder='big', signed=True), ofs + 1
+
     if fmt == 'W':
         return data[ofs] | (data[ofs + 1] << 8), ofs + 2
 
@@ -1304,7 +1307,7 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
             h += lh
         formats = set(s.type for s, _ in sprites)
 
-        m, rgb, rgba = None, None, None
+        m, rgba = None, None
         if any(s.type & 0x03 > 0 for s, _ in sprites):
             rgba = Image.new('RGBA', (w, h))
 
@@ -1342,15 +1345,20 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
 
             if s.type & 0x04 > 0:
                 bpp -= 1
-                im = Image.fromarray(a[:, :, -1], mode='P')
                 if duplicate_type > 0:
                     draw = ImageDraw.Draw(m)
                     draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=[0, 0xBE, 0xB8][duplicate_type])
+                im = Image.fromarray(a[:, :, -1], mode='P')
                 m.paste(im, (xofs, yofs))
 
+            # if bpp >= 3 and duplicate_type > 0:
+            if bpp >= 3:
+                draw = ImageDraw.Draw(rgba)
+                # draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=[0, 0xffff00, 0xB8][duplicate_type])
+                draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=0xffff00)
             if bpp == 3:
                 im = Image.fromarray(a[:, :, :bpp], mode='RGB')
-                rgb.paste(im, (xofs, yofs))
+                rgba.paste(im, (xofs, yofs))
             elif bpp == 4:
                 im = Image.fromarray(a[:, :, :bpp], mode='RGBA')
                 rgba.paste(im, (xofs, yofs))

@@ -1,0 +1,19 @@
+---------
+0.1.1
+---------
+- Added `extra_callback_info1_byte_2` variable for quick access to the second byte of `extra_callback_info1`.
+- Print timings for grf compilation.
+- Rename `layout` argument of `CallbackManager.make_switch` to `graphics`.
+- Added optional `purchase_graphics` argument for `CallbackManager.make_switch` to specify different chain for vehicle purchase graphics.
+- Change vehicle `retire_early` Action0 property type to a signed byte.
+- Add `RunningCost` class of constants.
+- grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
+
+---------
+0.1.0
+---------
+
+Initial version:
+- Low-level support for most actions and feautures.
+- Semi-functional decompiler.
+- Basic high-level classes for road vehicles and trains.

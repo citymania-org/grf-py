@@ -278,6 +278,30 @@ class GraphicsSprite(RealSprite):
         ) + data
 
 
+class EmptyGraphicsSprite(GraphicsSprite):
+    def __init__(self):
+        super().__init__(1, 1)
+
+    def draw(self, img):
+        pass
+
+    def get_real_data(self, encoder):
+        return struct.pack(
+            '<IIBBHHhhB',
+            self.sprite_id,
+            11,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+        )
+
+EMPTY_SPRITE = EmptyGraphicsSprite()
+
+
 class ImageSprite(GraphicsSprite):
     def __init__(self, image, w, h, *, mask=None, **kw):
         self._image = convert_image(image)

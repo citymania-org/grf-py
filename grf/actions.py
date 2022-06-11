@@ -175,7 +175,7 @@ ACTION0_TRAIN_PROPS = {
     0x23: ('extra_weight_per_wagon_low', 'B'),  # Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
     0x24: ('extra_weight_per_wagon_high', 'B'),  # High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
     0x25: ('bitmask_vehicle_info', 'B'),  # User-defined bit mask to set when checking veh. var. 42     yes
-    0x26: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
+    0x26: ('retire_early', 'b'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
     0x27: ('misc_flags', 'B'),  # Miscellaneous flags     partly
     0x28: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes    yes
     0x29: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes    yes
@@ -205,7 +205,7 @@ ACTION0_RV_PROPS = {
     0x18: ('tractive_effort_coefficient', 'B'),  # Coefficient of tractive effort  should be zero
     0x19: ('air_drag_coefficient', 'B'),  # Coefficient of air drag     should be zero
     0x1A: ('refit_cost', 'B'),  # Refit cost, using 25% of the purchase price cost base   yes
-    0x1B: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
+    0x1B: ('retire_early', 'b'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
     0x1C: ('misc_flags', 'B'),  # Miscellaneous vehicle flags     partly ("tram" should be same as front)
     0x1D: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28    yes
     0x1E: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29    yes
@@ -233,7 +233,7 @@ ACTION0_SHIP_PROPS = {
     0x13: ('refit_cost', 'B'),  #  Refit cost, using 1/32 of the default refit cost base
     0x14: ('ocean_speed', 'B'),  # Ocean speed fraction, sets fraction of top speed available in the ocean; e.g. 00=100%, 80=50%, FF=0.4%
     0x15: ('canal_speed', 'B'),  # Canal speed fraction, same as above but for canals and rivers
-    0x16: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
+    0x16: ('retire_early', 'b'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
     0x17: ('flags', 'B'),  # Miscellaneous vehicle flags
     0x18: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
@@ -260,7 +260,7 @@ ACTION0_AIRCRAFT_PROPS = {
     0x13: ('refittable_cargo_types', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (Bit Value) in CargoTypes
     0x14: ('cb_flags', 'B'),  # Callback flags bit mask, see below
     0x15: ('refit_cost', 'B'),  # Refit cost, using 1/32 of the default refit cost base
-    0x16: ('retire_early', 'B'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
+    0x16: ('retire_early', 'b'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
     0x17: ('misc_flags', 'B'),  # Miscellaneous vehicle flags
     0x18: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
@@ -732,6 +732,7 @@ class Action0(LazyBaseSprite):
         if isinstance(fmt, Property):
             return fmt.encode(value)
         if fmt == 'B': return struct.pack('<B', value)
+        if fmt == 'b': return struct.pack('<b', value)
         if fmt == 'W': return struct.pack('<H', value)
         if fmt == 'D':
             if isinstance(value, datetime.date):
@@ -1081,7 +1082,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         yield from self.groups
 
     def _encode(self):
-        atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[scope]
+        atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[self.scope]
         res = bytes((0x02, self.feature.id, self.ref_id, atype))
         if self.scope == 'relative' and self.feature not in VEHICLE_FEATURES:
             res += bytes((self.count, ))

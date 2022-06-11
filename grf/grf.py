@@ -190,7 +190,7 @@ class BaseNewGRF:
             return
 
         # Unfold real sprite tuple if it was passed as a single arg
-        if isinstance(sprites[0], tuple):
+        if isinstance(sprites[0], (tuple, list)):
             assert len(sprites) == 1
             sprites = sprites[0]
             assert len(sprites) >= 1
@@ -201,7 +201,7 @@ class BaseNewGRF:
                 for s in sprites:
                     self._add_sound(s)
                 return
-            assert(all(isinstance(s, GraphicsSprite) for s in sprites))
+            assert(all(isinstance(s, GraphicsSprite) for s in sprites)), sprites
             assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites)), sprites
 
             l.append(tuple(sprites))
