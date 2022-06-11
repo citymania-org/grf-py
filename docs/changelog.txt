@@ -8,6 +8,8 @@
 - Change vehicle `retire_early` Action0 property type to a signed byte.
 - Added `RunningCost` class of constants.
 - Added `VEHICLE_FEATURES` constant.
+- Allowed sprite generators to return other generators.
+- Added `SpriteTable` and `VehicleSpriteTable` classes.
 - grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
 
 ---------

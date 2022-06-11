@@ -277,6 +277,57 @@ class CallbackManager:
         return default, maps
 
 
+class SpriteTable(grf.SpriteGenerator):
+    def __init__(self, feature):
+        assert isinstance(feature, grf.Feature)
+        self.feature = feature
+        self._rows = []
+        self._width = None
+
+    def add_row(self, row):
+        assert isinstance(row, (list, tuple))
+        if self._width is not None and len(row) != self._width:
+            raise ValueError(f"Length of row ({len(row)}) doesn't match the width of {self.__class__.__name__} ({self._width})")
+        row_id = len(self._rows)
+        self._rows.append(tuple(row))
+        return row_id
+
+    def get_sprites(self, g):
+        if not self._rows:
+            raise RuntimeError(f'Trying to get sprites for empty {self.__class__.__name__}')
+        res = []
+        res.append(grf.Action1(
+            feature=self.feature,
+            set_count=len(self._rows),
+            sprite_count=self._width,
+        ))
+        for r in self._rows:
+            res.extend(r)
+        return res
+
+
+class VehicleSpriteTable(SpriteTable):
+    def __init__(self, feature):
+        assert feature in grf.VEHICLE_FEATURES
+        super().__init__(feature)
+        self._width = 8
+
+    def get_layout(self, row_id):
+        return grf.GenericSpriteLayout(ent1=(row_id,), ent2=(row_id,))
+
+    def add_purchase_graphics(self, sprite, second_head=None):
+        return self.add_row((
+            grf.EMPTY_SPRITE,
+            grf.EMPTY_SPRITE,
+            second_head or grf.EMPTY_SPRITE,
+            grf.EMPTY_SPRITE,
+            grf.EMPTY_SPRITE,
+            grf.EMPTY_SPRITE,
+            sprite,
+            grf.EMPTY_SPRITE
+        ))
+
+
 class RoadVehicle(grf.SpriteGenerator):
 
     class Flags:
