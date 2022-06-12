@@ -741,6 +741,10 @@ def train_hpi(value):
 def train_ton(value):
     return value
 
+def nml_te(value):
+    return int(float(value) * 255 + 0.5)
+
+
 class CargoClass:
     PASSENGERS = 0x1  # passengers, also tourists (ECS)
     MAIL = 0x2  # mail

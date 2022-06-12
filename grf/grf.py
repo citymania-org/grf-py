@@ -17,7 +17,7 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      ModifySprites, If, SetDescription, ReplaceOldSprites, Comment, ComputeParameters, \
                      Label, SoundEffects, ImportSound, Translations, SetProperties
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
-from .common import Feature, hex_str, utoi32, FeatureMeta
+from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite
 from .strings import StringManager
@@ -152,10 +152,10 @@ class SpriteEncoder:
         return res
 
     def print_time_report(self):
-        print(f'Sprite loading time: {self.loading_time:.02f}')
-        print(f'Sprite conversion time: {self.conversion_time:.02f}')
-        print(f'Sprite composing time: {self.composing_time:.02f}')
-        print(f'Sprite compression time: {self.compression_time:.02f}')
+        print(f'   Graphics loading time: {self.loading_time:.02f}')
+        print(f'   Graphics conversion time: {self.conversion_time:.02f}')
+        print(f'   Graphics composing time: {self.composing_time:.02f}')
+        print(f'   Graphics compression time: {self.compression_time:.02f}')
 
 
 class BaseNewGRF:
@@ -391,7 +391,16 @@ class BaseNewGRF:
             for s in self._sounds.values():
                 sprites.append((s,))
 
-        t.log(f'Adding strings')
+        t.log(f'Adding strings and cargo table')
+        if self._cargo_table is not None:
+            sprites.append(DefineMultiple(
+                feature=GLOBAL_VAR,
+                first_id=0,
+                count=len(self._cargo_table),
+                props={
+                    'cargo_table': list(self._cargo_table.keys())
+                }
+            ))
         sprites.extend(self._strings.get_actions())
 
         data_offset = 14
@@ -485,10 +494,21 @@ class NewGRF(BaseNewGRF):
 
         self._props = props
         self._params = []
+        self._cargo_table = None
         self.grfid = grfid
         self.name = name
         self.description = description
         self.format_version = format_version
+
+    def set_cargo_table(self, cargo_list):
+        self._cargo_table = {}
+        for i, c in enumerate(cargo_list):
+            self._cargo_table[to_bytes(c)] = i
+
+    def map_cargo_labels(self, labels):
+        if self._cargo_table is None:
+            raise RuntimeError(f'`{self.__class__.__name__}.map_cargo_lables` requires cargo_table to be set')
+        return bytes(self._cargo_table[to_bytes(l)] for l in labels)
 
     def generate_sprites(self):
         if self._params:

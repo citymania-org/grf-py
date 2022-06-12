@@ -94,6 +94,12 @@ def hex_str(s, n=None):
     return ':'.join('{:02x}'.format(ord(c)) for c in s) + add
 
 
+def to_bytes(value):
+    if isinstance(value, bytes):
+        return value
+    return value.encode('utf-8')
+
+
 def utoi8(value):
     return value | -(value & 0x80)
 
