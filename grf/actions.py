@@ -714,7 +714,7 @@ ACTION0_PROP_DICT = {
 
 # Action 0
 
-class Action0(LazyBaseSprite):
+class DefineMultiple(LazyBaseSprite):
     def __init__(self, *, feature, first_id, count, props):
         assert isinstance(feature, Feature)
         super().__init__()
@@ -773,7 +773,7 @@ class Action0(LazyBaseSprite):
 
     def py(self, context):
         return f'''
-        Action0(
+        DefineMultiple(
             feature={self.feature},
             first_id={self.first_id},
             count={self.count},
@@ -781,7 +781,7 @@ class Action0(LazyBaseSprite):
         )'''
 
 
-class Define(Action0):
+class Define(DefineMultiple):
     def __init__(self, *, feature, id, props):
         multi_props = {k: [v] for k, v in props.items()}
         super().__init__(feature=feature, first_id=id, count=1, props=multi_props)
@@ -793,22 +793,6 @@ class Define(Action0):
             feature={self.feature},
             id={self.first_id},
             props=''' + pformat(flat_props, indent_first=0, indent=10 + 8) + '''
-        )'''
-
-
-class DefineMultiple(Action0):
-    def __init__(self, *, feature, first_id, count, props):
-        if count == 1:
-            raise ValueError(f'Use Define for a single feature')
-        super().__init__(feature=feature, first_id=first_id, count=count, props=props)
-
-    def py(self, context):
-        return f'''
-        DefineMultiple(
-            feature={self.feature},
-            first_id={self.first_id},
-            count={self.count},
-            props=''' + pformat(self.props, indent_first=0, indent=10 + 8) + '''
         )'''
 
 

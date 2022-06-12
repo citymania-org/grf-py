@@ -10,7 +10,8 @@
 - Added `VEHICLE_FEATURES` constant.
 - Allowed sprite generators to return other generators.
 - Added `SpriteTable` and `VehicleSpriteTable` classes.
-- Added VarAction 2 variables for railtypes.
+- Added `DisableDefault` sprite generator for disabling default vehicles.
+- Added VarAction 2 variables for rail types.
 - grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
 
 ---------

@@ -1,4 +1,7 @@
+from collections.abc import Iterable
+
 import grf
+
 
 def fake_vehicle_info(props):
     return '{}'.join('{BLACK}' + k + ': {GOLD}' + v for k, v in props.items())
@@ -326,6 +329,37 @@ class VehicleSpriteTable(SpriteTable):
             sprite,
             grf.EMPTY_SPRITE
         ))
+
+
+class DisableDefault(grf.SpriteGenerator):
+    def __init__(self, feature, ids):
+        assert feature in grf.VEHICLE_FEATURES, feature
+        assert isinstance(ids, (int, Iterable)), type(ids)
+        if isinstance(ids, int): ids = [ids,]
+        assert all(isinstance(x, int) for x in ids)
+        self.feature = feature
+        self.ids = ids
+
+    def get_sprites(self, g):
+        last_id = None
+        starts, counts = [], []
+        for i in sorted(self.ids):
+            if last_id != i - 1:
+                starts.append(i)
+                counts.append(1)
+            else:
+                counts[-1] += 1
+            last_id = i + 1
+
+        return (
+            grf.DefineMultiple(
+                feature=self.feature,
+                first_id=first,
+                count=count,
+                props={'climates_available': [grf.NO_CLIMATE] * count}
+            )
+            for first, count in zip(starts, counts)
+        )
 
 
 class RoadVehicle(grf.SpriteGenerator):
