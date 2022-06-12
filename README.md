@@ -2,7 +2,7 @@
 
 A Python framework for making NewGRF mod files for the OpenTTD game.
 
-It aims to cover the whole cycle of NewGRF development, from resource generation and low-level GRF actions to convenient templating and compilation. Having at all in the one place, powered by one of the best programming languages helps to keep it simple but flexible, minimize repeating code and achieve great readability and maintanability of the code. As grf-py covers pretty much the whole range of GRF format capabilites its primary application are the most complex projects that benefit the most from the ease of development and maintenance while keeping full control over GRF performance. But in future, as grf-py gains more high-level classes it should make it pretty approachable for beginners as well, better than nml at least. Also, grf-py includes `grftopy` decompiler that can produce low-level grf-py code for a .grf file.It is a Python framework that aims to cover the whole cycle of NewGRF development, from resource generation and low-level GRF actions to convenient templating and compilation. Having at all in the one place, powered by one of the best programming languages helps to keep it simple but flexible, minimize repeating code and achieve great readability and maintanability of the code. As grf-py covers pretty much the whole range of GRF format capabilites its primary application are the most complex projects that benefit the most from the ease of development and maintenance while keeping full control over GRF performance. But in future, as grf-py gains more high-level classes it should make it pretty approachable for beginners as well, better than nml at least. Also, grf-py includes `grftopy` decompiler that can produce low-level grf-py code for a .grf file.
+It aims to cover the whole cycle of NewGRF development, from resource generation and low-level GRF actions to convenient templating and compilation. Having it all in the one place, powered by one of the best programming languages helps to keep it simple but flexible, minimize repeating code and achieve great readability and maintainability of the code. As grf-py covers pretty much the whole range of GRF format capabilities its primary application are the most complex projects that benefit the most from the ease of development and maintenance while keeping full control over GRF performance. But in the future, as grf-py gains more high-level classes it should make it pretty approachable for beginners as well, better than nml at least. Also, grf-py includes `grftopy` decompiler that can produce low-level grf-py code for a `.grf` file.
 
 Some examples of GRFs with grf-py:
 Simple examples: https://github.com/citymania-org/grf-py/tree/main/examples
@@ -23,7 +23,7 @@ Idea is to provide two levels of api:
 
 GRF decompiler into a low-level grf.py api.
 
-A tool to inspect the grf files. It's main goal is to provite a readable representation for studying the inner workings or a grf and decompile resources. Produced code should be mostly functional but expect some bugs as it's not a primary goal. Also support for older grfs (container version 1 and grf format version < 8) is limited.
+A tool to inspect the grf files. It's main goal is to provite a readable representation for studying the inner workings or a grf and decompile resources. Produced code should be mostly functional but expect some bugs as it's not a primary goal. Also, support for older grfs (container version 1 and grf format version < 8) is limited.
 
 ## Installation
 

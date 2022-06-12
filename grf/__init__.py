@@ -10,3 +10,4 @@ from .common import Feature, TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, B
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X, \
                     BPP_8, BPP_24, BPP_32, VEHICLE_FEATURES
+from .actions import RVFlags, TrainFlags, train_hpi, train_ton, CargoClass

@@ -364,9 +364,6 @@ class DisableDefault(grf.SpriteGenerator):
 
 class RoadVehicle(grf.SpriteGenerator):
 
-    class Flags:
-        USE_2CC = 2
-
     class Speed:
         def __init__(self, precise_value):
             self.precise_value = precise_value

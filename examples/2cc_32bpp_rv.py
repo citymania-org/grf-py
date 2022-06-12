@@ -41,7 +41,7 @@ RoadVehicle(
     cargo_capacity=90,
     default_cargo_type=0,
     cost_factor=246,
-    misc_flags=RoadVehicle.Flags.USE_2CC,
+    misc_flags=grf.RVFlags.USE_2CC,
 )
 
 g.write('grfpy_2cc_32bpp_rv_example.grf')

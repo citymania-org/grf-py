@@ -12,6 +12,9 @@
 - Added `SpriteTable` and `VehicleSpriteTable` classes.
 - Added `DisableDefault` sprite generator for disabling default vehicles.
 - Added VarAction 2 variables for rail types.
+- Renamed `RoadVehicle.Flags` to `RVFlags`, added more constants to it.
+- Added `TrainFlags` and `CargoClass` classes of constants.
+- Added `train_hpi` and `train_ton` functions for unit conversions.
 - grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
 
 ---------

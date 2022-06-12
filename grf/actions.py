@@ -714,6 +714,53 @@ ACTION0_PROP_DICT = {
 
 # Action 0
 
+class RVFlags:
+    TRAM = 0x1 # Vehicle is a tram/light rail vehicle and requires tram tracks to operate
+    USE_2CC = 0x2 # Uses two company colors
+    RESERVED_1 = 0x4  # reserved, do not use
+    RESERVED_2 = 0x8  # reserved, do not use
+    AUTOREFIT = 0x10  # Auto-refitting is enabled for refits where callback 15E allows it or prop 1A specifies zero cost.
+    USE_CARGO_MULT = 0x20  # Use cargo multiplier for default cargo. See page about vehicle refitting.
+    NO_BREAKDOWN_SMOKE = 0x40  # Disable breakdown smoke effect.
+    USE_SPRITE_STACK = 0x80  # Compose vehicle from multiple sprites.
+
+class TrainFlags:
+    TILT = 0x1
+    USE_2CC = 0x2
+    MULTIPLE_UNIT = 0x4
+    ALLOW_FLIPPING = 0x8
+    AUTOREFIT = 0x10
+    USE_CARGO_MULT = 0x20
+    NO_BREAKDOWN_SMOKE = 0x40
+    USE_SPRITE_STACK = 0x80
+
+
+def train_hpi(value):
+    return value
+
+def train_ton(value):
+    return value
+
+class CargoClass:
+    PASSENGERS = 0x1  # passengers, also tourists (ECS)
+    MAIL = 0x2  # mail
+    EXPRESS = 0x4  # express goods, also tourists (ECS)
+    ARMOURED = 0x8  # valuables, diamonds, gold and alike
+    BULK = 0x10  # coal, ore, grain,...
+    PIECE_GOODS = 0x20  # containers, crates, livestock
+    LIQUID = 0x40  # oil, milk, water, ...
+    REFRIGERATED = 0x80  # food, milk, ...
+    HAZARDOUS = 0x100  # chemicals?, uranium, ...
+    COVERED = 0x200  # grain, cement, fruit, ...
+    OVERSIZED = 0x400  # vehicles, ...
+    POWDERIZED = 0x800  # cement, ...
+    NON_POURABLE = 0x1000  # sugar cane, wool or straw bales, ...
+    SPECIAL = 0x8000  # Special cargo, used for refit tricks. (e.g. regearing in NARS)
+    NONE = 0  # S  Special value that you can used to instead of 0.
+    # ALL_NORMAL_CARGO_CLASSES    Bitmask of all cargo classes except CC_SPECIAL. This is the same as bitmask(CC_PASSENGERS, CC_MAIL, ..., CC_OVERSIZED). Note: This is already a bitmask, don't use the bitmask(..) function with this.
+    # ALL_CARGO_CLASSES   bitmask(CC_SPECIAL) Note: This is already a bitmask, don't use the bitmask(..) function with this.
+
+
 class DefineMultiple(LazyBaseSprite):
     def __init__(self, *, feature, first_id, count, props):
         assert isinstance(feature, Feature)
