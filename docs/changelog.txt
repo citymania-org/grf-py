@@ -11,6 +11,7 @@
 - Allowed sprite generators to return other generators.
 - Added `SpriteTable` and `VehicleSpriteTable` classes.
 - Added `DisableDefault` sprite generator for disabling default vehicles.
+- Added `BaseCosts` sprite generator for chaging base costs.
 - Added VarAction 2 variables for rail types.
 - Renamed `RoadVehicle.Flags` to `RVFlags`, added more constants to it.
 - Added `TrainFlags` and `CargoClass` classes of constants.

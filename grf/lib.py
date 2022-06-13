@@ -26,6 +26,18 @@ def make_cb_switches(callbacks, maps, layout):
     return default, out_maps
 
 
+def combine_ranges(value):
+    last_id = None
+    res = []
+    for i, value in sorted(value):
+        if last_id != i - 1:
+            res.append((i, [value]))
+        else:
+            res[-1][1].append(value)
+        last_id = i
+    return res
+
+
 class SoundEvent:
     START = 1 # Vehicle leaves station or depot, plane takes off
     TUNNEL = 2 #Vehicle enters tunnel
@@ -341,24 +353,15 @@ class DisableDefault(grf.SpriteGenerator):
         self.ids = ids
 
     def get_sprites(self, g):
-        last_id = None
-        starts, counts = [], []
-        for i in sorted(self.ids):
-            if last_id != i - 1:
-                starts.append(i)
-                counts.append(1)
-            else:
-                counts[-1] += 1
-            last_id = i + 1
 
         return (
             grf.DefineMultiple(
                 feature=self.feature,
                 first_id=first,
-                count=count,
-                props={'climates_available': [grf.NO_CLIMATE] * count}
+                count=len(values),
+                props={'climates_available': values}
             )
-            for first, count in zip(starts, counts)
+            for first, values in combine_ranges((x, grf.NO_CLIMATE) for x in self.ids)
         )
 
 
@@ -706,4 +709,91 @@ class Object(grf.Define):
             props['size'] = (props['size'][1] << 4) | props['size'][0]
         super().__init__(OBJECT, id, 1, props)
 
+
+class BaseCosts(grf.SpriteGenerator):
+    STATION_VALUE = 0
+    BUILD_RAIL = 1
+    BUILD_ROAD = 2
+    BUILD_SIGNALS = 3
+    BUILD_BRIDGE = 4
+    BUILD_DEPOT_TRAIN = 5
+    BUILD_DEPOT_ROAD = 6
+    BUILD_DEPOT_SHIP = 7
+    BUILD_TUNNEL = 8
+    BUILD_STATION_RAIL = 9
+    BUILD_STATION_RAIL_LENGTH = 10
+    BUILD_STATION_AIRPORT = 11
+    BUILD_STATION_BUS = 12
+    BUILD_STATION_TRUCK = 13
+    BUILD_STATION_DOCK = 14
+    BUILD_VEHICLE_TRAIN = 15
+    BUILD_VEHICLE_WAGON = 16
+    BUILD_VEHICLE_AIRCRAFT = 17
+    BUILD_VEHICLE_ROAD = 18
+    BUILD_VEHICLE_SHIP = 19
+    BUILD_TREES = 20
+    TERRAFORM = 21
+    CLEAR_GRASS = 22
+    CLEAR_ROUGH = 23
+    CLEAR_ROCKS = 24
+    CLEAR_FIELDS = 25
+    CLEAR_TREES = 26
+    CLEAR_RAIL = 27
+    CLEAR_SIGNALS = 28
+    CLEAR_BRIDGE = 29
+    CLEAR_DEPOT_TRAIN = 30
+    CLEAR_DEPOT_ROAD = 31
+    CLEAR_DEPOT_SHIP = 32
+    CLEAR_TUNNEL = 33
+    CLEAR_WATER = 34
+    CLEAR_STATION_RAIL = 35
+    CLEAR_STATION_AIRPORT = 36
+    CLEAR_STATION_BUS = 37
+    CLEAR_STATION_TRUCK = 38
+    CLEAR_STATION_DOCK = 39
+    CLEAR_HOUSE = 40
+    CLEAR_ROAD = 41
+    RUNNING_TRAIN_STEAM = 42
+    RUNNING_TRAIN_DIESEL = 43
+    RUNNING_TRAIN_ELECTRIC = 44
+    RUNNING_AIRCRAFT = 45
+    RUNNING_ROADVEH = 46
+    RUNNING_SHIP = 47
+    BUILD_INDUSTRY = 48
+    CLEAR_INDUSTRY = 49
+    BUILD_UNMOVABLE = 50
+    CLEAR_UNMOVABLE = 51
+    BUILD_WAYPOINT_RAIL = 52
+    CLEAR_WAYPOINT_RAIL = 53
+    BUILD_WAYPOINT_BUOY = 54
+    CLEAR_WAYPOINT_BUOY = 55
+    TOWN_ACTION = 56
+    BUILD_FOUNDATION = 57
+    BUILD_INDUSTRY_RAW = 58
+    BUILD_TOWN = 59
+    BUILD_CANAL = 60
+    CLEAR_CANAL = 61
+    BUILD_AQUEDUCT = 62
+    CLEAR_AQUEDUCT = 63
+    BUILD_LOCK = 64
+    CLEAR_LOCK = 65
+    MAINTENANCE_RAIL = 66
+    MAINTENANCE_ROAD = 67
+    MAINTENANCE_CANAL = 68
+    MAINTENANCE_STATION = 69
+    MAINTENANCE_AIRPORT = 70
+
+    def __init__(self, costs):
+        self.costs = costs
+
+    def get_sprites(self, g):
+        return [
+            grf.DefineMultiple(
+                feature=grf.GLOBAL_VAR,
+                first_id=first,
+                count=len(values),
+                props={'basecost': values},
+            )
+            for first, values in combine_ranges(self.costs.items())
+        ]
 
