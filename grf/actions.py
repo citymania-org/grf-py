@@ -2,8 +2,9 @@ import datetime
 import textwrap
 import struct
 import pprint
+from collections.abc import Iterable
 
-from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader
+from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE
@@ -518,6 +519,44 @@ ACTION0_HOUSE_PROPS = {
     0x23: ('tile_acceptance', 'V'), # Tile acceptance list
 }
 
+
+class MultiDictProperty(Property):
+    def validate(cls, value):
+        if isinstance(value, int) and 0 <= value < 256:
+            return
+        if (isinstance(value, (tuple, list)) and len(value) == 2
+                and 0 <= value[0] < 16 and 0 <= value[1] < 16):
+            return
+        raise ValueError(f'Expected integer 0-255 or a tuple (x, y) both in range 0-15')
+
+    def read(cls, data, ofs):
+        res = {}
+        while data[ofs] != 0:
+            name_end = data.find(b'\0', ofs + 1)
+            k, v = data[ofs], data[ofs + 1: name_end]
+            if k in res:
+                if isinstance(res[k], list):
+                    res[k].append(v)
+                else:
+                    res[k] = [res[k], v]
+            else:
+                res[k] = v
+            ofs = name_end + 1
+        return res, ofs + 1
+
+    def encode(cls, value):
+        res = b''
+        for k, vl in value.items():
+            if not isinstance(vl, Iterable):
+                vl = (vl,)
+            for v in vl:
+                res += bytes((k,))
+                res += to_bytes(v)
+                res += b'\0'
+        res += b'\0'
+        return res
+
+
 ACTION0_GLOBAL_PROPS = {
     0x08: ('basecost', 'B'),  # Cost base multipliers
     0x09: ('cargo_table', 'L'),  # Cargo translation table
@@ -529,9 +568,9 @@ ACTION0_GLOBAL_PROPS = {
     0x10: ('snowline_table', '12*32*B'),  # Snow line height table
     0x11: ('grfid_overrides', '2*L'),  # GRFID overrides for engines
     0x12: ('railtype_table', 'D'),  # Railtype translation table
-    0x13: ('gender_table1', '(BV)+'),  # Gender/case translation table
-    0x14: ('gender_table2', '(BV)+'),  # Gender/case translation table
-    0x15: ('plural_form', 'B'),  # Plural form
+    0x13: ('lang_genders', MultiDictProperty()),  # Gender/case translation table
+    0x14: ('lang_cases', MultiDictProperty()),  # Gender/case translation table
+    0x15: ('lang_plural', 'B'),  # Plural form
     0x16: ('roadtype_table1', 'B'),  # Road-/tramtype translation table
     0x17: ('roadtype_table2', 'D'),  # Road-/tramtype translation table
 }
@@ -766,11 +805,13 @@ class CargoClass:
 
 
 class DefineMultiple(LazyBaseSprite):
-    def __init__(self, *, feature, first_id, count, props):
+    def __init__(self, *, feature, first_id, props, count=None):
         assert isinstance(feature, Feature)
         super().__init__()
         self.feature = feature
         self.first_id = first_id
+        if count is None:
+            count = len(next(iter(props.values())))
         self.count = count
         if feature not in ACTION0_PROP_DICT:
             raise NotImplementedError
@@ -799,14 +840,6 @@ class DefineMultiple(LazyBaseSprite):
             assert isinstance(value, bytes)
             assert len(value) < 256, len(value)
             return struct.pack('<B', len(value)) + value
-        if fmt == '(BV)+':
-            res = b''
-            for k, v in value.items():
-                res += bytes((k,))
-                res += v
-                res += b'\0'
-            res += b'\0'
-            return res
 
     def _encode(self):
         res = struct.pack('<BBBBBH',
@@ -1269,18 +1302,14 @@ class DefineStrings(LazyBaseSprite):
             if not 0 <= offset <= 0xff:
                 raise ValueError(f'{self.__class__.__name__} `offset` {offset} is not in range 0..0xff (for non-generic non-vehicle offset)')
 
+        assert all(isinstance(s, bytes) for s in strings), strings
+
         super().__init__()
         self.feature = feature
         self.lang = lang
         self.offset = offset
         self.is_generic_offset = is_generic_offset
-        self.strings = []
-        for s in strings:
-            if isinstance(s, bytes):
-                self.strings.append(s)
-            else:
-                assert isinstance(s, str), type(s)
-                self.strings.append(s.encode('utf-8'))
+        self.strings = strings
 
     def _encode(self):
         str_data = b'\0'.join(self.strings) + b'\0'

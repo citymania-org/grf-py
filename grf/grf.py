@@ -163,11 +163,8 @@ class BaseNewGRF:
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
-        self._strings = StringManager()
+        self.strings = StringManager()
         self._sprite_encoder = SpriteEncoder()
-
-    def add_string(self, s):
-        return self._strings.add(s)
 
     def _add_sound(self, s):
         assert isinstance(s, SoundSprite)
@@ -392,6 +389,8 @@ class BaseNewGRF:
                 sprites.append((s,))
 
         t.log(f'Adding strings and cargo table')
+        sprites.extend(self.strings.get_actions())
+
         if self._cargo_table is not None:
             sprites.append(DefineMultiple(
                 feature=GLOBAL_VAR,
@@ -401,11 +400,9 @@ class BaseNewGRF:
                     'cargo_table': list(self._cargo_table.keys())
                 }
             ))
-        sprites.extend(self._strings.get_actions())
-
-        data_offset = 14
 
         t.log(f'Enumerating {len(sprites)} real sprites')
+        data_offset = 14
         next_sprite_id = 1
         for s in sprites:
             if isinstance(s, tuple):

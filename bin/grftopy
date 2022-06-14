@@ -197,14 +197,6 @@ def read_property(data, ofs, fmt):
             res.append([d.get_word() for _ in range(m)])
         return res, d.offset
 
-    if fmt == '(BV)+':
-        res = {}
-        while data[ofs] != 0:
-            name_end = data.find(b'\0', ofs + 1)
-            res[data[ofs]] = data[ofs + 1: name_end]
-            ofs = name_end + 1
-        return res, ofs + 1
-
     if fmt == 'n*(BB)':
         num = data[ofs]
         res = ((data[ofs + 2 * i + 1], data[ofs + 2 * i + 2]) for i in range(num))

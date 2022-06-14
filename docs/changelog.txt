@@ -1,6 +1,10 @@
 ---------
-0.1.1
+0.2.0
 ---------
+
+- Added support for string translations via NML lang directory.
+- Reimplemented `StringManager`, added `import_lang_dir`, `add`, `__getitem__`, and `__call__` methods.
+- Added `StringRef` class.
 - Added `extra_callback_info1_byte_2` variable for quick access to the second byte of `extra_callback_info1`.
 - Print timings for grf compilation.
 - Renamed `layout` argument of `CallbackManager.make_switch` to `graphics`.
