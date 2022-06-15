@@ -113,10 +113,10 @@ class StringManager:
                 name = f'GRFPY_{self._next_string_id}'
                 self._next_string_id += 1
                 self._named_strings[value] = name
+                self._default_lang.handle_text(name, None, value, None)
         else:
             name = 'STR_' + name
-
-        self._default_lang.handle_text(name, None, value, None)
+            self._default_lang.handle_text(name, None, value, None)
         return StringRef(self, nml.expression.Identifier(name, None), hash(name))
 
     def __call__(self, value):
@@ -152,9 +152,9 @@ class StringRef:
     def get_actions(self, feature, offset, is_generic_offset=False):
         self.manager.set_nml_globals()
         strings = [
-            (lang_id, grfstrings.get_translation(self.nmlexpr, lang_id)) for lang_id in grfstrings.get_translations(self.nmlexpr)
+            (lang_id, grfstrings.get_translation(self.nmlexpr, lang_id)) for lang_id in grfstrings.get_translations(self.string_nmlexpr)
         ]
-        strings = [(0x7F, grfstrings.get_translation(self.nmlexpr))] + strings
+        strings = [(0x7F, grfstrings.get_translation(self.string_nmlexpr))] + strings
         return [
             DefineStrings(
                 feature=feature,
