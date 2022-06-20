@@ -308,12 +308,14 @@ class BaseNewGRF:
                     refids[s.ref_id] = s
 
 
-        ids = list(range(-255, -1))
+        ids = list(range(-255, 0))
         reserved_ids = set()
         linked_refs = {}
         visited = set()
+        min_ids = len(ids)
 
         def dfs(aid, linked, feature):
+            nonlocal min_ids
             a, ai = actions[aid]
             if a.feature is not None and a.feature != feature:
                 raise RuntimeError(f'Mixed features {a.feature} and {feature} in action {a}')
@@ -327,6 +329,7 @@ class BaseNewGRF:
                     try:
                         while a.ref_id is None or a.ref_id in reserved_ids:
                             a.ref_id = -heapq.heappop(ids)
+                            min_ids = min(min_ids, len(ids))
                     except IndexError:
                         raise RuntimeError(f'Ran out of ids while trying to reference action {a}')
                 else:
@@ -349,7 +352,7 @@ class BaseNewGRF:
                 ref_count[aid] -= 1
                 # If this action is longer referenced return id to the pool
                 if ref_count[aid] <= 0:
-                    heapq.heappush(ids, a.ref_id)
+                    heapq.heappush(ids, -a.ref_id)
                     reserved_ids.discard(a.ref_id)
 
         roots = [(r, v[0].feature) for r, v in actions.items() if ref_count[r] <= 0]
@@ -363,6 +366,8 @@ class BaseNewGRF:
             dfs(r, None, f)
 
         # print('LREF', linked_refs)
+
+        # print('IDS used', 255 - min_ids)
 
         # Construct the full list of actions with resolved ids and order
         res = []
