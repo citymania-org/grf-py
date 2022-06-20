@@ -47,7 +47,7 @@ class StringManager:
     def add_global(self, ref):
         assert isinstance(ref, StringRef), ref
         if ref.hash in self._globals:
-            return self._globals[ref.hash][1]
+            return self._globals[ref.hash][0]
 
         string_id = len(self._globals)
         self._globals[ref.hash] = (string_id, ref)
