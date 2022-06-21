@@ -18,6 +18,7 @@ from grf.common import hex_str, utoi8, DataReader, read_extended_byte, read_dwor
 from grf.va2vars import VA2_VARS_INV
 from grf.parser import OP_INIT, SPRITE_FLAGS
 from grf.actions import ACTION0_PROPS, SpriteRef, Property, PyComment, PyCode, IntermediateSprite
+from grf.sprites import WIN_TO_DOS_REMAP
 
 
 RESOURCE_FOLDER = 'resources'
@@ -36,6 +37,11 @@ class ParsingContext:
         self.sprites = {}
         self.action_count = defaultdict(int)
         self.action_size = defaultdict(int)
+        self.v1_sprite_id = 0
+
+    def get_v1_sprite_id(self):
+        self.v1_sprite_id += 1
+        return self.v1_sprite_id - 1
 
     def consume(self, sprite_id=None):
         if sprite_id is not None:
@@ -1034,7 +1040,7 @@ def read_pseudo_sprite(f, nfo_line, container, context):
     #     return False, []
     l = struct.unpack('<H' if container < 2 else '<I', data)[0]
     if l == 0:
-        return False, [PyComment('End of pseudo sprites')]
+        return False, [PyComment('End of pseudo sprites')], None
     grf_type = f.read(1)[0]
     grf_type_str = hex(grf_type)[2:]
     res = []
@@ -1047,11 +1053,18 @@ def read_pseudo_sprite(f, nfo_line, container, context):
     if grf_type == 0xff:
         data = f.read(l)
         if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
-            return True, []
+            return True, [], None
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         context.count_action(data[0], l + size_bytes * 2 + 1)
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
-        res.extend(decode_pseudo_sprite(data, context))
+        if container == 1:
+            sprite = RealRemapSprite(context.get_v1_sprite_id(), data)
+            res.append(SpritePlaceholder(sprite.id))
+            return True, res, sprite
+        # try:
+        #     res.extend(decode_pseudo_sprite(data, context))
+        # except Exception as e:
+        #     res.append(PyComment(f'Error decoding sprite: {str(e)}'))
     elif container >= 2 and grf_type == 0xfd:
         data = f.read(l)
         context.count_action(0xfd, l + size_bytes * 2 + 1)
@@ -1069,17 +1082,18 @@ def read_pseudo_sprite(f, nfo_line, container, context):
             else:
                 num = l - 8
             sprite_type = (grf_type & 0x08) | 0x4
-            sprite = RealGraphicsSprite(None, f.tell(), num, width, height, sprite_type, zoom, xofs, yofs)
+            sprite = RealGraphicsSprite(context.get_v1_sprite_id(), f.tell(), num, width, height, sprite_type, zoom, xofs, yofs)
             decode_sprite(f, sprite, container)
             res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): Image: M {width}x{height} zoom={zoom} x_offs={xofs} y_offs={yofs} decomp_size={num}'))
+            res.append(SpritePlaceholder(sprite.id))
             context.consume()
-            return True, res
+            return True, res, sprite
         else:
             data = f.read(l)
             context.count_action(data[0], l + size_bytes * 2 + 1)
             context.consume()
             res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}'))
-    return True, res
+    return True, res, None
 
 
 UINT16_MAX = 2**16 - 1
@@ -1133,11 +1147,13 @@ def decode_sprite(f, sprite, container):
                 data += data[-data_offset:size - data_offset]
     if num != 0: raise RuntimeError('Corrupt sprite')
     if sprite.type & 0x8:
-        return decode_chunked(sprite, container, data)
+        a = decode_chunked(sprite, container, data)
+    else:
+        assert len(data) == sprite.width * sprite.height * sprite.bpp, (len(data), sprite.width, sprite.height, sprite.bpp)
+        a = np.frombuffer(data, dtype=np.uint8)
+        a.shape = (sprite.height, sprite.width, sprite.bpp)
 
-    assert len(data) == sprite.width * sprite.height * sprite.bpp, (len(data), sprite.width, sprite.height, sprite.bpp)
-    a = np.frombuffer(data, dtype=np.uint8)
-    a.shape = (sprite.height, sprite.width, sprite.bpp)
+    # a = WIN_TO_DOS_REMAP.remap_array(a)
 
     return a, hash(data)
 
@@ -1168,6 +1184,12 @@ class RealGraphicsSprite(RealSprite):
             self.bpp += 1
         if self.type & 4:
             self.bpp += 1
+
+
+class RealRemapSprite(RealSprite):
+    def __init__(self, id, data):
+        self.id = id
+        self.data = data
 
 
 class RealSoundSprite(RealSprite):
@@ -1391,8 +1413,8 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
             dup_sprites += v - 1
             dup_size += (v - 1) * sprite_size[k]
 
-    dup_pc = (100 * dup_sprites / total_sprites)
-    size_pc = (100 * dup_size / total_size)
+    dup_pc = (100 * dup_sprites / total_sprites) if total_sprites > 0 else 0.
+    size_pc = (100 * dup_size / total_size) if total_sprites > 0 else 0.
     print(f'Found {dup_sprites}({dup_pc:.0f}%) duplicate sprites, {dup_size}({size_pc:.0f}%) bytes total')
 
 
@@ -1446,17 +1468,19 @@ if __name__ == "__main__":
             f.seek(0, 0)
             comment(f'Old container, no header!')
             container = 1
-            magic_sprite_bytes = f.read(5 + 2)
-            comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
+            # magic_sprite_bytes = f.read(5 + 2)
+            # comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
 
         # print('Magic sprite:', hex_str(f.read(4)))
         nfo_line = 1
+        real_sprites = defaultdict(list)
         while (res := read_pseudo_sprite(f, nfo_line, container, context))[0]:
             gen.add(*res[1])
+            if (sprite := res[2]) is not None:
+                real_sprites[sprite.id].append(sprite)
             nfo_line += 1
 
         if container == 2:
-            real_sprites = defaultdict(list)
             real_data_offset = f.tell() - header_offset
             while (res := read_real_sprite(f, nfo_line, context))[0] is not None:
                 sprite = res[0]
@@ -1467,17 +1491,25 @@ if __name__ == "__main__":
             if data_offest != real_data_offset:
                 comment(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
 
-            res_sprites = defaultdict(list)
-            save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
-            save_sound_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
-            for i, g in enumerate(gen.generators):
-                if not isinstance(g, SpritePlaceholder):
+        res_sprites = defaultdict(list)
+        save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
+        save_sound_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
+
+        # Save recolour sprites
+        for sl in real_sprites.values():
+            for i, s in enumerate(sl):
+                if not isinstance(s, RealRemapSprite):
                     continue
-                new_gen = res_sprites.get(g.sprite_id)
-                if new_gen is None:
-                    gen.generators[i] = PyComment(f'Failed to resolve sprite {g.sprite_id}')
-                else:
-                    gen.generators[i] = new_gen
+                res_sprites[s.id] = PyCode(f"g.add(PaletteRemap.from_buffer({s.data!r}))")
+
+        for i, g in enumerate(gen.generators):
+            if not isinstance(g, SpritePlaceholder):
+                continue
+            new_gen = res_sprites.get(g.sprite_id)
+            if new_gen is None:
+                gen.generators[i] = PyComment(f'Failed to resolve sprite {g.sprite_id}')
+            else:
+                gen.generators[i] = new_gen
 
         with open(out_dir / 'generate.py', 'w') as f:
             f.write(f'# This file is generated by decompiling {in_grf_path.name} with grftopy.\n')

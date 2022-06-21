@@ -39,8 +39,8 @@ def grf_compile_string(value):
 class StringManager:
     def __init__(self):
         self._globals = {}
-        self._langs = None
-        self._default_lang = None
+        self._langs = grfstrings.langs
+        self._default_lang = grfstrings.default_lang
         self._next_string_id = 1
         self._named_strings = {}
 
@@ -144,10 +144,11 @@ class StringRef:
                 s = self.manager(s)
             if not isinstance(s, StringRef):
                 raise ValueError(type(s))
-            hashes.append(self.hash)
+            hashes.append(s.hash)
             params.append(s.string_nmlexpr)
 
-        return StringRef(self.manager, nml.expression.String(params, None), hash(tuple(hashes)))
+        ref_hash = hash(tuple(hashes))
+        return StringRef(self.manager, nml.expression.String(params, None), ref_hash)
 
     def get_actions(self, feature, offset, is_generic_offset=False):
         self.manager.set_nml_globals()
