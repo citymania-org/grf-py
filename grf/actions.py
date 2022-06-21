@@ -917,7 +917,7 @@ class SpriteSet(Action1):
 
 # Action 2
 
-class GenericSpriteLayout(LazyBaseSprite, ReferenceableAction):
+class GenericSpriteLayout(BaseSprite, ReferenceableAction):
     def __init__(self, *, ent1, ent2, feature=None, ref_id=None):
         assert feature not in (HOUSE, INDUSTRY_TILE, OBJECT, AIRPORT_TILE, INDUSTRY), feature
         super().__init__()
@@ -926,7 +926,10 @@ class GenericSpriteLayout(LazyBaseSprite, ReferenceableAction):
         self.ent1 = ent1
         self.ent2 = ent2
 
-    def _encode(self):
+    def get_data_size(self):
+        return 5 + 2 * (len(self.ent1) + len(self.ent2))
+
+    def get_data(self):
         return struct.pack(
             '<BBBBB' + 'H' * (len(self.ent1) + len(self.ent2)),
             0x02,
@@ -1292,7 +1295,7 @@ class Map(Action3):
 
 # Action 4
 
-class DefineStrings(LazyBaseSprite):
+class DefineStrings(BaseSprite):
     def __init__(self, *, feature, offset, is_generic_offset, strings, lang=ANY_LANGUAGE):
         assert isinstance(feature, Feature), feature
         if feature in VEHICLE_FEATURES or is_generic_offset:
@@ -1311,14 +1314,23 @@ class DefineStrings(LazyBaseSprite):
         self.is_generic_offset = is_generic_offset
         self.strings = strings
 
-    def _encode(self):
+    def get_data_size(self):
+        str_size = max(1, sum(len(s) + 1 for s in self.strings))
+        if self.is_generic_offset:
+            return 6 + str_size
+        elif self.feature in VEHICLE_FEATURES and self.offset >= 0xff:
+            return 7 + str_size
+        else:
+            return 5 + str_size
+
+    def get_data(self):
         str_data = b'\0'.join(self.strings) + b'\0'
         if self.is_generic_offset:
             return struct.pack('<BBBBH', 0x04, self.feature.id, self.lang | 0x80, len(self.strings), self.offset) + str_data
-        elif self.feature in VEHICLE_FEATURES:
+        elif self.feature in VEHICLE_FEATURES and self.offset >= 0xff:
             return struct.pack('<BBBBBH', 0x04, self.feature.id, self.lang, len(self.strings), 0xff, self.offset) + str_data
         else:
-            return struct.pack('<BBBBBH', 0x04, self.feature.id, self.lang, len(self.strings), 0xff, self.offset) + str_data
+            return struct.pack('<BBBBB', 0x04, self.feature.id, self.lang, len(self.strings), self.offset) + str_data
 
     def py(self, context):
         offset_str = f'0x{self.offset:04x}' if self.is_generic_offset else self.offset

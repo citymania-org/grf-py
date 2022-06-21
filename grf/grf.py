@@ -329,7 +329,7 @@ class BaseNewGRF:
                     try:
                         while a.ref_id is None or a.ref_id in reserved_ids:
                             a.ref_id = -heapq.heappop(ids)
-                            min_ids = min(min_ids, len(ids))
+                        min_ids = min(min_ids, len(ids))
                     except IndexError:
                         raise RuntimeError(f'Ran out of ids while trying to reference action {a}')
                 else:
@@ -348,12 +348,19 @@ class BaseNewGRF:
             # Apppend node to the ordered parent node (or itself)
             linked.append(a)
 
-            if isinstance(a, ReferenceableAction):
-                ref_count[aid] -= 1
-                # If this action is longer referenced return id to the pool
-                if ref_count[aid] <= 0:
-                    heapq.heappush(ids, -a.ref_id)
-                    reserved_ids.discard(a.ref_id)
+            if isinstance(a, ReferencingAction):
+                for r in a.get_refs():
+                    rid = id(r)
+                    # TODO release Ref too?
+                    if isinstance(r, ReferenceableAction):
+                        if ref_count[rid] == 0:
+                            raise RuntimeError('Reference counting error')
+                        ref_count[rid] -= 1
+                        # If this action is longer referenced return id to the pool
+                        if ref_count[rid] == 0:
+                            if -r.ref_id not in ids:
+                                heapq.heappush(ids, -r.ref_id)
+                            reserved_ids.discard(r.ref_id)
 
         roots = [(r, v[0].feature) for r, v in actions.items() if ref_count[r] <= 0]
         # print('SPRITES', sprites)

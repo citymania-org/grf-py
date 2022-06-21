@@ -2,6 +2,7 @@
 0.2.0
 ---------
 
+- Fixed automatic ref_id assignment.
 - Added support for string translations via NML lang directory.
 - Reimplemented `StringManager`, added `import_lang_dir`, `add`, `__getitem__`, and `__call__` methods.
 - Added `StringRef` class.
