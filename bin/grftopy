@@ -1061,10 +1061,10 @@ def read_pseudo_sprite(f, nfo_line, container, context):
             sprite = RealRemapSprite(context.get_v1_sprite_id(), data)
             res.append(SpritePlaceholder(sprite.id))
             return True, res, sprite
-        # try:
-        #     res.extend(decode_pseudo_sprite(data, context))
-        # except Exception as e:
-        #     res.append(PyComment(f'Error decoding sprite: {str(e)}'))
+        try:
+            res.extend(decode_pseudo_sprite(data, context))
+        except Exception as e:
+            res.append(PyComment(f'Error decoding sprite: {str(e)}'))
     elif container >= 2 and grf_type == 0xfd:
         data = f.read(l)
         context.count_action(0xfd, l + size_bytes * 2 + 1)
@@ -1117,10 +1117,11 @@ def decode_chunked(sprite, container, data):
                 length = data[ofs] & 0x7f
                 skip = data[ofs + 1]
                 ofs += 2
-            b = np.frombuffer(data, offset=ofs, count=length, dtype=np.uint8)
+            byte_length = length * sprite.bpp
+            b = np.frombuffer(data, offset=ofs, count=byte_length, dtype=np.uint8)
             b.shape = (length, sprite.bpp)
             a[y, skip:skip+length, :] = b
-            ofs += length
+            ofs += byte_length
     return a
 
 
@@ -1347,8 +1348,10 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
             else:
                 sprite_data_hashes.add(sprite_hash)
             sprite_hash = hash((sprite_hash, s.xofs, s.yofs))
+            s_size = f.tell() - s.offset + 18
+            assert sprite_size.get(sprite_hash, s_size) == s_size
             sprite_count[sprite_hash] += 1
-            sprite_size[sprite_hash] = f.tell() - s.offset + 18
+            sprite_size[sprite_hash] = s_size
             if sprite_count[sprite_hash] > 1:
                 duplicate_type = 2
 
@@ -1365,11 +1368,9 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
                 im = Image.fromarray(a[:, :, -1], mode='P')
                 m.paste(im, (xofs, yofs))
 
-            # if bpp >= 3 and duplicate_type > 0:
-            if bpp >= 3:
+            if bpp >= 3 and duplicate_type > 0:
                 draw = ImageDraw.Draw(rgba)
-                # draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=[0, 0xffff00, 0xB8][duplicate_type])
-                draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=0xffff00)
+                draw.rectangle((xofs - 2, yofs - 2, xofs + s.width + 1, yofs + s.height + 1), outline=[0, 0xff00ffff, 0xff0000ff][duplicate_type])
             if bpp == 3:
                 im = Image.fromarray(a[:, :, :bpp], mode='RGB')
                 rgba.paste(im, (xofs, yofs))

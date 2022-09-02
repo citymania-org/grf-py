@@ -192,4 +192,4 @@ class VoxFile:
 
         im = Image.fromarray(data, mode='P')
         im.putpalette(PALETTE)
-        return ImageSprite(im, 0, 0, data.shape[1], data.shape[0], zoom=zoom, **kw)
+        return ImageSprite(im, data.shape[1], data.shape[0], zoom=zoom, **kw)

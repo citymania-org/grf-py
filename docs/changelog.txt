@@ -23,6 +23,7 @@
 - Added `train_hpi`, `train_ton`, and `nml_te` functions for unit conversions.
 - Added `set_cargo_table` and `map_cargo_labels` methods to `BaseNewGRF` class.
 - grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
+- grftopy: Improved decompilation of grf container version 1
 
 ---------
 0.1.0

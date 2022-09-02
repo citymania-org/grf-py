@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE, ALL_COLOURS, SAFE_COLOURS, \
-    to_spectra, SPECTRA_PALETTE
+    to_spectra, SPECTRA_PALETTE, WIN_TO_DOS
 
 
 def color_distance(c1, c2):
@@ -119,7 +119,7 @@ class PaletteRemap(BaseSprite):
         return b'\x00' + self.remap.tobytes()
 
     def get_data_size(self):
-        return 257
+        return len(self.remap) + 1
 
     @classmethod
     def from_function(cls, color_func, remap_water=False):
@@ -129,6 +129,19 @@ class PaletteRemap(BaseSprite):
         if remap_water:
             for i in WATER_COLOURS:
                 res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
+        return res
+
+    @classmethod
+    def from_array(cls, array):
+        assert len(array) == 256
+        res = cls()
+        res.remap = np.array(array, dtype=np.uint8)
+        return res
+
+    @classmethod
+    def from_buffer(cls, data):
+        res = cls()
+        res.remap = np.frombuffer(data, dtype=np.uint8)
         return res
 
     def set_ranges(self, ranges):
@@ -143,6 +156,12 @@ class PaletteRemap(BaseSprite):
         res = Image.fromarray(data)
         res.putpalette(PALETTE)
         return res
+
+    def remap_array(self, a):
+        return self.remap[a]
+
+
+WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
 class GraphicsSprite(RealSprite):

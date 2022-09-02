@@ -19,7 +19,8 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
-from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite
+from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite, \
+                     PaletteRemap
 from .strings import StringManager
 
 
@@ -82,13 +83,6 @@ class SpriteSheet:
             x += s.w + padding
 
         im.save(filename)
-
-
-    def write_nml(self, file):
-        for s in self._sprites:
-            file.write(s.get_nml())
-            file.write('\n')
-        file.write('\n')
 
 
 class DummySprite(BaseSprite):
@@ -198,6 +192,9 @@ class BaseNewGRF:
                 for s in sprites:
                     self._add_sound(s)
                 return
+            elif isinstance(sprites[0], PaletteRemap):
+                l.append((sprites[0],))
+                return
             assert(all(isinstance(s, GraphicsSprite) for s in sprites)), sprites
             assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites)), sprites
 
@@ -217,13 +214,15 @@ class BaseNewGRF:
         res = 'import grf\n'
         make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
         res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
-        res += 'from grf import Ref, CB, ImageFile, FileSprite, RAWSound\n\n'
+        res += 'from grf import Ref, CB, ImageFile, FileSprite, RAWSound, PaletteRemap\n\n'
         res += 'g = grf.BaseNewGRF()\n\n'
         used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, IntermediateSprite)))
         # used_classes.update(('ImageFile', 'ImageSprite', 'RAWSound'))  # TODO check usage of IntermediateSprite
-        res += '# Bind all the used classes to current grf so they can be used declaratively\n'
-        res += ', '.join(used_classes) + ' = ' +  ', '.join(f'g.bind(grf.{c})' for c in used_classes)
-        res += '\n\n'
+        if used_classes:
+            res += '# Bind all the used classes to current grf so they can be used declaratively\n'
+            res += ', '.join(used_classes) + ' = ' +  ', '.join(f'g.bind(grf.{c})' for c in used_classes)
+            res += '\n'
+        res += '\n'
 
         for s in self.generators:
             if isinstance(s, tuple):
@@ -400,18 +399,8 @@ class BaseNewGRF:
             for s in self._sounds.values():
                 sprites.append((s,))
 
-        t.log(f'Adding strings and cargo table')
+        t.log(f'Adding strings')
         sprites.extend(self.strings.get_actions())
-
-        if self._cargo_table is not None:
-            sprites.append(DefineMultiple(
-                feature=GLOBAL_VAR,
-                first_id=0,
-                count=len(self._cargo_table),
-                props={
-                    'cargo_table': list(self._cargo_table.keys())
-                }
-            ))
 
         t.log(f'Enumerating {len(sprites)} real sprites')
         data_offset = 14
@@ -526,7 +515,7 @@ class NewGRF(BaseNewGRF):
             for i, p in enumerate(self._params):
                 self._props['INFO']['PARA'][i] = p
 
-        return [
+        res = [
             SetProperties(self._props),
             SetDescription(
                 format_version=self.format_version,
@@ -534,7 +523,19 @@ class NewGRF(BaseNewGRF):
                 name=self.name,
                 description=self.description
             )
-        ] + super().generate_sprites()
+        ]
+
+        if self._cargo_table is not None:
+            res.append(DefineMultiple(
+                feature=GLOBAL_VAR,
+                first_id=0,
+                count=len(self._cargo_table),
+                props={
+                    'cargo_table': list(self._cargo_table.keys())
+                }
+            ))
+
+        return res + super().generate_sprites()
 
     def add_bool_parameter(self, *, name, description, default=None):
         data = {
