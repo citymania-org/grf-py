@@ -1067,6 +1067,8 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
                 self._ranges.append(Range(low, high, set_obj))
 
         self.default = default
+        if isinstance(code, (list, tuple)):
+            code = '\n'.join(code)
         self.code = code
         self._parsed_code = None
 
