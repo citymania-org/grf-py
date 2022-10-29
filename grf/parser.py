@@ -87,14 +87,6 @@ OPERATORS = {
     OPE_NEQ: ('NEQ', '{a} != {b}', 3, False),
     OPE_HASBIT: ('HASBIT', 'hasbit({a}, {b})', 7, False),
     OPE_NHASBIT: ('NHASBIT', '!hasbit({a}, {b})', 7, False),
-    # OPE_LT: ('LT', '{a} < {b} ? {c} : 0', 3, False),
-    # OPE_GT: ('GT', '{a} > {b} ? {c} : 0', 3, False),
-    # OPE_LE: ('LE', '{a} <= {b} ? {c} : 0', 3, False),
-    # OPE_GE: ('GE', '{a} >= {b} ? {c} : 0', 3, False),
-    # OPE_EQ: ('EQ', '{a} == {b} ? {c} : 0', 3, False),
-    # OPE_NEQ: ('NEQ', '{a} != {b} ? {c} : 0', 3, False),
-    # OPE_HASBIT: ('HASBIT', 'hasbit({a}, {b}) ? {c} : 0', 3, False),
-    # OPE_NHASBIT: ('NHASBIT', '!hasbit({a}, {b}) ? {c} : 0', 3, False),
 }
 DEFAULT_INDENT_STR = '    '
 
@@ -385,6 +377,7 @@ tokens = (
     'BINAND', 'BINOR', 'BINXOR', 'SHR', 'SHL', 'SHRU',
     'ASSIGN', 'COMMA',
     'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
+    'LT', 'GT', 'LE', 'GE', 'EQ', 'NEQ',
 )
 
 # Tokens
@@ -406,6 +399,12 @@ t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_LBRACKET = r'\['
 t_RBRACKET = r'\]'
+t_LT = r'<'
+t_GT = r'>'
+t_LE = r'<='
+t_GE = r'>='
+t_EQ = r'=='
+t_NEQ = r'!='
 t_NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 
@@ -453,6 +452,7 @@ def t_error(t):
 # Parsing rules
 
 precedence = (
+    ('left', 'LT', 'GT', 'LE', 'GE', 'EQ', 'NEQ'),
     ('left', 'SHRU', 'SHR', 'SHL'),
     ('left', 'BINOR'),
     ('left', 'BINXOR'),
@@ -517,6 +517,12 @@ def p_expression_binop(t):
                   | expression SHRU expression
                   | expression SHR expression
                   | expression SHL expression
+                  | expression LT expression
+                  | expression GT expression
+                  | expression LE expression
+                  | expression GE expression
+                  | expression EQ expression
+                  | expression NEQ expression
     '''
     op = {
         '+': OP_ADD,
@@ -528,11 +534,26 @@ def p_expression_binop(t):
         '>>': OP_SHR,
         '+>>': OP_SHRU,
         '<<': OP_SHL,
+        '<': OPE_LT,
+        '>': OPE_GT,
+        '<=': OPE_LE,
+        '>=': OPE_GE,
+        '==': OPE_EQ,
+        '!=': OPE_NEQ,
     }.get(t[2])
 
     assert op is not None, t[2]
-    # print(op, t[1], t[3])
-    t[0] = Expr(op, t[1], t[3])
+
+    if op in NML_OPE:
+        a, b, bv, c, cv = NML_OPE[op]
+        res = Expr(a, t[1], t[3])
+        res = Expr(b, res, Value(bv))
+        if c is not None:
+            res = Expr(c, res, Value(cv))
+        t[0] = res
+    else:
+        # print(op, t[1], t[3])
+        t[0] = Expr(op, t[1], t[3])
 
 
 # def p_storagge(t):
