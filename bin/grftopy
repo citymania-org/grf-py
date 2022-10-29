@@ -1262,7 +1262,7 @@ class GraphicsSpriteGen(IntermediateSprite):
             if path in context.resources:
                 return context.resources[path]
 
-            file_var = m_path[path.rfind('/') + 1:].replace('.', '_')
+            file_var = path[path.rfind('/') + 1:].replace('.', '_')
             res += f"{file_var} = ImageFile('{path}')\n"
             context.resources[path] = file_var
 
