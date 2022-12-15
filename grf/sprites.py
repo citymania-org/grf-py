@@ -32,6 +32,7 @@ def find_best_color(x, in_range=SAFE_COLOURS):
 
 
 _remap_cache = {}
+_FIX_PALETTE_LOOKUP = {(PALETTE[3 * i], PALETTE[3 * i + 1], PALETTE[3 * i + 2]): i for i in ALL_COLOURS}
 
 def fix_palette(img, sprite_name):
     assert (img.mode == 'P')  # TODO
@@ -46,7 +47,11 @@ def fix_palette(img, sprite_name):
     if remap is None:
         remap = PaletteRemap()
         for i in ALL_COLOURS:
-            remap.remap[i] = find_best_color(to_spectra(pal[3 * i], pal[3 * i + 1], pal[3 * i + 2]), in_range=ALL_COLOURS)
+            color = (pal[3 * i], pal[3 * i + 1], pal[3 * i + 2])
+            res = _FIX_PALETTE_LOOKUP.get(color)
+            if res is None:
+                res = find_best_color(to_spectra(*color), in_range=ALL_COLOURS)
+            remap.remap[i] = res
         _remap_cache[pal_hash] = remap
     return remap.remap_image(img)
 
