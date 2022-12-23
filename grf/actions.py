@@ -567,7 +567,7 @@ ACTION0_GLOBAL_PROPS = {
     0x0F: ('currency_euro_date', 'W'),  # Euro introduction dates
     0x10: ('snowline_table', '12*32*B'),  # Snow line height table
     0x11: ('grfid_overrides', '2*L'),  # GRFID overrides for engines
-    0x12: ('railtype_table', 'D'),  # Railtype translation table
+    0x12: ('railtype_table', 'L'),  # Railtype translation table
     0x13: ('lang_genders', MultiDictProperty()),  # Gender/case translation table
     0x14: ('lang_cases', MultiDictProperty()),  # Gender/case translation table
     0x15: ('lang_plural', 'B'),  # Plural form
@@ -820,6 +820,12 @@ class DefineMultiple(LazyBaseSprite):
             if x not in ACTION0_PROP_DICT[feature]:
                 raise ValueError(f'Unknown property `{x}` for a feature {feature}')
 
+    def _encode_label(self, value):
+        if isinstance(value, int): return struct.pack('<I', value)
+        assert isinstance(value, bytes), (type(value), value)
+        assert len(value) == 4, (len(value), value)
+        return value
+
     def _encode_value(self, value, fmt):
         if isinstance(fmt, Property):
             return fmt.encode(value)
@@ -831,15 +837,16 @@ class DefineMultiple(LazyBaseSprite):
                 value = date_to_days(value)
             return struct.pack('<I', value)
         if fmt == 'L':
-            if isinstance(value, int): return struct.pack('<I', value)
-            assert isinstance(value, bytes), (type(value), value)
-            assert len(value) == 4, (len(value), value)
-            return value
+            return self._encode_label(value)
         if fmt == 'B*': return struct.pack('<BH', 255, value)
         if fmt == 'n*B':
             assert isinstance(value, bytes)
             assert len(value) < 256, len(value)
             return struct.pack('<B', len(value)) + value
+        if fmt == '2*L':
+            assert isinstance(value, tuple), type(value)
+            assert len(value) == 2, (len(value), value)
+            return self._encode_label(value[0]) + self._encode_label(value[1])
 
     def _encode(self):
         res = struct.pack('<BBBBBH',
