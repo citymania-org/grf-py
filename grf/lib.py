@@ -381,6 +381,13 @@ class Vehicle(grf.SpriteGenerator):
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
 
+    def _set_callbacks(self, callbacks, layout):
+        if self.additional_text:
+            if isinstance(self.additional_text, grf.StringRef):
+                callbacks.purchase_text = self.additional_text.get_global_id()
+            else:
+                callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
+
 
 class RoadVehicle(Vehicle):
 
@@ -428,6 +435,18 @@ class RoadVehicle(Vehicle):
         self.liveries = liveries
         self._props = props
 
+    def _set_callbacks(self, callbacks, layout):
+        super()._set_callbacks(callbacks, layout)
+
+        if self.max_speed.precise_value >= 0x400:
+            callbacks.change_properties = grf.Switch(
+                ranges={
+                    0x15: self.max_speed.value,
+                },
+                default=layout,
+                code='extra_callback_info1_byte',
+            )
+
     def get_sprites(self, g):
         callbacks = CallbackManager(Callback.Vehicle)
 
@@ -445,17 +464,7 @@ class RoadVehicle(Vehicle):
             code='cargo_subtype',
         )
 
-        if self.additional_text:
-            callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
-
-        if self.max_speed.precise_value >= 0x400:
-            callbacks.change_properties = grf.Switch(
-                ranges={
-                    0x15: self.max_speed.value,
-                },
-                default=layout,
-                code='var(16, 0, 255)',
-            )
+        self._set_callbacks(callbacks, layout)
 
         # Liveries
         callbacks.cargo_subtype = grf.Switch(
@@ -594,8 +603,7 @@ class Train(Vehicle):
             code='cargo_subtype',
         )
 
-        if self.additional_text:
-            callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
+        self._set_callbacks(callbacks, layout)
 
         # Liveries
         callbacks.cargo_subtype = grf.Switch(
