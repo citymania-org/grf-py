@@ -298,6 +298,15 @@ class CallbackManager:
             )
         return default, maps
 
+    def make_map_action(self, definition):
+        assert isinstance(definition, grf.DefineMultiple)
+        default, maps = self.make_switch()
+        return grf.Map(
+            definition,
+            maps=maps,
+            default=default,
+        )
+
 
 class SpriteTable(grf.SpriteGenerator):
     def __init__(self, feature):
@@ -482,7 +491,7 @@ class RoadVehicle(Vehicle):
         res = []
         res.extend(self._gen_name_sprites())
 
-        res.append(grf.Define(
+        res.append(definition := grf.Define(
             feature=grf.RV,
             id=self.id,
             props={
@@ -503,13 +512,7 @@ class RoadVehicle(Vehicle):
             res.extend(l['sprites'])
 
         callbacks.graphics = layout
-        default, maps = callbacks.make_switch()
-        res.append(grf.Action3(
-            feature=grf.RV,
-            ids=[self.id],
-            maps=maps,
-            default=default,
-        ))
+        res.append(callbacks.make_map_action(definition))
         return res
 
 
@@ -644,7 +647,7 @@ class Train(Vehicle):
                 **self._props
             }
         ))
-        res.append(grf.Action1(
+        res.append(definition := grf.Action1(
             feature=grf.TRAIN,
             set_count=len(self.liveries),
             sprite_count=8,
@@ -654,13 +657,7 @@ class Train(Vehicle):
             res.extend(l['sprites'])
 
         callbacks.graphics = layout
-        default, maps = callbacks.make_switch()
-        res.append(grf.Action3(
-            feature=grf.TRAIN,
-            ids=[self.id],
-            maps=maps,
-            default=default,
-        ))
+        res.append(callbacks.make_map_action(definition))
 
         for apid, liveries, props in self._articulated_parts:
             res.append(grf.Define(
