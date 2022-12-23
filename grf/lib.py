@@ -232,9 +232,11 @@ class CallbackManager:
     def __init__(self, domain):
         self._domain = domain
         self._callbacks = {}
+        self.graphics = None
+        self.purchase_graphics = None
 
     def __setattr__(self, name, value):
-        if name.startswith('_'):
+        if name.startswith('_') or name in ('graphics', 'purchase_graphics'):
             return super().__setattr__(name, value)
         if name.lower() != name:
             raise AttributeError(name)
@@ -259,7 +261,9 @@ class CallbackManager:
             res |= FLAGS.get(k, 0)
         return res
 
-    def make_switch(self, graphics, purchase_graphics=None):
+    def make_switch(self):
+        if self.graphics is None:
+            raise ValueError('No graphics')
         # False - only purchase, True - general + purchase
         PURCHASE = {
             Callback.Vehicle.PURCHASE_TEXT: False,
@@ -278,15 +282,15 @@ class CallbackManager:
         if purchase_callbacks:
             purchase_switch = grf.Switch(
                 ranges=purchase_callbacks,
-                default=purchase_graphics or graphics,
+                default=self.purchase_graphics or self.graphics,
                 code='current_callback',
             )
             maps = {255: purchase_switch}
-        default = graphics
+        default = self.graphics
         if callbacks:
             default = grf.Switch(
                 ranges={**callbacks},
-                default=graphics,
+                default=self.graphics,
                 code='current_callback',
             )
         return default, maps
@@ -486,7 +490,8 @@ class RoadVehicle(Vehicle):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        default, maps = callbacks.make_switch(layout)
+        callbacks.graphics = layout
+        default, maps = callbacks.make_switch()
         res.append(grf.Action3(
             feature=grf.RV,
             ids=[self.id],
@@ -637,7 +642,8 @@ class Train(Vehicle):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        default, maps = callbacks.make_switch(layout)
+        callbacks.graphics = layout
+        default, maps = callbacks.make_switch()
         res.append(grf.Action3(
             feature=grf.TRAIN,
             ids=[self.id],
