@@ -185,7 +185,7 @@ class BaseNewGRF:
             assert len(sprites) == 1
             sprites = sprites[0]
             assert len(sprites) >= 1
-            assert isinstance(sprites[0], GraphicsSprite)
+            assert isinstance(sprites[0], GraphicsSprite), type(sprites[0])
 
         if isinstance(sprites[0], RealSprite):
             if isinstance(sprites[0], SoundSprite):
@@ -493,10 +493,22 @@ class NewGRF(BaseNewGRF):
         self._props = props
         self._params = []
         self._cargo_table = None
+        self._railtype_table = None
         self.grfid = grfid
         self.name = name
         self.description = description
         self.format_version = format_version
+
+    def set_railtype_table(self, railtype_list):
+        self._railtype_table = {}
+        for i, rt in enumerate(railtype_list):
+            self._railtype_table[to_bytes(rt)] = i
+
+    def get_railtype_id(self, railtype):
+        rtbytes = to_bytes(railtype)
+        res = self._railtype_table.get(rtbytes)
+        assert res is not None, rtbytes
+        return res
 
     def set_cargo_table(self, cargo_list):
         self._cargo_table = {}
@@ -532,6 +544,16 @@ class NewGRF(BaseNewGRF):
                 count=len(self._cargo_table),
                 props={
                     'cargo_table': list(self._cargo_table.keys())
+                }
+            ))
+
+        if self._railtype_table is not None:
+            res.append(DefineMultiple(
+                feature=GLOBAL_VAR,
+                first_id=0,
+                count=len(self._railtype_table),
+                props={
+                    'railtype_table': list(self._railtype_table.keys())
                 }
             ))
 
