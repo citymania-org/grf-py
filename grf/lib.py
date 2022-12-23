@@ -286,6 +286,9 @@ class CallbackManager:
                 code='current_callback',
             )
             maps = {255: purchase_switch}
+        elif self.purchase_graphics:
+            maps = {255: self.purchase_graphics}
+
         default = self.graphics
         if callbacks:
             default = grf.Switch(
