@@ -1283,10 +1283,11 @@ class Action3(LazyBaseSprite, ReferencingAction):
 
 
 class Map(Action3):
-    def __init__(self, object, maps, default):
+    def __init__(self, definition, maps, default):
+        assert isinstance(definition, DefineMultiple)
         super().__init__(
-            feature=object.feature,
-            ids=[object.first_id],
+            feature=definition.feature,
+            ids=[definition.first_id],
             maps=maps,
             default=default
         )
