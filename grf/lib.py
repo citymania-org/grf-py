@@ -273,7 +273,7 @@ class CallbackManager:
         purchase_callbacks = {}
         for k, c in self._callbacks.items():
             pdata = PURCHASE.get(k)
-            if not pdata:
+            if pdata is not False:
                 callbacks[k] = c
             if pdata is not None:
                 purchase_callbacks[k] = c
