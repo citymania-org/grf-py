@@ -229,11 +229,14 @@ class Callback:
 
 
 class CallbackManager:
-    def __init__(self, domain):
+    def __init__(self, domain, callbacks=None):
         self._domain = domain
         self._callbacks = {}
         self.graphics = None
         self.purchase_graphics = None
+        for k, v in (callbacks or {}).items():
+            if v is not None:
+                setattr(self, k, v)
 
     def __setattr__(self, name, value):
         if name.startswith('_') or name in ('graphics', 'purchase_graphics'):
@@ -242,6 +245,8 @@ class CallbackManager:
             raise AttributeError(name)
 
         cb_id = getattr(self._domain, name.upper())
+        if cb_id in self._callbacks:
+            raise ProgrammingError('Callback {name} already defined')
         self._callbacks[cb_id] = value
 
     def get_flags(self):
@@ -393,7 +398,7 @@ class Vehicle(grf.SpriteGenerator):
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
 
-    def _set_callbacks(self, callbacks, layout):
+    def _set_callbacks(self, callbacks):
         if self.additional_text:
             if isinstance(self.additional_text, grf.StringRef):
                 callbacks.purchase_text = self.additional_text.get_global_id()
@@ -447,15 +452,15 @@ class RoadVehicle(Vehicle):
         self.liveries = liveries
         self._props = props
 
-    def _set_callbacks(self, callbacks, layout):
-        super()._set_callbacks(callbacks, layout)
+    def _set_callbacks(self, callbacks):
+        super()._set_callbacks(callbacks)
 
         if self.max_speed.precise_value >= 0x400:
             callbacks.change_properties = grf.Switch(
                 ranges={
                     0x15: self.max_speed.value,
                 },
-                default=layout,
+                default=callbacks.graphics,
                 code='extra_callback_info1_byte',
             )
 
@@ -469,14 +474,14 @@ class RoadVehicle(Vehicle):
                 ent2=(i,),
             ))
 
-        layout = grf.Switch(
+        callbacks.graphics = grf.Switch(
             related_scope=True,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
             code='cargo_subtype',
         )
 
-        self._set_callbacks(callbacks, layout)
+        self._set_callbacks(callbacks)
 
         # Liveries
         callbacks.cargo_subtype = grf.Switch(
@@ -511,7 +516,6 @@ class RoadVehicle(Vehicle):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        callbacks.graphics = layout
         res.append(callbacks.make_map_action(definition))
         return res
 
@@ -602,14 +606,14 @@ class Train(Vehicle):
                 ent2=(i,),
             ))
 
-        layout = grf.Switch(
+        callbacks.graphics = grf.Switch(
             related_scope=True,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
             code='cargo_subtype',
         )
 
-        self._set_callbacks(callbacks, layout)
+        self._set_callbacks(callbacks)
 
         # Liveries
         callbacks.cargo_subtype = grf.Switch(
@@ -621,7 +625,7 @@ class Train(Vehicle):
         if self.sound_effects:
             callbacks.sound_effect = grf.Switch(
                 ranges=self.sound_effects,
-                default=layout,
+                default=callbacks.graphics,
                 code='extra_callback_info1 & 255',
             )
 
@@ -638,7 +642,7 @@ class Train(Vehicle):
         res = []
         res.extend(self._gen_name_sprites())
 
-        res.append(grf.Define(
+        res.append(definition := grf.Define(
             feature=grf.TRAIN,
             id=self.id,
             props={
@@ -647,7 +651,7 @@ class Train(Vehicle):
                 **self._props
             }
         ))
-        res.append(definition := grf.Action1(
+        res.append(grf.Action1(
             feature=grf.TRAIN,
             set_count=len(self.liveries),
             sprite_count=8,
@@ -656,7 +660,6 @@ class Train(Vehicle):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        callbacks.graphics = layout
         res.append(callbacks.make_map_action(definition))
 
         for apid, liveries, props in self._articulated_parts:
