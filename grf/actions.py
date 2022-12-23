@@ -547,7 +547,7 @@ class MultiDictProperty(Property):
     def encode(cls, value):
         res = b''
         for k, vl in value.items():
-            if not isinstance(vl, Iterable):
+            if isinstance(vl, (bytes, str)):
                 vl = (vl,)
             for v in vl:
                 res += bytes((k,))
