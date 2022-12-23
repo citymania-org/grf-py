@@ -515,6 +515,12 @@ class NewGRF(BaseNewGRF):
         for i, c in enumerate(cargo_list):
             self._cargo_table[to_bytes(c)] = i
 
+    def get_cargo_id(self, cargo):
+        cbytes = to_bytes(cargo)
+        res = self._cargo_table.get(cbytes)
+        assert res is not None, cbytes
+        return res
+
     def map_cargo_labels(self, labels):
         if self._cargo_table is None:
             raise RuntimeError(f'`{self.__class__.__name__}.map_cargo_lables` requires cargo_table to be set')
