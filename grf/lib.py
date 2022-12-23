@@ -365,7 +365,20 @@ class DisableDefault(grf.SpriteGenerator):
         )
 
 
-class RoadVehicle(grf.SpriteGenerator):
+class Vehicle(grf.SpriteGenerator):
+    def _gen_name_sprites(self):
+        if isinstance(self.name, grf.StringRef):
+            return [self.name.get_actions(grf.TRAIN, self.id)]
+        else:
+            return [grf.DefineStrings(
+                 eature=grf.TRAIN,
+                 ffset=self.id,
+                 s_generic_offset=False,
+                strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
+            )]
+
+
+class RoadVehicle(Vehicle):
 
     class Speed:
         def __init__(self, precise_value):
@@ -450,14 +463,8 @@ class RoadVehicle(grf.SpriteGenerator):
         if callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
-        res = [
-            grf.DefineStrings(
-                feature=grf.RV,
-                offset=self.id,
-                is_generic_offset=False,
-                strings=[self.name.encode('utf-8')]
-            ),
-        ]
+        res = []
+        res.extend(self._gen_name_sprites())
 
         res.append(grf.Define(
             feature=grf.RV,
@@ -489,7 +496,7 @@ class RoadVehicle(grf.SpriteGenerator):
         return res
 
 
-class Train(grf.SpriteGenerator):
+class Train(Vehicle):
     class EngineClass:
         STEAM = 0x0
         DIESEL = 0x8
@@ -609,14 +616,8 @@ class Train(grf.SpriteGenerator):
         if callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
 
-        res = [
-            grf.DefineStrings(
-                feature=grf.TRAIN,
-                offset=self.id,
-                is_generic_offset=False,
-                strings=[self.name.encode('utf-8')]
-            ),
-        ]
+        res = []
+        res.extend(self._gen_name_sprites())
 
         res.append(grf.Define(
             feature=grf.TRAIN,
