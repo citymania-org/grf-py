@@ -1272,6 +1272,10 @@ class GraphicsSpriteGen(IntermediateSprite):
 
         sprite_sl = []
         for sprite, x, y, m_path, rgba_path in self.sprites:
+            if m_path is None and rgba_path is None:
+                # TODO broken sprite?
+                sprite_sl.append(f'EMPTY_SPRITE')
+                continue
             main_file_var = context.resources[rgba_path or m_path]
             if rgba_path and m_path:
                 mask_file_var = context.resources[m_path]
