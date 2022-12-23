@@ -387,6 +387,9 @@ class DisableDefault(grf.SpriteGenerator):
 
 
 class Vehicle(grf.SpriteGenerator):
+    def __init__(self, callbacks):
+        self.callbacks = CallbackManager(Callback.Vehicle, callbacks)
+
     def _gen_name_sprites(self):
         if isinstance(self.name, grf.StringRef):
             return [self.name.get_actions(grf.TRAIN, self.id)]
@@ -398,12 +401,12 @@ class Vehicle(grf.SpriteGenerator):
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
 
-    def _set_callbacks(self, callbacks):
+    def _set_callbacks(self):
         if self.additional_text:
             if isinstance(self.additional_text, grf.StringRef):
-                callbacks.purchase_text = self.additional_text.get_global_id()
+                self.callbacks.purchase_text = self.additional_text.get_global_id()
             else:
-                callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
+                self.callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
 
 
 class RoadVehicle(Vehicle):
@@ -431,7 +434,8 @@ class RoadVehicle(Vehicle):
         # TODO doesn't show exact mph in the game
         return RoadVehicle.Speed((speed * 16 + 4) // 5)
 
-    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, livery_refits=None, **props):
+    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, livery_refits=None, callbacks=None, **props):
+        super().__init__(callbacks)
         for l in liveries:
             if 'name' not in l:
                 raise ValueError(f'RoadVehicle livery is missing the name')
@@ -452,21 +456,19 @@ class RoadVehicle(Vehicle):
         self.liveries = liveries
         self._props = props
 
-    def _set_callbacks(self, callbacks):
-        super()._set_callbacks(callbacks)
+    def _set_callbacks(self):
+        super()._set_callbacks()
 
         if self.max_speed.precise_value >= 0x400:
-            callbacks.change_properties = grf.Switch(
+            self.callbacks.change_properties = grf.Switch(
                 ranges={
                     0x15: self.max_speed.value,
                 },
-                default=callbacks.graphics,
+                default=self.callbacks.graphics,
                 code='extra_callback_info1_byte',
             )
 
     def get_sprites(self, g):
-        callbacks = CallbackManager(Callback.Vehicle)
-
         layouts = []
         for i, l in enumerate(self.liveries):
             layouts.append(grf.GenericSpriteLayout(
@@ -474,24 +476,24 @@ class RoadVehicle(Vehicle):
                 ent2=(i,),
             ))
 
-        callbacks.graphics = grf.Switch(
+        self.callbacks.graphics = grf.Switch(
             related_scope=True,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
             code='cargo_subtype',
         )
 
-        self._set_callbacks(callbacks)
+        self._set_callbacks()
 
         # Liveries
-        callbacks.cargo_subtype = grf.Switch(
+        self.callbacks.cargo_subtype = grf.Switch(
             ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
         )
 
-        if callbacks.get_flags():
-            self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
+        if self.callbacks.get_flags():
+            self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
 
         res = []
         res.extend(self._gen_name_sprites())
@@ -516,7 +518,7 @@ class RoadVehicle(Vehicle):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        res.append(callbacks.make_map_action(definition))
+        res.append(self.callbacks.make_map_action(definition))
         return res
 
 
@@ -537,7 +539,8 @@ class Train(Vehicle):
     def mph(speed):
         return (speed * 16 + 4) // 10
 
-    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, sound_effects=None, **props):
+    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, sound_effects=None, callbacks=None, **props):
+        super().__init__(callbacks)
         for l in liveries:
             if 'name' not in l:
                 raise ValueError(f'Train livery is missing the name')
@@ -597,8 +600,6 @@ class Train(Vehicle):
         if self._props.get('is_dual_headed') and self._articulated_parts:
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
-        callbacks = CallbackManager(Callback.Vehicle)
-
         layouts = []
         for i, l in enumerate(self.liveries):
             layouts.append(grf.GenericSpriteLayout(
@@ -606,38 +607,38 @@ class Train(Vehicle):
                 ent2=(i,),
             ))
 
-        callbacks.graphics = grf.Switch(
+        self.callbacks.graphics = grf.Switch(
             related_scope=True,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
             code='cargo_subtype',
         )
 
-        self._set_callbacks(callbacks)
+        self._set_callbacks()
 
         # Liveries
-        callbacks.cargo_subtype = grf.Switch(
+        self.callbacks.cargo_subtype = grf.Switch(
             ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
             default=0x400,
             code='cargo_subtype',
         )
 
         if self.sound_effects:
-            callbacks.sound_effect = grf.Switch(
+            self.callbacks.sound_effect = grf.Switch(
                 ranges=self.sound_effects,
-                default=callbacks.graphics,
+                default=self.callbacks.graphics,
                 code='extra_callback_info1 & 255',
             )
 
         if self._articulated_parts:
-            callbacks.articulated_part = grf.Switch(
+            self.callbacks.articulated_part = grf.Switch(
                 ranges={i + 1: ap[0] for i, ap in enumerate(self._articulated_parts)},
                 default=0x7fff,
                 code='extra_callback_info1 & 255',
             )
 
-        if callbacks.get_flags():
-            self._props['cb_flags'] = self._props.get('cb_flags', 0) | callbacks.get_flags()
+        if self.callbacks.get_flags():
+            self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
 
         res = []
         res.extend(self._gen_name_sprites())
@@ -660,7 +661,7 @@ class Train(Vehicle):
         for l in self.liveries:
             res.extend(l['sprites'])
 
-        res.append(callbacks.make_map_action(definition))
+        res.append(self.callbacks.make_map_action(definition))
 
         for apid, liveries, props in self._articulated_parts:
             res.append(grf.Define(
