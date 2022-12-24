@@ -150,6 +150,9 @@ def is_leap_year(year):
 def date_to_days(d):
     return (d - datetime.date(1, 1, 1)).days + 366
 
+def days_to_date(days):
+    if days < 366: return days
+    return datetime.date(1, 1, 1) + datetime.timedelta(days=days-366)
 
 
 class FeatureMeta(type):

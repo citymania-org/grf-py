@@ -4,7 +4,7 @@ import struct
 import pprint
 from collections.abc import Iterable
 
-from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes
+from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes, read_dword, days_to_date
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE
@@ -136,6 +136,21 @@ class Property:
         raise NotImplementedError
 
 
+class DateProperty(Property):
+    def validate(cls, value):
+        if not isinstance(value, (datetime.date, int)):
+            raise ValueError(f'datetime.date or int object expected')
+
+    def read(cls, data, ofs):
+        value, ofs = read_dword(data, ofs)
+        return days_to_date(value), ofs
+
+    def encode(cls, value):
+        if isinstance(value, datetime.date):
+            value = date_to_days(value)
+        return struct.pack('<I', value)
+
+
 class PyComment(IntermediateSprite):
     def __init__(self, text):
         self.text = text
@@ -196,7 +211,7 @@ ACTION0_TRAIN_PROPS = {
     0x27: ('misc_flags', 'B'),  # Miscellaneous flags     partly
     0x28: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes    yes
     0x29: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes    yes
-    0x2A: ('introduction_date', 'D'),  # Long format introduction date   no
+    0x2A: ('introduction_date', DateProperty()),  # Long format introduction date   no
     0x2B: ('cargo_age_period', 'W'),  # period  yes
     0x2C: ('cargo_allow_refit', 'n*B'), # refittable cargo types   yes
     0x2D: ('cargo_disallow_refit', 'n*B'),  # refittable cargo types    yes
@@ -226,7 +241,7 @@ ACTION0_RV_PROPS = {
     0x1C: ('misc_flags', 'B'),  # Miscellaneous vehicle flags     partly ("tram" should be same as front)
     0x1D: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28    yes
     0x1E: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29    yes
-    0x1F: ('introduction_date', 'D'),  # Long format introduction date   no
+    0x1F: ('introduction_date', DateProperty()),  # Long format introduction date   no
     0x20: ('sort_purchase_list', 'B*'), # Sort the purchase list  no
     0x21: ('visual_effect', 'B'),  # Visual effect   yes
     0x22: ('cargo_age_period', 'W'),  # Custom cargo ageing period  yes
@@ -254,7 +269,7 @@ ACTION0_SHIP_PROPS = {
     0x17: ('flags', 'B'),  # Miscellaneous vehicle flags
     0x18: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
-    0x1A: ('introduction_date', 'D'),  # Long format introduction date
+    0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
     0x1B: ('sort_purchase_list', 'B*'), # Sort the purchase list
     0x1C: ('visual_effect', 'B'),  # Visual effect
     0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
@@ -281,7 +296,7 @@ ACTION0_AIRCRAFT_PROPS = {
     0x17: ('misc_flags', 'B'),  # Miscellaneous vehicle flags
     0x18: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
-    0x1A: ('introduction_date', 'D'),  # Long format introduction date
+    0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
     0x1B: ('sort_purchase_list', 'B*'),  # Sort the purchase list
     0x1C: ('cargo_age_period', 'W'),  # Custom cargo ageing period
     0x1D: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
@@ -700,7 +715,7 @@ ACTION0_OBJECT_PROPS = {
     0x0B: ('climate', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Climate availability
     0x0C: ('size', SizeTupleProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Byte representing size, see below
     0x0D: ('build_cost_factor', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Object build cost factor (sets object removal cost factor as well)
-    0x0E: ('intro_date', 'D'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Introduction date, see below
+    0x0E: ('intro_date', DateProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Introduction date, see below
     0x0F: ('eol_date', 'D'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   End of life date, see below
     0x10: ('flags', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Object flags, see below
     0x11: ('anim_info', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Animation information
@@ -723,7 +738,7 @@ ACTION0_RAILTYPE_PROPS = {
     0x0D: ('new_engine_text', 'W'),  # StringID: New engine text
     0x13: ('construction_cost', 'W'),  # Construction costs
     0x16: ('map_colour', 'B'),  # Minimap colour
-    0x17: ('introduction_date', 'D'),  # Introduction date
+    0x17: ('introduction_date', DateProperty()),  # Introduction date
     0x1A: ('sort_order', 'B'),  # Sort order
     0x1B: ('name', 'W'),  # StringID: Rail type name[4]
     0x1C: ('maintenance_cost', 'W'),  # Infrastructure maintenance cost factor
@@ -848,12 +863,8 @@ class DefineMultiple(LazyBaseSprite):
         if fmt == 'B': return struct.pack('<B', value)
         if fmt == 'b': return struct.pack('<b', value)
         if fmt == 'W': return struct.pack('<H', value)
-        if fmt == 'D':
-            if isinstance(value, datetime.date):
-                value = date_to_days(value)
-            return struct.pack('<I', value)
-        if fmt == 'L':
-            return self._encode_label(value)
+        if fmt == 'D': return struct.pack('<I', value)
+        if fmt == 'L': return self._encode_label(value)
         if fmt == 'B*': return struct.pack('<BH', 255, value)
         if fmt == 'n*B':
             assert isinstance(value, bytes)
@@ -1200,7 +1211,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         return res
 
     def py(self, context):
-        groupsdata = [context.format_ref(r) for r in self.groups]
+        groupsdata = ', '.join(context.format_ref(r) for r in self.groups)
         return f'''
         {context.get_var_assignment_str(self.ref_id)}RandomSwitch(
             feature={self.feature},
@@ -1209,7 +1220,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             triggers={self.triggers},
             cmp_all={self.cmp_all},
             lowest_bit={self.lowest_bit},
-            groups={groupsdata!r},
+            groups=[{groupsdata}],
         )'''
 
 

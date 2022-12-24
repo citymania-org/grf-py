@@ -227,7 +227,7 @@ class BaseNewGRF:
 
     def generate_python(self, grf_filename):
         context = PythonGenerationContext()
-        res = 'import grf\n'
+        res = 'import datetime\nimport grf\n'
         make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
         res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
         res += 'from grf import Ref, CB, ImageFile, FileSprite, RAWSound, PaletteRemap\n\n'
