@@ -564,7 +564,7 @@ class Train(Vehicle):
         self._props = props
         self._articulated_parts = []
 
-    def add_articulated_part(self, *, id, liveries, **props):
+    def add_articulated_part(self, *, id, liveries, callbacks=None, **props):
         if self._props.get('is_dual_headed'):
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
 
@@ -593,7 +593,7 @@ class Train(Vehicle):
         if invalid_props:
             raise ValueError('Property not allowed for articulated part: {}'.format(', '.join(invalid_props)))
 
-        self._articulated_parts.append((id, liveries, props))
+        self._articulated_parts.append((id, liveries, callbacks, props))
         return self
 
     def get_sprites(self, g):
@@ -601,28 +601,30 @@ class Train(Vehicle):
         if self._props.get('is_dual_headed') and self._articulated_parts:
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
-        layouts = []
-        for i, l in enumerate(self.liveries):
-            layouts.append(grf.GenericSpriteLayout(
-                ent1=(i,),
-                ent2=(i,),
-            ))
+        if self.liveries:
+            layouts = []
+            for i, l in enumerate(self.liveries):
+                layouts.append(grf.GenericSpriteLayout(
+                    ent1=(i,),
+                    ent2=(i,),
+                ))
 
-        self.callbacks.graphics = grf.Switch(
-            related_scope=True,
-            ranges=dict(enumerate(layouts)),
-            default=layouts[0],
-            code='cargo_subtype',
-        )
+            self.callbacks.graphics = grf.Switch(
+                related_scope=True,
+                ranges=dict(enumerate(layouts)),
+                default=layouts[0],
+                code='cargo_subtype',
+            )
 
         self._set_callbacks()
 
-        # Liveries
-        self.callbacks.cargo_subtype = grf.Switch(
-            ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
-            default=0x400,
-            code='cargo_subtype',
-        )
+        if self.liveries:
+            # Liveries
+            self.callbacks.cargo_subtype = grf.Switch(
+                ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
+                default=0x400,
+                code='cargo_subtype',
+            )
 
         if self.sound_effects:
             self.callbacks.sound_effect = grf.Switch(
@@ -666,16 +668,8 @@ class Train(Vehicle):
 
         res.append(self.callbacks.make_map_action(definition))
 
-        for apid, liveries, props in self._articulated_parts:
-            res.append(grf.Define(
-                feature=grf.TRAIN,
-                id=apid,
-                props={
-                    'sprite_id': 0xfd,  # magic value for newgrf sprites
-                    'engine_class': self._props.get('engine_class'),
-                    **props
-                }
-            ))
+        for apid, liveries, initial_callbacks, props in self._articulated_parts:
+            callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
 
             res.append(grf.Action1(
                 feature=grf.TRAIN,
@@ -691,19 +685,27 @@ class Train(Vehicle):
                     ent2=(i,),
                 ))
 
-            layout = grf.Switch(
+            callbacks.graphics = grf.Switch(
                 related_scope=True,
                 ranges=dict(enumerate(layouts)),
                 default=layouts[0],
                 code='cargo_subtype',
             )
 
-            res.append(grf.Action3(
+            if callbacks.get_flags():
+                props['cb_flags'] = props.get('cb_flags', 0) | callbacks.get_flags()
+
+            res.append(definition := grf.Define(
                 feature=grf.TRAIN,
-                ids=[apid],
-                maps={},
-                default=layout,
+                id=apid,
+                props={
+                    'sprite_id': 0xfd,  # magic value for newgrf sprites
+                    'engine_class': self._props.get('engine_class'),
+                    **props
+                }
             ))
+            res.append(callbacks.make_map_action(definition))
+
         return res
 
 
