@@ -961,6 +961,10 @@ class Define(DefineMultiple):
         multi_props = {k: [v] for k, v in props.items()}
         super().__init__(feature=feature, first_id=id, count=1, props=multi_props)
 
+    @property
+    def id(self):
+        return self.first_id
+
     def py(self, context):
         propstr = _py_dict(context, self.props, repr, lambda k, v: py_property(self.feature, k, v[0]))
         return f'''
