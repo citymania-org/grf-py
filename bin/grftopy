@@ -7,6 +7,7 @@ import numpy as np
 import re
 import sys
 import struct
+import traceback
 import unicodedata
 
 from PIL import Image, ImageDraw
@@ -241,7 +242,7 @@ def read_property(data, ofs, fmt):
 
         return res, d.offset
 
-    raise ValueError(fmt)
+    raise ValueError(f'Unknown format {fmt}')
 
 
 def decode_action0(data, context):
@@ -255,18 +256,18 @@ def decode_action0(data, context):
         ofs += 1
         propdict = ACTION0_PROPS[feature]
         name, fmt, *_ = propdict[prop]
-        if num_info == 1:
-            try:
+        try:
+            if num_info == 1:
                 value, ofs = read_property(data, ofs, fmt)
-            except ValueError:
-                raise RuntimeError(f'No reader for property {name} format {fmt}')
-            props[name] = value
-        else:
-            res = []
-            for _ in range(num_info):
-                value, ofs = read_property(data, ofs, fmt)
-                res.append(value)
-            props[name] = res
+                props[name] = value
+            else:
+                res = []
+                for _ in range(num_info):
+                    value, ofs = read_property(data, ofs, fmt)
+                    res.append(value)
+                props[name] = res
+        except Exception as e:
+            raise RuntimeError(f'Error decoding property {name}: {e}')
 
     if num_info == 1:
         return [grf.Define(
@@ -1064,7 +1065,10 @@ def read_pseudo_sprite(f, nfo_line, container, context):
         try:
             res.extend(decode_pseudo_sprite(data, context))
         except Exception as e:
-            res.append(PyComment(f'Error decoding sprite: {str(e)}'))
+            res.append(PyComment(f'Error decoding sprite:'))
+            estr = traceback.format_exc()
+            for l in estr.split('\n'):
+                res.append(PyComment(l))
     elif container >= 2 and grf_type == 0xfd:
         data = f.read(l)
         context.count_action(0xfd, l + size_bytes * 2 + 1)

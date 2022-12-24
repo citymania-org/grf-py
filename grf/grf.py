@@ -24,10 +24,6 @@ from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBa
 from .strings import StringManager
 
 
-TEMPERATE, ARCTIC, TROPICAL, TOYLAND = 1, 2, 4, 8
-NO_CLIMATE, ALL_CLIMATES = 0, TEMPERATE | ARCTIC | TROPICAL | TOYLAND
-
-
 # def map_rgb_image(self, im):
 #     assert im.mode == 'RGB', im.mode
 #     data = np.array(im)

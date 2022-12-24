@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes, read_dword, days_to_date
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
-                    AIRPORT_TILE, ROADTYPE, TRAMTYPE
+                    AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
 from .sprites import BaseSprite, LazyBaseSprite, SoundSprite, IntermediateSprite
@@ -50,20 +50,29 @@ class Range:
         return f'Range({self.low}, {self.high}, {self.ref})'
 
 
-def _py_ref_dict(ref_dict, context):
-    if len(ref_dict) == 0:
+def _py_dict(context, data, key_func, value_func, indent=12):
+    if len(data) == 0:
         return '{}'
-    indent = ' ' * 12
+    indent_str = ' ' * indent
     res = ''
-    for k, v in ref_dict.items():
-        if isinstance(k, Range):
-            kdata = utoi32(k.low) if k.low == k.high else (utoi32(k.low), utoi32(k.high))
-        else:
-            kdata = k
-        res += f'\n{indent}    {kdata!r}: {context.format_ref(v)},'
-    if len(ref_dict) == 1:
-        return f'{{{res[1:-1]}}}'
-    return f'{{{res}\n{indent}}}'
+    for k, v in data.items():
+        kstr = key_func(k)
+        vstr = value_func(k, v)
+        res += f'\n{indent_str}    {kstr}: {vstr},'
+    if len(data) == 1:
+        return f'{{{res[:-1].lstrip()}}}'
+    return f'{{{res}\n{indent_str}}}'
+
+
+def _py_ref_dict(context, ref_dict):
+    def key_func(k):
+        if not isinstance(k, Range):
+            return repr(k)
+        if k.low == k.high:
+            return utoi32(k.low)
+        return repr((utoi32(k.low), utoi32(k.high)))
+    return _py_dict(context, ref_dict, key_func,
+                    lambda k, v: context.format_ref(v))
 
 
 class ReferenceableAction:
@@ -135,6 +144,9 @@ class Property:
     def encode(cls, value):
         raise NotImplementedError
 
+    def format(cls, value):
+        return repr(value)
+
 
 class DateProperty(Property):
     def validate(cls, value):
@@ -149,6 +161,38 @@ class DateProperty(Property):
         if isinstance(value, datetime.date):
             value = date_to_days(value)
         return struct.pack('<I', value)
+
+
+class ClimateProperty(Property):
+    def validate(cls, value):
+        if not (0 <= value <= ALL_CLIMATES):
+            raise ValueError(f'Expected value between NO_CLIMATE(0) and ALL_CLIMATES({ALL_CLIMATES})')
+
+    def read(cls, data, ofs):
+        return data[ofs], ofs + 1
+
+    def encode(cls, value):
+        return struct.pack('<B', value)
+
+    def format(cls, value):
+        if value == NO_CLIMATE: return 'grf.NO_CLIMATE'
+        if value == ALL_CLIMATES: return 'grf.ALL_CLIMATES'
+
+        # Preserve incorrect decompiled values
+        if not (0 < value < ALL_CLIMATES):
+            return value
+
+        climates = {
+            TEMPERATE: 'grf.TEMPERATE',
+            ARCTIC: 'grf.ARCTIC',
+            TROPICAL: 'grf.TROPICAL',
+            TOYLAND:'grf.TOYLAND',
+        }
+        res = []
+        for k, v in climates.items():
+            if k & value > 0:
+                res.append(v)
+        return ' | '.join(res)
 
 
 class PyComment(IntermediateSprite):
@@ -174,7 +218,7 @@ ACTION0_COMMON_VEHICLE_PROPS = {
     0x02: ('reliability_decay', 'B'),  # reliability decay speed     no
     0x03: ('vehicle_life', 'B'),  # vehicle life in years   no
     0x04: ('model_life', 'B'),  # model life in years     no
-    0x06: ('climates_available', 'B'),  # climate availability    should be zero
+    0x06: ('climates_available', ClimateProperty()),  # climate availability    should be zero
     0x07: ('loading_speed', 'B'),  # loading speed   yes
 }
 
@@ -712,7 +756,7 @@ ACTION0_OBJECT_PROPS = {
     0x08: ('class', 'L'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Class label, see below
     0x09: ('class_name_id', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Text ID for class
     0x0A: ('name_id', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Text ID for this object
-    0x0B: ('climates_available', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Climate availability
+    0x0B: ('climates_available', ClimateProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Climate availability
     0x0C: ('size', SizeTupleProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Byte representing size, see below
     0x0D: ('build_cost_multiplier', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Object build cost factor (sets object removal cost factor as well)
     0x0E: ('introduction_date', DateProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Introduction date, see below
@@ -890,13 +934,23 @@ class DefineMultiple(LazyBaseSprite):
         return res
 
     def py(self, context):
+        def value_func(k, v):
+            prop = ACTION0_PROP_DICT[self.feature][k][1]
+            if isinstance(prop, Property):
+                pdata = ', '.join(map(prop.format, v))
+                return f'[{pdata}]'
+            return repr(v)
+
+        propstr = _py_dict(context, self.props, repr, value_func)
+
         return f'''
         DefineMultiple(
             feature={self.feature},
             first_id={self.first_id},
             count={self.count},
-            props=''' + pformat(self.props, indent_first=0, indent=10 + 8) + '''
-        )'''
+            props={propstr}
+        )
+        '''
 
 
 class Define(DefineMultiple):
@@ -905,12 +959,19 @@ class Define(DefineMultiple):
         super().__init__(feature=feature, first_id=id, count=1, props=multi_props)
 
     def py(self, context):
-        flat_props = {k: v[0] for k, v in self.props.items()}
+        def value_func(k, v):
+            prop = ACTION0_PROP_DICT[self.feature][k][1]
+            if isinstance(prop, Property):
+                return prop.format(v[0])
+            return repr(v[0])
+
+        propstr = _py_dict(context, self.props, repr, value_func)
+
         return f'''
         Define(
             feature={self.feature},
             id={self.first_id},
-            props=''' + pformat(flat_props, indent_first=0, indent=10 + 8) + '''
+            props={propstr}
         )'''
 
 
@@ -1313,7 +1374,7 @@ class Action3(LazyBaseSprite, ReferencingAction):
             feature={self.feature},
             wagon_override={self.wagon_override},
             ids={self.ids!r},
-            maps={_py_ref_dict(self.maps, context)},
+            maps={_py_ref_dict(context, self.maps)},
             default={context.format_ref(self.default)},
         )'''
 
@@ -1334,7 +1395,7 @@ class Map(Action3):
             feature={self.feature},
             wagon_override={self.wagon_override},
             ids={self.ids!r},
-            maps={_py_ref_dict(self.maps, context)},
+            maps={_py_ref_dict(context, self.maps)},
             default={context.format_ref(self.default)},
         )'''
 
