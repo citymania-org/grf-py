@@ -50,6 +50,22 @@ class Range:
         return f'Range({self.low}, {self.high}, {self.ref})'
 
 
+def _py_ref_dict(ref_dict, context):
+    if len(ref_dict) == 0:
+        return '{}'
+    indent = ' ' * 12
+    res = ''
+    for k, v in ref_dict.items():
+        if isinstance(k, Range):
+            kdata = utoi32(k.low) if k.low == k.high else (utoi32(k.low), utoi32(k.high))
+        else:
+            kdata = k
+        res += f'\n{indent}    {kdata!r}: {context.format_ref(v)},'
+    if len(ref_dict) == 1:
+        return f'{{{res[1:-1]}}}'
+    return f'{{{res}\n{indent}}}'
+
+
 class ReferenceableAction:
     pass
 
@@ -950,7 +966,7 @@ class GenericSpriteLayout(BaseSprite, ReferenceableAction):
 
     def py(self, context):
         return f''' \
-        GenericSpriteLayout(
+        {context.get_var_assignment_str(self.ref_id)}GenericSpriteLayout(
             feature={self.feature},
             ref_id={self.ref_id},
             ent1={self.ent1!r},
@@ -977,7 +993,7 @@ class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
     def py(self, context):
         return f''' \
-        BasicSpriteLayout(
+        {context.get_var_assignment_str(self.ref_id)}BasicSpriteLayout(
             feature={self.feature},
             ref_id={self.ref_id},
             ground={self.ground!r},
@@ -1038,7 +1054,7 @@ class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
     def py(self, context):
         return f'''
-        {self.__class__.__name__}(
+        {context.get_var_assignment_str(self.ref_id)}{self.__class__.__name__}(
             feature={self.feature},
             ref_id={self.ref_id},
             ground={self.ground!r},
@@ -1128,17 +1144,24 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             code_str = repr(self.code)
         else:
             code_str = textwrap.indent("'''\n" + self.code + "'''", ' ' * 16).lstrip()
-        ranges_str = pformat({
-            utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high)): r.ref
-            for r in self._ranges
-        }, indent_first=0, indent=19)
+        # ranges_str = pformat({
+        #     utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high)): r.ref
+        #     for r in self._ranges
+        # }, indent_first=0, indent=19)
+        ranges_str = ''
+        indent = ' ' * 16
+        for r in self._ranges:
+            key = utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high))
+            ranges_str += f'\n{indent}{key!r}: {context.format_ref(r.ref)},'
+        default_str = context.format_ref(self.default)
         return f'''
-        Switch(
+        {context.get_var_assignment_str(self.ref_id)}Switch(
             feature={self.feature},
             ref_id={self.ref_id},
             related_scope={self.related_scope},
-            ranges={ranges_str},
-            default={self.default},
+            ranges={{{ranges_str}
+            }},
+            default={default_str},
             code={code_str},
         )'''
 
@@ -1166,6 +1189,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         res = bytes((0x02, self.feature.id, self.ref_id, atype))
         if self.scope == 'relative' and self.feature not in VEHICLE_FEATURES:
             res += bytes((self.count, ))
+        # TODO vars instead of refs
         res += struct.pack(
             '<BBB' + 'H' * len(self.groups),
             self.triggers | (int(self.cmp_all) * 0x80),
@@ -1176,15 +1200,16 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         return res
 
     def py(self, context):
+        groupsdata = [context.format_ref(r) for r in self.groups]
         return f'''
-        RandomSwitch(
+        {context.get_var_assignment_str(self.ref_id)}RandomSwitch(
             feature={self.feature},
             ref_id={self.ref_id},
             scope={self.scope!r},
             triggers={self.triggers},
             cmp_all={self.cmp_all},
             lowest_bit={self.lowest_bit},
-            groups={self.groups!r},
+            groups={groupsdata!r},
         )'''
 
 
@@ -1277,8 +1302,8 @@ class Action3(LazyBaseSprite, ReferencingAction):
             feature={self.feature},
             wagon_override={self.wagon_override},
             ids={self.ids!r},
-            maps={self.maps!r},
-            default={self.default},
+            maps={_py_ref_dict(self.maps, context)},
+            default={context.format_ref(self.default)},
         )'''
 
 
@@ -1298,8 +1323,8 @@ class Map(Action3):
             feature={self.feature},
             wagon_override={self.wagon_override},
             ids={self.ids!r},
-            maps={self.maps!r},
-            default={self.default},
+            maps={_py_ref_dict(self.maps, context)},
+            default={context.format_ref(self.default)},
         )'''
 
 

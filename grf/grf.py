@@ -101,6 +101,22 @@ class SpriteGenerator:
 class PythonGenerationContext:
     def __init__(self):
         self.resources = {}
+        self.use_vars_not_refs = True
+        self._var_count = {}
+
+    def get_var_assignment_str(self, ref_id):
+        if not self.use_vars_not_refs:
+            return ''
+        count = self._var_count.get(ref_id, 0) + 1
+        self._var_count[ref_id] = count
+        return f'ref_{ref_id}_{count} = '
+
+    def format_ref(self, ref):
+        if self.use_vars_not_refs and not ref.is_callback:
+            count = self._var_count.get(ref.value)
+            if count is not None:
+                return f'ref_{ref.value}_{count}'
+        return repr(ref)
 
 
 class Timer:
