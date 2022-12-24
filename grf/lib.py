@@ -434,9 +434,9 @@ class RoadVehicle(Vehicle):
         # TODO doesn't show exact mph in the game
         return RoadVehicle.Speed((speed * 16 + 4) // 5)
 
-    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, livery_refits=None, callbacks=None, **props):
+    def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, livery_refits=None, callbacks=None, **props):
         super().__init__(callbacks)
-        for l in liveries:
+        for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'RoadVehicle livery is missing the name')
             sprites = l.get('sprites')
@@ -469,19 +469,20 @@ class RoadVehicle(Vehicle):
             )
 
     def get_sprites(self, g):
-        layouts = []
-        for i, l in enumerate(self.liveries):
-            layouts.append(grf.GenericSpriteLayout(
-                ent1=(i,),
-                ent2=(i,),
-            ))
+        if self.liveries:
+            layouts = []
+            for i, l in enumerate(self.liveries):
+                layouts.append(grf.GenericSpriteLayout(
+                    ent1=(i,),
+                    ent2=(i,),
+                ))
 
-        self.callbacks.graphics = grf.Switch(
-            related_scope=True,
-            ranges=dict(enumerate(layouts)),
-            default=layouts[0],
-            code='cargo_subtype',
-        )
+            self.callbacks.graphics = grf.Switch(
+                related_scope=True,
+                ranges=dict(enumerate(layouts)),
+                default=layouts[0],
+                code='cargo_subtype',
+            )
 
         self._set_callbacks()
 
@@ -508,15 +509,15 @@ class RoadVehicle(Vehicle):
                 **self._props
             }
         ))
+        if self.liveries:
+            res.append(grf.Action1(
+                feature=grf.RV,
+                set_count=len(self.liveries),
+                sprite_count=8,
+            ))
 
-        res.append(grf.Action1(
-            feature=grf.RV,
-            set_count=len(self.liveries),
-            sprite_count=8,
-        ))
-
-        for l in self.liveries:
-            res.extend(l['sprites'])
+            for l in self.liveries:
+                res.extend(l['sprites'])
 
         res.append(self.callbacks.make_map_action(definition))
         return res
@@ -539,9 +540,9 @@ class Train(Vehicle):
     def mph(speed):
         return (speed * 16 + 4) // 10
 
-    def __init__(self, *, id, name, liveries, max_speed, additional_text=None, sound_effects=None, callbacks=None, **props):
+    def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
         super().__init__(callbacks)
-        for l in liveries:
+        for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'Train livery is missing the name')
             sprites = l.get('sprites')
@@ -652,14 +653,16 @@ class Train(Vehicle):
                 **self._props
             }
         ))
-        res.append(grf.Action1(
-            feature=grf.TRAIN,
-            set_count=len(self.liveries),
-            sprite_count=8,
-        ))
 
-        for l in self.liveries:
-            res.extend(l['sprites'])
+        if self.liveries:
+            res.append(grf.Action1(
+                feature=grf.TRAIN,
+                set_count=len(self.liveries),
+                sprite_count=8,
+            ))
+
+            for l in self.liveries:
+                res.extend(l['sprites'])
 
         res.append(self.callbacks.make_map_action(definition))
 
