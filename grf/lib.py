@@ -564,34 +564,35 @@ class Train(Vehicle):
         self._props = props
         self._articulated_parts = []
 
-    def add_articulated_part(self, *, id, liveries=None, callbacks=None, **props):
-        if self._props.get('is_dual_headed'):
-            raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
+    def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, **props):
+        if not skip_props_check:
+            if self._props.get('is_dual_headed'):
+                raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
 
-        # REQUIRED_PROPS = ('id', 'liveries')
-        # missing_props = [p for p in REQUIRED_PROPS if p not in props]
-        # if missing_props:
-        #     raise ValueError('Articulated part is missing required property: {}'.format(', '.join(missing_props)))
+            # REQUIRED_PROPS = ('id', 'liveries')
+            # missing_props = [p for p in REQUIRED_PROPS if p not in props]
+            # if missing_props:
+            #     raise ValueError('Articulated part is missing required property: {}'.format(', '.join(missing_props)))
 
-        ALLOWED_PROPS = (
-            'cargo_capacity',
-            'default_cargo_type',
-            'refit_cost',
-            'refittable_cargo_types',
-            'shorten_by',
-            'visual_effect',
-            'bitmask_vehicle_info',
-            'misc_flags',
-            'refittable_cargo_classes',
-            'non_refittable_cargo_classes',
-            'cargo_age_period',
-            'cargo_allow_refit',
-            'cargo_disallow_refit',
-            'curve_speed_mod',
-        )
-        invalid_props = [p for p in props if p not in ALLOWED_PROPS]
-        if invalid_props:
-            raise ValueError('Property not allowed for articulated part: {}'.format(', '.join(invalid_props)))
+            ALLOWED_PROPS = (
+                'cargo_capacity',
+                'default_cargo_type',
+                'refit_cost',
+                'refittable_cargo_types',
+                'shorten_by',
+                'visual_effect',
+                'bitmask_vehicle_info',
+                'misc_flags',
+                'refittable_cargo_classes',
+                'non_refittable_cargo_classes',
+                'cargo_age_period',
+                'cargo_allow_refit',
+                'cargo_disallow_refit',
+                'curve_speed_mod',
+            )
+            invalid_props = [p for p in props if p not in ALLOWED_PROPS]
+            if invalid_props:
+                raise ValueError('Property not allowed for articulated part: {}'.format(', '.join(invalid_props)))
 
         self._articulated_parts.append((id, liveries, callbacks, props))
         return self
