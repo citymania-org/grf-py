@@ -826,6 +826,12 @@ ACTION0_PROP_DICT = {
     for feature, fdict in ACTION0_PROPS.items()
 }
 
+def py_property(feature, name, value):
+    prop = ACTION0_PROP_DICT[feature][name][1]
+    if isinstance(prop, Property):
+        return prop.format(value)
+    return repr(value)
+
 # Action 0
 
 class RVFlags:
@@ -935,11 +941,8 @@ class DefineMultiple(LazyBaseSprite):
 
     def py(self, context):
         def value_func(k, v):
-            prop = ACTION0_PROP_DICT[self.feature][k][1]
-            if isinstance(prop, Property):
-                pdata = ', '.join(map(prop.format, v))
-                return f'[{pdata}]'
-            return repr(v)
+            pdata = ', '.join(py_property(self.feature, k, value) for value in v)
+            return f'[{pdata}]'
 
         propstr = _py_dict(context, self.props, repr, value_func)
 
@@ -959,14 +962,7 @@ class Define(DefineMultiple):
         super().__init__(feature=feature, first_id=id, count=1, props=multi_props)
 
     def py(self, context):
-        def value_func(k, v):
-            prop = ACTION0_PROP_DICT[self.feature][k][1]
-            if isinstance(prop, Property):
-                return prop.format(v[0])
-            return repr(v[0])
-
-        propstr = _py_dict(context, self.props, repr, value_func)
-
+        propstr = _py_dict(context, self.props, repr, lambda k, v: py_property(self.feature, k, v[0]))
         return f'''
         Define(
             feature={self.feature},

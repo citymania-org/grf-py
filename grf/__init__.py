@@ -10,6 +10,6 @@ from .common import Feature, TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, B
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X, \
                     BPP_8, BPP_24, BPP_32, VEHICLE_FEATURES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND, NO_CLIMATE, ALL_CLIMATES
-from .actions import RVFlags, TrainFlags, CargoClass, train_hpi, train_ton, nml_te
+from .actions import RVFlags, TrainFlags, CargoClass, train_hpi, train_ton, nml_te, py_property
 from .strings import StringRef
 
