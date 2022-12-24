@@ -2,7 +2,6 @@ from collections.abc import Iterable
 
 import grf
 
-
 def fake_vehicle_info(props):
     return '{}'.join('{BLACK}' + k + ': {GOLD}' + v for k, v in props.items())
 
@@ -392,12 +391,12 @@ class Vehicle(grf.SpriteGenerator):
 
     def _gen_name_sprites(self):
         if isinstance(self.name, grf.StringRef):
-            return [self.name.get_actions(grf.TRAIN, self.id)]
+            return self.name.get_actions(grf.TRAIN, self.id)
         else:
             return [grf.DefineStrings(
-                 eature=grf.TRAIN,
-                 ffset=self.id,
-                 s_generic_offset=False,
+                feature=grf.TRAIN,
+                offset=self.id,
+                is_generic_offset=False,
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
 
