@@ -564,7 +564,7 @@ class Train(Vehicle):
         self._props = props
         self._articulated_parts = []
 
-    def add_articulated_part(self, *, id, liveries, callbacks=None, **props):
+    def add_articulated_part(self, *, id, liveries=None, callbacks=None, **props):
         if self._props.get('is_dual_headed'):
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
 
@@ -671,26 +671,27 @@ class Train(Vehicle):
         for apid, liveries, initial_callbacks, props in self._articulated_parts:
             callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
 
-            res.append(grf.Action1(
-                feature=grf.TRAIN,
-                set_count=len(liveries),
-                sprite_count=8,
-            ))
-
-            layouts = []
-            for i, l in enumerate(liveries):
-                res.extend(l['sprites'])
-                layouts.append(grf.GenericSpriteLayout(
-                    ent1=(i,),
-                    ent2=(i,),
+            if liveries:
+                res.append(grf.Action1(
+                    feature=grf.TRAIN,
+                    set_count=len(liveries),
+                    sprite_count=8,
                 ))
 
-            callbacks.graphics = grf.Switch(
-                related_scope=True,
-                ranges=dict(enumerate(layouts)),
-                default=layouts[0],
-                code='cargo_subtype',
-            )
+                layouts = []
+                for i, l in enumerate(liveries):
+                    res.extend(l['sprites'])
+                    layouts.append(grf.GenericSpriteLayout(
+                        ent1=(i,),
+                        ent2=(i,),
+                    ))
+
+                callbacks.graphics = grf.Switch(
+                    related_scope=True,
+                    ranges=dict(enumerate(layouts)),
+                    default=layouts[0],
+                    code='cargo_subtype',
+                )
 
             if callbacks.get_flags():
                 props['cb_flags'] = props.get('cb_flags', 0) | callbacks.get_flags()
