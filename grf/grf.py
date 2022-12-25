@@ -14,8 +14,8 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      Define, DefineMultiple, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, \
                      IndustryProductionCallback, Action3, Map, DefineStrings, ReplaceNewSprites, \
-                     ModifySprites, If, SetDescription, ReplaceOldSprites, Comment, ComputeParameters, \
-                     Label, SoundEffects, ImportSound, Translations, SetProperties
+                     ModifySprites, If, SetDescription, ReplaceOldSprites, ErrorMessage, Comment, \
+                     ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE

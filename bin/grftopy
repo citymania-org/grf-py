@@ -838,6 +838,42 @@ def decode_actionA(data, context):
     return [grf.ReplaceOldSprites(sets)]
 
 
+def decode_actionB(data, context):
+    severity = data[0]
+    lang = data[1]
+    message = data[2]
+    text_param = None
+    res = []
+    ofs = 3
+    if message == 0xFF:
+        message_end = data.find(b'\0', 3)
+        if message_end == -1:
+            res.append(PyComment('Error: Action 0x0B message has no terminal 00 byte.'))
+        else:
+            message = data[3: message_end]
+            ofs = message_end + 1
+    if ofs < len(data):
+        text_end = data.find(b'\0', ofs)
+        if text_end == -1:
+            res.append(PyComment('Error: Action 0x0B text parameter has no terminal 00 byte.'))
+        else:
+            text_param = data[ofs: text_end]
+            ofs = text_end + 1
+        params = list(data[ofs: ])
+    res.append(grf.ErrorMessage(
+        severity=severity,
+        lang=lang,
+        message=message,
+        text_param=text_param,
+        params=params,
+    ))
+    return res
+
+
+def decode_actionC(data, context):
+    return [grf.Comment(data)]
+
+
 OPERATIONS = {
     0x00: '{target} = {source1}', # Supported by OpenTTD Supported by TTDPatch  Assignment  target = source1
     0x01: '{target} = {source1} + {source2}', # Supported by OpenTTD Supported by TTDPatch  Addition    target = source1 + source2
@@ -853,10 +889,6 @@ OPERATIONS = {
     0x0B: '{target} = {source1} % {source2} (Unsigned)', # Supported by OpenTTD Supported by TTDPatch 2.5 (alpha 59)2.5    Unsigned modulo     target = source1 % source2
     0x0C: '{target} = {source1} % {source2} (Signed)', # Supported by OpenTTD Supported by TTDPatch 2.5 (alpha 59)2.5    Signed modulo   target = source1 % source2
 }
-
-
-def decode_actionC(data, context):
-    return [grf.Comment(data)]
 
 
 def decode_actionD(data, context):
@@ -988,6 +1020,7 @@ ACTIONS = {
     0x08: decode_action8,
     0x09: decode_action9,
     0x0a: decode_actionA,
+    0x0b: decode_actionB,
     0x0c: decode_actionC,
     0x0d: decode_actionD,
     0x10: decode_action10,

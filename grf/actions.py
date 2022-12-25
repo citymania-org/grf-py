@@ -1614,6 +1614,44 @@ class ReplaceOldSprites(BaseSprite):
 
 ActionA = ReplaceOldSprites
 
+# Action B
+
+class ErrorMessage(LazyBaseSprite):
+    def __init__(self, *, severity, lang, message, text_param=None, params=None):
+        super().__init__()
+        assert 0 <= severity < 256, severity
+        assert 0 <= lang <= ANY_LANGUAGE, lang
+        assert all(0 <= p < 256 for p in params), params
+        self.severity = severity
+        self.lang = lang
+        assert isinstance(message, (int, str, bytes))
+        self.message = message
+        self.text_param = text_param
+        self.params = params or []
+
+    def _encode(self):
+        message_id = self.message if isinstance(self.message, int) else 0xFF
+        data = bytes((0x0B, self.severity, self.lang, message_id))
+        if message_id == 0xFF:
+            data += to_bytes(self.message)
+        data += b'\0'
+        if self.text_param is not None or self.params:
+            data += to_bytes(self.text_param or '')
+            data += b'\0'
+            data += bytes(self.params)
+        return data
+
+    def py(self, context):
+        return f'''
+        ErrorMessage(
+            severity={self.severity},
+            lang={self.lang},
+            message={self.message!r},
+            text_param={self.text_param!r},
+            params={self.params!r},
+        )'''
+
+ActionB = ErrorMessage
 
 # Action C
 
