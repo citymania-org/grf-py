@@ -76,7 +76,10 @@ def _py_ref_dict(context, ref_dict):
 
 
 class ReferenceableAction:
-    pass
+    def _py_ref_id(self, context):
+        if self.ref_id is None:
+            return None
+        return f'\n            ref_id={self.ref_id},'
 
 
 class ReferencingAction:
@@ -1037,10 +1040,10 @@ class GenericSpriteLayout(BaseSprite, ReferenceableAction):
         )
 
     def py(self, context):
+        ref_id_str = '            ref_id={self.ref_id},\n'
         return f''' \
         {context.get_var_assignment_str(self.ref_id)}GenericSpriteLayout(
-            feature={self.feature},
-            ref_id={self.ref_id},
+            feature={self.feature},{self._py_ref_id(context)}
             ent1={self.ent1!r},
             ent2={self.ent2!r},
         )
@@ -1066,8 +1069,7 @@ class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
     def py(self, context):
         return f''' \
         {context.get_var_assignment_str(self.ref_id)}BasicSpriteLayout(
-            feature={self.feature},
-            ref_id={self.ref_id},
+            feature={self.feature},{self._py_ref_id(context)}
             ground={self.ground!r},
             building={self.building!r},
         )
@@ -1127,8 +1129,7 @@ class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
     def py(self, context):
         return f'''
         {context.get_var_assignment_str(self.ref_id)}{self.__class__.__name__}(
-            feature={self.feature},
-            ref_id={self.ref_id},
+            feature={self.feature},{self._py_ref_id(context)}
             ground={self.ground!r},
             buildings={self.buildings!r},
         )'''
@@ -1228,8 +1229,7 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         default_str = context.format_ref(self.default)
         return f'''
         {context.get_var_assignment_str(self.ref_id)}Switch(
-            feature={self.feature},
-            ref_id={self.ref_id},
+            feature={self.feature},{self._py_ref_id(context)}
             related_scope={self.related_scope},
             ranges={{{ranges_str}
             }},
@@ -1275,8 +1275,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         groupsdata = ', '.join(context.format_ref(r) for r in self.groups)
         return f'''
         {context.get_var_assignment_str(self.ref_id)}RandomSwitch(
-            feature={self.feature},
-            ref_id={self.ref_id},
+            feature={self.feature},{self._py_ref_id(context)}
             scope={self.scope!r},
             triggers={self.triggers},
             cmp_all={self.cmp_all},
