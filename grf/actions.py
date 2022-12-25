@@ -50,7 +50,7 @@ class Range:
         return f'Range({self.low}, {self.high}, {self.ref})'
 
 
-def _py_dict(context, data, key_func, value_func, indent=12):
+def _py_dict(data, key_func, value_func, indent=12):
     if len(data) == 0:
         return '{}'
     indent_str = ' ' * indent
@@ -64,27 +64,42 @@ def _py_dict(context, data, key_func, value_func, indent=12):
     return f'{{{res}\n{indent_str}}}'
 
 
-def _py_ref_dict(context, ref_dict):
+def _py_ref_dict(ref_dict, value_func):
     def key_func(k):
         if not isinstance(k, Range):
             return repr(k)
         if k.low == k.high:
             return utoi32(k.low)
         return repr((utoi32(k.low), utoi32(k.high)))
-    return _py_dict(context, ref_dict, key_func,
-                    lambda k, v: context.format_ref(v))
+    return _py_dict(ref_dict, key_func, value_func)
 
 
 class ReferenceableAction:
+    def __init__(self):
+        self.ref_var = None
+
     def _py_ref_id(self, context):
         if self.ref_id is None:
-            return None
+            return ''
         return f'\n            ref_id={self.ref_id},'
+
+    def py_ref(self):
+        if self.ref_var is not None:
+            return self.ref_var
+        return f'Ref({self.ref_id})'
 
 
 class ReferencingAction:
     def get_refs(self):
-        return NotImplementedError
+        raise NotImplementedError
+
+    def set_refs(self, refs):
+        raise NotImplementedError
+
+    def _format_ref(self, context, ref):
+        if isinstance(ref, ReferenceableAction):
+            return ref.py_ref()
+        return repr(ref)
 
 
 def get_ref_id(ref_obj):
@@ -947,7 +962,7 @@ class DefineMultiple(LazyBaseSprite):
             pdata = ', '.join(py_property(self.feature, k, value) for value in v)
             return f'[{pdata}]'
 
-        propstr = _py_dict(context, self.props, repr, value_func)
+        propstr = _py_dict(self.props, repr, value_func)
 
         return f'''
         DefineMultiple(
@@ -969,7 +984,7 @@ class Define(DefineMultiple):
         return self.first_id
 
     def py(self, context):
-        propstr = _py_dict(context, self.props, repr, lambda k, v: py_property(self.feature, k, v[0]))
+        propstr = _py_dict(self.props, repr, lambda k, v: py_property(self.feature, k, v[0]))
         return f'''
         Define(
             feature={self.feature},
@@ -1042,7 +1057,7 @@ class GenericSpriteLayout(BaseSprite, ReferenceableAction):
     def py(self, context):
         ref_id_str = '            ref_id={self.ref_id},\n'
         return f''' \
-        {context.get_var_assignment_str(self.ref_id)}GenericSpriteLayout(
+        GenericSpriteLayout(
             feature={self.feature},{self._py_ref_id(context)}
             ent1={self.ent1!r},
             ent2={self.ent2!r},
@@ -1068,7 +1083,7 @@ class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
     def py(self, context):
         return f''' \
-        {context.get_var_assignment_str(self.ref_id)}BasicSpriteLayout(
+        BasicSpriteLayout(
             feature={self.feature},{self._py_ref_id(context)}
             ground={self.ground!r},
             building={self.building!r},
@@ -1128,7 +1143,7 @@ class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
 
     def py(self, context):
         return f'''
-        {context.get_var_assignment_str(self.ref_id)}{self.__class__.__name__}(
+        {self.__class__.__name__}(
             feature={self.feature},{self._py_ref_id(context)}
             ground={self.ground!r},
             buildings={self.buildings!r},
@@ -1171,6 +1186,11 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
     def get_refs(self):
         yield from (r.ref for r in self._ranges)
         yield self.default
+
+    def set_refs(self, refs):
+        self.default = refs[-1]
+        for i, r in enumerate(self._ranges):
+            r.ref = refs[i]
 
     @property
     def parsed_code(self):
@@ -1225,10 +1245,10 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         indent = ' ' * 16
         for r in self._ranges:
             key = utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high))
-            ranges_str += f'\n{indent}{key!r}: {context.format_ref(r.ref)},'
-        default_str = context.format_ref(self.default)
+            ranges_str += f'\n{indent}{key!r}: {self._format_ref(context, r.ref)},'
+        default_str = self._format_ref(context, self.default)
         return f'''
-        {context.get_var_assignment_str(self.ref_id)}Switch(
+        Switch(
             feature={self.feature},{self._py_ref_id(context)}
             related_scope={self.related_scope},
             ranges={{{ranges_str}
@@ -1256,6 +1276,9 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
     def get_refs(self):
         yield from self.groups
 
+    def set_refs(self, refs):
+        self.groups = refs
+
     def _encode(self):
         atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[self.scope]
         res = bytes((0x02, self.feature.id, self.ref_id, atype))
@@ -1272,9 +1295,9 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         return res
 
     def py(self, context):
-        groupsdata = ', '.join(context.format_ref(r) for r in self.groups)
+        groupsdata = ', '.join(self._format_ref(context, r) for r in self.groups)
         return f'''
-        {context.get_var_assignment_str(self.ref_id)}RandomSwitch(
+        RandomSwitch(
             feature={self.feature},{self._py_ref_id(context)}
             scope={self.scope!r},
             triggers={self.triggers},
@@ -1348,6 +1371,11 @@ class Action3(LazyBaseSprite, ReferencingAction):
         yield from self.maps.values()
         yield self.default
 
+    def set_refs(self, refs):
+        self.default = refs[-1]
+        for i, k in enumerate(self.maps.keys()):
+            self.maps[k] = refs[i]
+
     def _encode(self):
         idcount = len(self.ids)
         mcount = len(self.maps)
@@ -1368,13 +1396,14 @@ class Action3(LazyBaseSprite, ReferencingAction):
                 get_ref_id(self.default))
 
     def py(self, context):
+        value_func = lambda k, v: self._format_ref(context, v)
         return f'''
         Action3(
             feature={self.feature},
             wagon_override={self.wagon_override},
             ids={self.ids!r},
-            maps={_py_ref_dict(context, self.maps)},
-            default={context.format_ref(self.default)},
+            maps={_py_ref_dict(self.maps, value_func)},
+            default={self._format_ref(context, self.default)},
         )'''
 
 
@@ -1389,13 +1418,14 @@ class Map(Action3):
         )
 
     def py(self, context):
+        value_func = lambda k, v: self._format_ref(context, v)
         return f'''
         Action3(
             feature={self.feature},
             wagon_override={self.wagon_override},
             ids={self.ids!r},
-            maps={_py_ref_dict(context, self.maps)},
-            default={context.format_ref(self.default)},
+            maps={_py_ref_dict(self.maps, value_func)},
+            default={self._format_ref(context, self.default)},
         )'''
 
 

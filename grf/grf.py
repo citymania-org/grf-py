@@ -100,20 +100,6 @@ class PythonGenerationContext:
         self.use_vars_not_refs = True
         self._var_count = {}
 
-    def get_var_assignment_str(self, ref_id):
-        if not self.use_vars_not_refs:
-            return ''
-        count = self._var_count.get(ref_id, 0) + 1
-        self._var_count[ref_id] = count
-        return f'ref_{ref_id}_{count} = '
-
-    def format_ref(self, ref):
-        if self.use_vars_not_refs and not ref.is_callback:
-            count = self._var_count.get(ref.value)
-            if count is not None:
-                return f'ref_{ref.value}_{count}'
-        return repr(ref)
-
 
 class Timer:
     def __init__(self):
@@ -236,10 +222,31 @@ class BaseNewGRF:
             res += '\n'
         res += '\n'
 
+        refs = {}
+        ref_count = {}
+        for s in self.generators:
+            if isinstance(s, ReferencingAction):
+                new_refs = []
+                for r in s.get_refs():
+                    if isinstance(r, Ref) and not r.is_callback:
+                        nr = refs.get(r.value)
+                        if nr is not None:
+                            new_refs.append(nr)
+                            continue
+                    new_refs.append(r)
+                s.set_refs(new_refs)
+            if isinstance(s, ReferenceableAction) and s.ref_id is not None:
+                refs[s.ref_id] = s
+                count = ref_count.get(s.ref_id, 0) + 1
+                ref_count[s.ref_id] = count
+                s.ref_var = f'ref_{s.ref_id}_{count}'
+
         for s in self.generators:
             if isinstance(s, tuple):
                 s = s[0]
             code = textwrap.dedent(s.py(context)).strip()
+            if isinstance(s, ReferenceableAction) and s.ref_var is not None:
+                res += f'{s.ref_var} = '
             res += code + '\n'
             if '\n' in code: res += '\n'
 
