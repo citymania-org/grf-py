@@ -1707,8 +1707,8 @@ class ComputeParameters(LazyBaseSprite):
 
 class Label(LazyBaseSprite):
     def __init__(self, label, comment):
-        if 0 <= label <= 255:
-            raise ValueError('label not in range 0..255')
+        if not(0 <= label <= 255):
+            raise ValueError(f'label {label} not in range 0..255')
         super().__init__()
         self.label = label
         self.comment = comment
