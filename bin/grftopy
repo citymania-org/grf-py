@@ -553,7 +553,7 @@ def get_var_node(feature, root, var, param, shift, and_mask, node_type, add_val=
 def read_random_switch(d, feature, atype, ref_id):
     scope = {0x80: 'self', 0x83: 'parent', 0x84: 'relative'}[atype]
     count = None
-    if scope == 'relative' and feature not in VEHICLE_FEATURES:
+    if scope == 'relative' and feature in VEHICLE_FEATURES:
         count = d.get_byte()
     triggers_byte = d.get_byte()
     triggers = triggers_byte & 0x7f
@@ -565,6 +565,7 @@ def read_random_switch(d, feature, atype, ref_id):
         feature=feature,
         ref_id=ref_id,
         scope=scope,
+        count=count,
         triggers=triggers,
         cmp_all=cmp_all,
         lowest_bit=lowest_bit,

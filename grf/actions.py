@@ -1268,6 +1268,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         self.feature = feature
         self.ref_id = ref_id
         self.scope = scope
+        self.count = count
         self.triggers = triggers
         self.cmp_all = cmp_all
         self.lowest_bit = lowest_bit
@@ -1300,6 +1301,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         RandomSwitch(
             feature={self.feature},{self._py_ref_id(context)}
             scope={self.scope!r},
+            count={self.count!r},
             triggers={self.triggers},
             cmp_all={self.cmp_all},
             lowest_bit={self.lowest_bit},
