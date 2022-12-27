@@ -51,15 +51,16 @@ class Range:
 
 
 def _py_dict(data, key_func, value_func, indent=12):
-    if len(data) == 0:
-        return '{}'
     indent_str = ' ' * indent
     res = ''
-    for k, v in data.items():
+    it = data.items() if isinstance(data, dict) else data
+    for k, v in it:
         kstr = key_func(k)
         vstr = value_func(k, v)
         res += f'\n{indent_str}    {kstr}: {vstr},'
-    if len(data) == 1:
+    if not res:
+        return '{}'
+    if '\n' not in res[1:]:
         return f'{{{res[:-1].lstrip()}}}'
     return f'{{{res}\n{indent_str}}}'
 
@@ -1237,24 +1238,15 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             code_str = repr(self.code)
         else:
             code_str = textwrap.indent("'''\n" + self.code + "'''", ' ' * 16).lstrip()
-        # ranges_str = pformat({
-        #     utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high)): r.ref
-        #     for r in self._ranges
-        # }, indent_first=0, indent=19)
-        ranges_str = ''
-        indent = ' ' * 16
-        for r in self._ranges:
-            key = utoi32(r.low) if r.low == r.high else (utoi32(r.low), utoi32(r.high))
-            ranges_str += f'\n{indent}{key!r}: {self._format_ref(context, r.ref)},'
+        ranges_str = _py_ref_dict(((r, r.ref) for r in self._ranges), lambda k, r: self._format_ref(context, r))
         default_str = self._format_ref(context, self.default)
         return f'''
         Switch(
             feature={self.feature},{self._py_ref_id(context)}
             related_scope={self.related_scope},
-            ranges={{{ranges_str}
-            }},
-            default={default_str},
             code={code_str},
+            ranges={ranges_str},
+            default={default_str},
         )'''
 
 
