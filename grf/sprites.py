@@ -63,6 +63,8 @@ def open_image(filename, *args, **kw):
 def convert_image(image):
     if image.mode == 'P':
         return image, BPP_8
+    if image.mode == 'RGBA':
+        return image, BPP_32
     if image.mode != 'RGB':
         image = image.convert('RGB')
     return img, BPP_24
@@ -187,7 +189,10 @@ class GraphicsSprite(RealSprite):
         self.zoom = zoom
         self.bpp = bpp
         self.mask = mask
-        self.name = f'{self.w}x{self.h}'
+
+    @property
+    def name(self):
+        return f'{self.w}x{self.h}'
 
     def get_image(self):
         raise NotImplementedError
@@ -205,6 +210,10 @@ class GraphicsSprite(RealSprite):
     def get_real_data(self, encoder):
         t0 = time.time()
         img, bpp = self.get_image()
+        if self.w is None:
+            self.w = img[0].size[0]
+        if self.h is None:
+            self.h = img[0].size[1]
 
         encoder.count_loading(time.time() - t0)
         t0 = time.time()
@@ -333,12 +342,12 @@ EMPTY_SPRITE = EmptyGraphicsSprite()
 
 
 class ImageSprite(GraphicsSprite):
-    def __init__(self, image, w, h, *, mask=None, **kw):
+    def __init__(self, image, *, mask=None, **kw):
         self._image = convert_image(image)
         if mask:
             mask_image, xofs, yofs = mask
             mask = convert_image(mask_image), xofs, yofs
-        super().__init__(w, h, bpp=self._image[1], mask=mask, **kw)
+        super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
 
     def get_image(self):
         return self._image
@@ -375,10 +384,15 @@ class FileSprite(GraphicsSprite):
         self.x = x
         self.y = y
         self.file = file
-        self.name = f'{self.x},{self.y} {self.w}x{self.h}'
+
+    @property
+    def name(self):
+        return f'{self.x},{self.y} {self.w}x{self.h}'
 
     def get_image(self):
         img, bpp = self.file.get_image()
+        if self.w is None or self.h is None:
+            self.w, self.h = img.size
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
         return img, bpp
 
