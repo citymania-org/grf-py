@@ -279,6 +279,8 @@ ACTION0_TRAIN_PROPS = {
     0x2C: ('cargo_allow_refit', 'n*B'), # refittable cargo types   yes
     0x2D: ('cargo_disallow_refit', 'n*B'),  # refittable cargo types    yes
     0x2E: ('curve_speed_mod', 'W'),  # speed modifier    yes
+    0x2F: ('variant_group', 'W'),  # Vehicle variant group
+    0x30: ('extra_flags', 'D'),  # extra flags
 }
 
 ACTION0_RV_PROPS = {
@@ -311,6 +313,8 @@ ACTION0_RV_PROPS = {
     0x23: ('shorten_by', 'B'),  # Make vehicle shorter, see train property 21     yes
     0x24: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C    yes
     0x25: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D     yes
+    0x26: ('variant_group', 'W'),  # Vehicle variant group
+    0x27: ('extra_flags', 'D'),  # extra flags
 }
 
 ACTION0_SHIP_PROPS = {
@@ -338,6 +342,8 @@ ACTION0_SHIP_PROPS = {
     0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
     0x1E: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
     0x1F: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
+    0x20: ('variant_group', 'W'),  # Vehicle variant group
+    0x21: ('extra_flags', 'D'),  # extra flags
 }
 
 ACTION0_AIRCRAFT_PROPS = {
@@ -365,6 +371,8 @@ ACTION0_AIRCRAFT_PROPS = {
     0x1D: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
     0x1E: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
     0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
+    0x20: ('variant_group', 'W'),  # Vehicle variant group
+    0x21: ('extra_flags', 'D'),  # extra flags
 }
 
 

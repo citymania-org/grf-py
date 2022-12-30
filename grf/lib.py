@@ -386,6 +386,13 @@ class DisableDefault(grf.SpriteGenerator):
 
 
 class Vehicle(grf.SpriteGenerator):
+
+    class ExtraFlags:
+        DISABLE_NEW_VEHICLE_MESSAGE = 0x01
+        DISABLE_EXCLUSIVE_PREVIEW = 0x02
+        SYNC_VARIANT_EXCLUSIVE_PREVIEW = 0x04
+        SYNC_VARIANT_RELIABILITY = 0x08
+
     def __init__(self, callbacks):
         self.callbacks = CallbackManager(Callback.Vehicle, callbacks)
 
