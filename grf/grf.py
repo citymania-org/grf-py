@@ -300,13 +300,14 @@ class BaseNewGRF:
 
                     assert isinstance(r, ReferenceableAction)
 
+                    ref_count[id(r)] += 1
                     if id(r) not in actions:
                         actions[id(r)] = (r, None)
                         unordered_refs[id(s)].append(id(r))
+                        resolve(r, None)
                     else:
-                        ordered_refs[id(s)].append(id(r))
-                    ref_count[id(r)] += 1
-                    resolve(r, None)
+                        if id(r) not in ordered_refs[id(s)]:
+                            ordered_refs[id(s)].append(id(r))
 
             prev_i = actions.get(id(s), (None, None))[1]
             if prev_i is not None and i is not None and prev_i != i:
@@ -324,7 +325,6 @@ class BaseNewGRF:
             if isinstance(s, ReferenceableAction):
                 if s.ref_id is not None:
                     refids[s.ref_id] = s
-
 
         ids = list(range(-255, 0))
         reserved_ids = set()
