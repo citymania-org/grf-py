@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'nml==0.6.1',
-    'numpy==1.19.5',
+    'numpy==1.22.0',
     'Pillow==8.4.0',
     'spectra==0.0.11',
 ]
