@@ -572,6 +572,9 @@ class Train(Vehicle):
 
     def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, **props):
         if not skip_props_check:
+            # TODO support flipping (id + 0x4000)
+            if id >= 0x4000:
+                raise ValueError(f'Articulated part id too big ({id} >= 0x4000)')
             if self._props.get('is_dual_headed'):
                 raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
 
