@@ -1244,6 +1244,8 @@ class SpritePlaceholder:
 
 
 def read_real_sprite(f, nfo_line, context):
+    # print(hex_str(aa := f.read(4)))
+    # sprite_id = struct.unpack('<I', aa)[0]
     sprite_id = struct.unpack('<I', f.read(4))[0]
     if sprite_id == 0:
         return None, [PyComment('End of pseudo sprites')]
@@ -1474,8 +1476,7 @@ def save_sound_resources(container, f, resource_dir, resource_dir_rel, context, 
             out_sprites[s.id] = PyCode(f"g.add(RAWSound('{resource_dir_rel}/{fname}'))")
 
 
-if __name__ == "__main__":
-    in_grf_path = Path(sys.argv[1])
+def decompile(in_grf_path):
     out_dir_name = in_grf_path.name
     if '.' in out_dir_name:
         out_dir_name = out_dir_name[:out_dir_name.rfind('.')]
@@ -1562,3 +1563,12 @@ if __name__ == "__main__":
 
     print(f'Finished decompiling `{in_grf_path}` into directory `{out_dir}`.')
     context.print_stats()
+
+
+def main():
+    in_grf_path = Path(sys.argv[1])
+    decompile(in_grf_path)
+
+
+if __name__ == "__main__":
+    main()
