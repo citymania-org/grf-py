@@ -450,11 +450,15 @@ class BaseNewGRF:
             f.write(b'\x00\x00\x00\x00')
 
             t.log(f'Writing real sprites')
+            written_sprites = set()
             for sl in sprites:
                 if not isinstance(sl, tuple):
                     continue
                 for s in sl:
+                    if s in written_sprites:
+                        continue
                     f.write(s.get_real_data(self._sprite_encoder))
+                    written_sprites.add(s)
 
             f.write(b'\x00\x00\x00\x00')
 

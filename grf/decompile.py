@@ -1244,8 +1244,6 @@ class SpritePlaceholder:
 
 
 def read_real_sprite(f, nfo_line, context):
-    # print(hex_str(aa := f.read(4)))
-    # sprite_id = struct.unpack('<I', aa)[0]
     sprite_id = struct.unpack('<I', f.read(4))[0]
     if sprite_id == 0:
         return None, [PyComment('End of pseudo sprites')]
