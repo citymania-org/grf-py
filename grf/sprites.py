@@ -308,7 +308,8 @@ class GraphicsSprite(RealSprite):
         return struct.pack(
             '<IIBBHHhh',
             self.sprite_id,
-            len(data) + 10, info_byte,
+            len(data) + 10,
+            info_byte,
             self.zoom,
             self.h,
             self.w,
@@ -326,15 +327,16 @@ class EmptyGraphicsSprite(GraphicsSprite):
 
     def get_real_data(self, encoder):
         return struct.pack(
-            '<IIBBHHhhB',
+            '<IIBBHHhhBB',
             self.sprite_id,
-            11,
-            0,
+            12,
+            0x4,
             0,
             1,
             1,
             0,
             0,
+            1,
             0,
         )
 
