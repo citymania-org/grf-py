@@ -272,6 +272,7 @@ class CallbackManager:
         PURCHASE = {
             Callback.Vehicle.PURCHASE_TEXT: False,
             Callback.Vehicle.CHANGE_PROPERTIES: True,
+            Callback.Vehicle.ARTICULATED_PART: True,
         }
         callbacks = {}
         purchase_callbacks = {}
