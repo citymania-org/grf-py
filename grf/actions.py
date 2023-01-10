@@ -1542,13 +1542,14 @@ class If(LazyBaseSprite):
         return res
 
     def py(self, context):
+        valuestr = f'  # {repr(struct.pack("<I", self.value))[2:-1]}' if self.value is not None else ''
         return f'''
             If(
                 is_static={self.is_static},
                 variable={self.variable},
                 varsize={self.varsize},
                 condition={self.condition},
-                value={self.value},
+                value={self.value},{valuestr}
                 skip={self.skip},
             )'''
 
@@ -1694,6 +1695,7 @@ class ComputeParameters(LazyBaseSprite):
         # sf = lambda x: f'[{x:02x}]' if x != 0xff else str(value)
         # target_str = f'[{target:02x}]'
         # op_str = fmt.format(target=target_str, source1=sf(source1), source2=sf(source2))
+        valuestr = f'  # {repr(struct.pack("<I", self.value))[2:-1]}' if self.value is not None else ''
         return f'''
         ComputeParameters(
             target={self.target},
@@ -1701,7 +1703,7 @@ class ComputeParameters(LazyBaseSprite):
             if_undefined={self.if_undefined},
             source1={self.source1},
             source2={self.source2},
-            value={self.value},
+            value={self.value},{valuestr}
         )'''
 
 
