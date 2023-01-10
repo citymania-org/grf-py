@@ -1525,7 +1525,9 @@ class ModifySprites(LazyBaseSprite):
 # Action 7, Action 9
 
 class If(LazyBaseSprite):
-    def __init__(self, *, is_static, variable, varsize, condition, value, skip):
+    def __init__(self, *, is_static, variable, condition, value, skip, varsize=None):
+        assert varsize is not None or isinstance(value, bytes)
+
         super().__init__()
         self.is_static = is_static
         self.variable = variable
@@ -1535,9 +1537,13 @@ class If(LazyBaseSprite):
         self.skip = skip
 
     def _encode(self):
-        res = bytes((0x09 if self.is_static else 0x07, self.variable, self.varsize, self.condition))
-        for i in range(self.varsize):
-            res += bytes(((self.value >> (8 * i)) & 0xff,))
+        varsize = self.varsize if self.varsize is not None else len(self.value)
+        res = bytes((0x09 if self.is_static else 0x07, self.variable, varsize, self.condition))
+        if isinstance(self.value, bytes):
+            res += self.value
+        else:
+            for i in range(self.varsize):
+                res += bytes(((self.value >> (8 * i)) & 0xff,))
         res += bytes((self.skip,))
         return res
 
@@ -1687,7 +1693,10 @@ class ComputeParameters(LazyBaseSprite):
         operation_byte = self.operation | 0x80 * self.if_undefined
         res = bytes((0x0D, self.target, operation_byte, self.source1, self.source2))
         if self.source1 == 0xff or self.source2 == 0xff:
-            res += struct.pack('<I', self.value)
+            if isinstance(self.value, bytes):
+                res += self.value
+            else:
+                res += struct.pack('<I', self.value)
         return res
 
     def py(self, context):
