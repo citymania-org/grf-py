@@ -531,6 +531,7 @@ class NewGRF(BaseNewGRF):
             else:
                 rtb = to_bytes(rt)
                 self._railtype_table[rtb] = (i, None)
+        return tuple(range(len(self._railtype_table)))
 
     def get_railtype_id(self, railtype):
         rtbytes = to_bytes(railtype)
