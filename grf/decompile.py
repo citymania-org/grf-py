@@ -797,7 +797,7 @@ def decode_action7or9(data, is_static):
         varsize = 1
     value = 0
     for i in range(varsize):
-        value = data[3 + i] * (1 << (8 * i))
+        value += data[3 + i] << (8 * i)
     skip = data[3 + varsize]
     return [grf.If(
         is_static=is_static,
