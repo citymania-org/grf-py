@@ -525,13 +525,18 @@ class NewGRF(BaseNewGRF):
     def set_railtype_table(self, railtype_list):
         self._railtype_table = {}
         for i, rt in enumerate(railtype_list):
-            self._railtype_table[to_bytes(rt)] = i
+            if isinstance(rt, (list, tuple)):
+                rtb = to_bytes(rt[0])
+                self._railtype_table[rtb] = (i, tuple(map(to_bytes, rt)))
+            else:
+                rtb = to_bytes(rt)
+                self._railtype_table[rtb] = (i, None)
 
     def get_railtype_id(self, railtype):
         rtbytes = to_bytes(railtype)
-        res = self._railtype_table.get(rtbytes)
-        assert res is not None, rtbytes
-        return res
+        if rtbytes not in self._railtype_table:
+            raise ValueError(f'Unknown railtype `{railtype}`')
+        return self._railtype_table[rtbytes][0]
 
     def set_cargo_table(self, cargo_list):
         self._cargo_table = {}
@@ -576,17 +581,58 @@ class NewGRF(BaseNewGRF):
                 }
             ))
 
-        if self._railtype_table is not None:
-            res.append(DefineMultiple(
-                feature=GLOBAL_VAR,
-                first_id=0,
-                count=len(self._railtype_table),
-                props={
-                    'railtype_table': list(self._railtype_table.keys())
-                }
-            ))
+        res.extend(self._generate_railtype_table())
 
         return res + super().generate_sprites()
+
+    def _generate_railtype_table(self):
+        if self._railtype_table is None:
+            return []
+
+        res = []
+
+        mods = []
+        for i, rtlist in self._railtype_table.values():
+            if rtlist is None:
+                continue
+
+            param = 0x7f - len(mods)
+            for j, rt in enumerate(rtlist):
+                # [param] = rt
+                res.append(ComputeParameters(
+                    target=param,
+                    operation=0,
+                    if_undefined=False,
+                    source1=255,
+                    source2=255,
+                    value=rt,
+                ))
+
+                # if rt is defined skip the rest (unless it's the last rt)
+                skip = 2 * (len(rtlist) - j - 1) - 1
+                if skip > 0:
+                    res.append(If(
+                        is_static=True,
+                        variable=0,
+                        condition=0xe,
+                        value=rt,
+                        skip=skip,
+                    ))
+
+            mods.append({'num': param, 'size': 4, 'offset': 8 + i * 4})
+
+        if mods:
+            res.append(ModifySprites(mods))
+
+        res.append(DefineMultiple(
+            feature=GLOBAL_VAR,
+            first_id=0,
+            count=len(self._railtype_table),
+            props={
+                'railtype_table': list(self._railtype_table.keys())
+            }
+        ))
+        return res
 
     def add_bool_parameter(self, *, name, description, default=None):
         data = {
