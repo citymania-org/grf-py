@@ -853,11 +853,11 @@ ACTION0_PROP_DICT = {
     for feature, fdict in ACTION0_PROPS.items()
 }
 
-def py_property(feature, name, value):
+def py_property(feature, name, value, indent=4):
     prop = ACTION0_PROP_DICT[feature][name][1]
     if isinstance(prop, Property):
         return prop.format(value)
-    return repr(value)
+    return pformat(value, indent=indent, indent_first=0)
 
 # Action 0
 
@@ -968,7 +968,7 @@ class DefineMultiple(LazyBaseSprite):
 
     def py(self, context):
         def value_func(k, v):
-            pdata = ', '.join(py_property(self.feature, k, value) for value in v)
+            pdata = ', '.join(py_property(self.feature, k, value, indent=16) for value in v)
             return f'[{pdata}]'
 
         propstr = _py_dict(self.props, repr, value_func)
@@ -993,7 +993,7 @@ class Define(DefineMultiple):
         return self.first_id
 
     def py(self, context):
-        propstr = _py_dict(self.props, repr, lambda k, v: py_property(self.feature, k, v[0]))
+        propstr = _py_dict(self.props, repr, lambda k, v: py_property(self.feature, k, v[0], indent=16))
         return f'''
         Define(
             feature={self.feature},
@@ -1904,7 +1904,7 @@ class PrettyPrinter(pprint.PrettyPrinter):
         if not len(items):
             stream.write(f'{name}([])')
             return
-        stream.write(f'{name}([\n')
+        stream.write(f'{name}([\n ')
         stream.write(' ' * indent)
         self._format_items_no_compact(items, stream, indent, allowance + 2, context, level)
         stream.write('\n')
