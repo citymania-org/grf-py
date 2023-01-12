@@ -163,7 +163,7 @@ class Property:
     def encode(cls, value):
         raise NotImplementedError
 
-    def format(cls, value):
+    def format(cls, value, indent):
         return repr(value)
 
 
@@ -193,7 +193,7 @@ class ClimateProperty(Property):
     def encode(cls, value):
         return struct.pack('<B', value)
 
-    def format(cls, value):
+    def format(cls, value, indent):
         if value == NO_CLIMATE: return 'grf.NO_CLIMATE'
         if value == ALL_CLIMATES: return 'grf.ALL_CLIMATES'
 
@@ -384,7 +384,7 @@ class BaseSpriteData:
         self.registers = registers
 
 
-class ToplevelSprite(BaseSpriteData):
+class TopLevelSprite(BaseSpriteData):
     def __init__(self, sprite, *, children=None, **kw):
         assert isinstance(sprite, SpriteRef)
         super().__init__(sprite, **kw)
@@ -394,11 +394,11 @@ class ToplevelSprite(BaseSpriteData):
         self.children.append(child)
 
 
-class GroundSprite(ToplevelSprite):
+class GroundSprite(TopLevelSprite):
     pass
 
 
-class ParentSprite(ToplevelSprite):
+class ParentSprite(TopLevelSprite):
     def __init__(self, *, sprite, extent, offset, **kw):
         assert isinstance(offset, tuple) and len(offset) == 3
         assert isinstance(extent, tuple) and len(extent) == 3
@@ -447,7 +447,7 @@ def read_sprite_layout_registers(d, flags, is_parent):
     return regs
 
 
-def read_sprite_layout(d, num, basic_format):
+def read_sprite_layout(d, num, basic_format, global_if_flagged=True):
     has_z_position = not basic_format
     has_flags = bool(num & 0x40)
     num &= 0x3f
@@ -455,7 +455,7 @@ def read_sprite_layout(d, num, basic_format):
     def read_sprite():
         sprite = d.get_dword()
         flags = d.get_word() if has_flags else 0
-        return SpriteRef.from_grf(sprite, global_if_flagged=True), flags
+        return SpriteRef.from_grf(sprite, global_if_flagged=global_if_flagged), flags
 
     sprites = []
 
@@ -484,14 +484,80 @@ def read_sprite_layout(d, num, basic_format):
     return SpriteLayout(sprites)
 
 
+def encode_sprite_layout_registers(registers, is_parent):
+    flags = 0
+    res = b''
+    for register, value in (registers or {}).items():
+        assert register in SPRITE_FLAGS, register
+        fparent, mask, size, conversion = SPRITE_FLAGS[register]
+
+        if fparent is not None and fparent != is_parent:
+            raise ValueError(f'Unexpected sprite register `{register}` with is_parent={is_parent}')
+
+        if conversion:
+            assert conversion is Temp, conversion
+            value = value.get_index()
+
+        if size == 0:
+            if not value:
+                continue
+        elif size == 1:
+            res += bytes((value,))
+        elif size == 2:
+            res += bytes((value[0], value[1]))
+        else:
+            raise RuntimeError(f'Incorrect size of sprite register {flag}: {size}')
+
+        flags |= mask
+
+    return res, flags
+
+
+def encode_sprite(sprite, has_z_position):
+    flags = 0
+    is_parent = isinstance(sprite, TopLevelSprite)
+    regs_bytes, flags = encode_sprite_layout_registers(sprite.registers, is_parent)
+    res = struct.pack(
+        '<IH',
+        sprite.sprite.to_grf(global_if_flagged=False),
+        flags,
+    )
+    if not isinstance(sprite, GroundSprite):
+        if isinstance(sprite, ParentSprite):
+            assert len(sprite.offset) == 3 if has_z_position else 2
+            res += bytes(sprite.offset)
+            assert len(sprite.extent) == 3
+            res += bytes(sprite.extent)
+        elif isinstance(sprite, ChildSprite):
+            # TODO basic format (no z position) has no child sprites?
+            res += bytes((sprite.xofs, sprite.yofs, 0x80))
+
+    return res + regs_bytes
+
+
+def encode_sprite_layout(layout, has_flags, basic_format):
+    # TODO basic_format has no flags
+    has_z_position = not basic_format
+    num = len(layout.sprites) - 1
+    assert num < 0x40, num
+    if has_flags:
+        num |= 0x40
+
+    res = bytes((num,))
+
+    for sprite in layout.sprites:
+        res += encode_sprite(sprite, has_z_position)
+
+    return res
+
+
 class SpriteLayoutList:
     def __init__(self, layouts):
         self.layouts = layouts
 
 
-class StationLayout(Property):
-    @classmethod
-    def read_action0_old(cls, data, ofs):
+class OldStationLayoutProperty(Property):
+    def read(self, data, ofs):
         d = DataReader(data, ofs)
         num = d.get_extended_byte()
         res = []
@@ -522,22 +588,36 @@ class StationLayout(Property):
 
         return SpriteLayoutList(res), d.offset
 
-    @classmethod
-    def read_action0_new(cls, data, ofs):
+    def format(self, value, indent):
+        return pformat(value, indent=indent, indent_first=0)
+
+
+class NewStationLayoutProperty(Property):
+    def read(self, data, ofs):
         d = DataReader(data, ofs)
         num = d.get_extended_byte()
         res = []
         for i in range(num):
-            num = d.get_byte()
+            snum = d.get_byte()
             # var10 flags allowed
-            res.append(read_sprite_layout(d, num, False))
+            res.append(read_sprite_layout(d, snum, False, global_if_flagged=False))
 
         return SpriteLayoutList(res), d.offset
+
+    def encode(self, value):
+        num = len(value.layouts)
+        assert num <= 0xffff, num
+        res = struct.pack('<BH', 255, num)
+        res += b''.join(encode_sprite_layout(l, True, False) for l in value.layouts)
+        return res
+
+    def format(self, value, indent):
+        return pformat(value, indent=indent, indent_first=0)
 
 
 ACTION0_STATION_PROPS = {
     0x08: ('class', 'L'),  # Class ID, see below
-    0x09: ('layout', StationLayout.read_action0_old),  # Sprite layout, see below
+    0x09: ('layout', OldStationLayoutProperty()),  # Sprite layout, see below
     0x0A: ('copy_layout', 'B'),  # Copy sprite layout
     0x0B: ('cb_flags', 'B'),  # Callback flags
     0x0C: ('disabled_platforms', 'B'),  # Bit mask of disabled numbers of platforms
@@ -554,7 +634,7 @@ ACTION0_STATION_PROPS = {
     0x17: ('animation_speed', 'B'),  # Animation speed
     0x18: ('animation_triggers', 'W'),  # Animation triggers
     0x19: ('road_routing', 'V'),  # Road routing (reserved for future use)
-    0x1A: ('advanced_layout', StationLayout.read_action0_new),  # Advanced sprite layout with register modifiers
+    0x1A: ('advanced_layout', NewStationLayoutProperty()),  # Advanced sprite layout with register modifiers
     0x1B: ('min_bridge_height', '8*B'),  # Advanced sprite layout with register modifiers
 }
 
@@ -856,8 +936,8 @@ ACTION0_PROP_DICT = {
 def py_property(feature, name, value, indent=4):
     prop = ACTION0_PROP_DICT[feature][name][1]
     if isinstance(prop, Property):
-        return prop.format(value)
-    return pformat(value, indent=indent, indent_first=0)
+        return prop.format(value, indent=indent)
+    return repr(value)
 
 # Action 0
 
@@ -963,7 +1043,7 @@ class DefineMultiple(LazyBaseSprite):
                 try:
                     res += self._encode_value(value[i], fmt)
                 except Exception as e:
-                    raise RuntimeError(f'Error encoding value {value} for property {prop}: {e}')
+                    raise RuntimeError(f'Error encoding value {value} for property {prop} with format `{fmt}`: {e}')
         return res
 
     def py(self, context):
@@ -1928,7 +2008,7 @@ class PrettyPrinter(pprint.PrettyPrinter):
             if obj.registers is not None:
                 stream.write(' ' * indent)
                 stream.write(f'registers={obj.registers!r},\n')
-            if isinstance(obj, ToplevelSprite) and obj.children:
+            if isinstance(obj, TopLevelSprite) and obj.children:
                 stream.write(' ' * indent)
                 stream.write(f'children=[\n ')
                 stream.write(' ' * indent)

@@ -309,6 +309,13 @@ class Temp(Node):
         super().__init__()
         self.register = register
 
+    def get_index(self):
+        if isinstance(self.register, int):
+            return self.register
+        if isinstance(self.register, Value):
+            return self.register.value
+        raise RuntimeError('Register number should be a simple value, not expression')
+
     def format(self, parent_priority=0):
         if isinstance(self.register, int):
             return  f'TEMP[0x{self.register:02x}]'
