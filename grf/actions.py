@@ -115,6 +115,8 @@ def get_ref_id(ref_obj):
 
 class SpriteRef:
     def __init__(self, id, pal=0, is_global=True, use_recolour=False, always_transparent=False, no_transparent=False):
+        assert id <= 0x3fff, id
+        assert pal <= 0x3fff, pal
         self.id = id
         self.pal = pal
         self.is_global = is_global
