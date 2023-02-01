@@ -1,4 +1,67 @@
 ---------
+0.2.1
+---------
+
+- Fix: Add articulated callback to purchase chain as well.
+- Fix: Don't write data for same real sprite object multiple times.
+- Fix incorrect encoding of empty sprite.
+- Fix duplicating actions that were added to grf manually.
+- Fix `Label` value validation.
+- Fix error in action generator for vehicle name
+- Fix compilation for `railtype_table` global var.
+- Fix compilation for `lang_genders` and `lang_cases` global vars.
+- Fix python generation for properties of custom type.
+- Fix vox house example.
+
+- Allow specifying fallbacks in the railtype table.
+- Add a `crop` parameter to sprites (`True` by default).
+- Add encoder for `advanced_layout` action 0 station property.
+- Return railtype ids in `NewGRF.set_railtype_table`.
+- Add functions to manage railtype tables to `NewGRF` class (`set_railtype_table` and `get_railtype_id`).
+- Add `get_cargo_id` method to `NewGRF` class.
+- Allow to use nml-like comparison operators in the `Switch` code.
+- Allow to pass code to `Switch` as a list of lines.
+- Add `DEFAULT_CARGO_FIRST_REFITTABLE` constant.
+- Allow passing bytes value to actions 7, 9 and D.
+- Check that articulated part id doesn't exceed the max value (0x4000).
+- Support new `variant_group` and `extra_flag` Action 0 vehicle properties.
+- Allow to omit sprite width and height when they can be auto-detected.
+- Add support for Action B (`ErrorMessage`).
+- Add `id` property to the `Define` class.
+- Rename `Action0` properties for `OBJECT` feature to match NML names.
+- Export `StringRef`, `open_image` and `find_best_color`.
+- Export `SpriteRef`, `SpriteLayout`, `SpriteLayoutList`, `GroundSprite`, `ParentSprite`, `ChildSprite` classes.
+- Check that first parameter of `Map` action is `DefineMultiple`.
+- Cache palette remap when fixing sprite palette.
+- When fixing palette check for exact color first.
+- Add some handling for sprites without any image.
+- Update numpy version to one that has Python 10 builds.
+
+- lib: Fix `CallbackManager` not writing some callbacks.
+- lib: Fix `CallbackManager` not setting purchase graphics without purchase callbacks.
+- lib: Add `skip_props_check` argument to `Train.add_articulated_part` to skip validation of properties.
+- lib: Make `Train` articulated parts liveries optional.
+- lib: Allow specifying callbacks for `Train` articulated parts.
+- lib: Make liveries argument optional for `Train` and `RoadVehicle`.
+- lib: Add callbacks property to `Train` and `RoadVehicle`.
+- lib: Add optional callback argument to `CallbackManager` constructor.
+- lib: Add `CallbackManager.make_map_action` to make `Map` (`Action3`) for `Define` (`Action0`).
+- lib: Make graphics and purchase graphics properties of `CallbackManager` instead of `make_switches` arguments.
+- lib: Allow using `StringRef` as a name for `Train` or `RoadVehicle`.
+- lib: Allow using `StringRef` as a vehicle additional text.
+
+grftopy: Fix value decompilation in action 7/9.
+grftopy: Fix sprite sheet filename generation.
+grftopy: Fix RandomSwitch decompilation for vehicles.
+grftopy: Assign variables to referenceable actions and use them for references.
+grftopy: Write climate bits as constants.
+grftopy: Don't write ref_id=None in generated python.
+grftopy: Decomplile introduction_date property into a datetime object.
+grftopy: Print value as a label in comment for actions 7, 9 and D.
+grftopy: Convert `grftopy` script into `decompile` sub-module.
+
+
+---------
 0.2.0
 ---------
 
@@ -24,6 +87,7 @@
 - Added `set_cargo_table` and `map_cargo_labels` methods to `BaseNewGRF` class.
 - grftopy: Added outlines to duplicate sprites: red - full dup, yellow - data dup but different offsets
 - grftopy: Improved decompilation of grf container version 1
+
 
 ---------
 0.1.0
