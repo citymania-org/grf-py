@@ -178,7 +178,7 @@ WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
 class GraphicsSprite(RealSprite):
-    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None):
+    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None, crop=True):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
         super().__init__()
@@ -189,6 +189,7 @@ class GraphicsSprite(RealSprite):
         self.zoom = zoom
         self.bpp = bpp
         self.mask = mask
+        self.crop = crop
 
     @property
     def name(self):
@@ -210,10 +211,11 @@ class GraphicsSprite(RealSprite):
     def get_real_data(self, encoder):
         t0 = time.time()
         img, bpp = self.get_image()
-        if self.w is None:
-            self.w = img[0].size[0]
-        if self.h is None:
-            self.h = img[0].size[1]
+        w, h, xofs, yofs = self.w, self.h, self.xofs, self.yofs
+        if w is None:
+            w = img[0].size[0]
+        if h is None:
+            h = img[0].size[1]
 
         encoder.count_loading(time.time() - t0)
         t0 = time.time()
@@ -253,41 +255,67 @@ class GraphicsSprite(RealSprite):
             else:
                 print(f'Colour key on 8bpp sprites is not supported')
 
+        crop_x = crop_y = 0
+        if self.crop and w > 0 and h > 0:
+            if npalpha is not None:
+                npcheck = npalpha
+            elif self.bpp == BPP_32:
+                npcheck = npimg[:, :, 3]
+            else:
+                assert self.bpp == BPP_8, self.bpp
+                npcheck = npimg
+
+            cols_used = np.arange(w)[npcheck.any(0)]
+            rows_used = np.arange(h)[npcheck.any(1)]
+            crop_x = min(cols_used, default=0)
+            crop_y = min(rows_used, default=0)
+            w = max(cols_used, default=0) - crop_x + 1
+            h = max(rows_used, default=0) - crop_y + 1
+            xofs += crop_x
+            yofs += crop_y
+
+            if npalpha is not None:
+                npalpha = npalpha[crop_y: crop_y + h, crop_x: crop_x + w]
+            if self.bpp == BPP_8:
+                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w]
+            else:
+                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w, :]
+
         info_byte = 0x40
         if self.bpp == BPP_24 or self.bpp == BPP_32:
             stack = [npimg]
 
             if self.bpp == BPP_32:
-                npimg.shape = (self.w * self.h, 4)
+                npimg.reshape((w * h, 4))
                 rbpp = 4
                 info_byte |= 0x1 | 0x2  # rgb, alph
 
                 if npalpha is not None:
                     npimg = npimg[:, :3]
-                    npalpha.shape = (self.w * self.h, 1)
+                    npalpha.reshape((w * h, 1))
                     stack = [npimg, npalpha]
             else:
-                npimg.shape = (self.w * self.h, 3)
+                npimg.reshape((w * h, 3))
                 rbpp = 3
                 info_byte = 0x1  # rgb
 
                 if npalpha is not None:
-                    npalpha.shape = (self.w * self.h, 1)
+                    npalpha.reshape((w * h, 1))
                     stack.append(npalpha)
                     rbpp += 1
                     info_byte |= 0x2  # alpha
 
 
             if self.mask is not None:
-                mask_file, xofs, yofs = self.mask
+                mask_file, mxofs, myofs = self.mask
                 mask_img, mask_bpp = self.get_mask_image()
                 if mask_bpp != BPP_8:
                     raise RuntimeError(f'Mask {mask_file.path} is not an 8bpp image')
-                xofs, yofs = self.x + xofs, self.y + yofs
-                mask_img = mask_img.crop((xofs, yofs, xofs + self.w, yofs + self.h))
-                mask_img = fix_palette(mask_img, f'{mask_file.path} {xofs},{yofs} {self.w}x{self.h}')
+                mxofs, myofs = self.x + mxofs + crop_x, self.y + myofs + crop_y
+                mask_img = mask_img.crop((mxofs, myofs, mxofs + w, myofs + h))
+                mask_img = fix_palette(mask_img, f'{mask_file.path} {mxofs},{myofs} {w}x{h}')
                 npmask = np.asarray(mask_img)
-                npmask.shape = (self.w * self.h, 1)
+                npmask.reshape((w * h, 1))
                 stack.append(npmask)
                 rbpp += 1
                 info_byte |= 0x4  # mask
@@ -296,25 +324,25 @@ class GraphicsSprite(RealSprite):
                 raw_data = np.concatenate(stack, axis=1)
             else:
                 raw_data = stack[0]
-            raw_data.shape = self.w * self.h * rbpp
+            raw_data.reshape(w * h * rbpp, order='c')
 
         else:
             info_byte |= 0x4  # pal/mask
             raw_data = npimg
-            raw_data.shape = self.w * self.h
+            raw_data.reshape(w * h, order='c')
 
         encoder.count_composing(time.time() - t0)
-        data = encoder.sprite_compress(raw_data)
+        data = encoder.sprite_compress(np.ascontiguousarray(raw_data))
         return struct.pack(
             '<IIBBHHhh',
             self.sprite_id,
             len(data) + 10,
             info_byte,
             self.zoom,
-            self.h,
-            self.w,
-            self.xofs,
-            self.yofs,
+            h,
+            w,
+            xofs,
+            yofs,
         ) + data
 
 
