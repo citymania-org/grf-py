@@ -20,7 +20,7 @@ from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INI
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite, \
-                     PaletteRemap
+                     PaletteRemap, AlternativeSprites
 from .strings import StringManager
 
 
@@ -178,27 +178,15 @@ class BaseNewGRF:
         if not sprites:
             return
 
-        # Unfold real sprite tuple if it was passed as a single arg
-        if isinstance(sprites[0], (tuple, list)):
-            assert len(sprites) == 1
-            sprites = sprites[0]
-            assert len(sprites) >= 1
-            assert isinstance(sprites[0], GraphicsSprite), type(sprites[0])
+        assert all(isinstance(s, (BaseSprite, SpriteGenerator)) for s in sprites), sprites
 
         if isinstance(sprites[0], RealSprite):
             if isinstance(sprites[0], SoundSprite):
                 for s in sprites:
                     self._add_sound(s)
                 return
-            elif isinstance(sprites[0], PaletteRemap):
-                l.append((sprites[0],))
-                return
-            assert(all(isinstance(s, GraphicsSprite) for s in sprites)), sprites
-            assert(len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites)), sprites
 
-            l.append(tuple(sprites))
-        else:
-            l.extend(sprites)
+        l.extend(sprites)
 
     def add(self, *sprites):
         self._add(self.generators, *sprites)
@@ -415,8 +403,7 @@ class BaseNewGRF:
         t.log(f'Adding sounds')
         if self._sounds:
             sprites.append(SoundEffects(len(self._sounds)))
-            for s in self._sounds.values():
-                sprites.append((s,))
+            sprites.extend(self._sounds.values())
 
         t.log(f'Adding strings')
         sprites.extend(self.strings.get_actions())
@@ -425,11 +412,9 @@ class BaseNewGRF:
         data_offset = 14
         next_sprite_id = 1
         for s in sprites:
-            if isinstance(s, tuple):
-                for x in s:
-                    x.sprite_id = next_sprite_id
+            if isinstance(s, (AlternativeSprites, RealSprite)):
+                s.sprite_id = next_sprite_id
                 next_sprite_id += 1
-                s = s[0]
             data_offset += s.get_data_size() + 5
 
         with open(filename, 'wb') as f:
@@ -443,8 +428,8 @@ class BaseNewGRF:
             self._write_pseudo_sprite(f, b'\x02\x00\x00\x00')
 
             for s in sprites:
-                if isinstance(s, tuple):
-                    self._write_pseudo_sprite(f, s[0].get_data(), grf_type=0xfd)
+                if isinstance(s, (AlternativeSprites, RealSprite)):
+                    self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd)
                 else:
                     self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
             f.write(b'\x00\x00\x00\x00')
@@ -452,13 +437,17 @@ class BaseNewGRF:
             t.log(f'Writing real sprites')
             written_sprites = set()
             for sl in sprites:
-                if not isinstance(sl, tuple):
-                    continue
-                for s in sl:
-                    if s in written_sprites:
+                if isinstance(sl, RealSprite):
+                    if sl in written_sprites:
                         continue
-                    f.write(s.get_real_data(self._sprite_encoder))
-                    written_sprites.add(s)
+                    f.write(sl.get_real_data(self._sprite_encoder))
+                    written_sprites.add(sl)
+                elif isinstance(sl, AlternativeSprites):
+                    for s in sl.sprites:
+                        if s in written_sprites:
+                            continue
+                        f.write(s.get_real_data(self._sprite_encoder))
+                        written_sprites.add(s)
 
             f.write(b'\x00\x00\x00\x00')
 
