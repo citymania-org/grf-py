@@ -113,6 +113,29 @@ class RealSprite(BaseSprite, IntermediateSprite):
         raise NotImplementedError
 
 
+class AlternativeSprites(RealSprite):
+    def __init__(self, *sprites):
+        assert all(isinstance(s, GraphicsSprite) for s in sprites), sprites
+        assert len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites), sprites
+
+        super().__init__()
+        self._sprite_id = None
+        self.sprites = sprites
+
+    @property
+    def sprite_id(self):
+        return self._sprite_id
+
+    @sprite_id.setter
+    def sprite_id(self, value):
+        self.sprite_id = value
+        for s in self.sprites:
+            s.sprite_id = value
+
+    def get_real_data(self, encoder):
+        sum(b'', (s.get_real_data(encoder) for s in self.sprites))
+
+
 class SoundSprite(RealSprite):
     def __init__(self):
         super().__init__()
@@ -283,28 +306,29 @@ class GraphicsSprite(RealSprite):
 
         info_byte = 0x40
         if self.bpp == BPP_24 or self.bpp == BPP_32:
-            stack = [npimg]
-
             if self.bpp == BPP_32:
-                npimg.reshape((w * h, 4))
+                npimg = npimg.reshape(w * h, 4)
                 rbpp = 4
                 info_byte |= 0x1 | 0x2  # rgb, alph
 
                 if npalpha is not None:
                     npimg = npimg[:, :3]
-                    npalpha.reshape((w * h, 1))
+                    npalpha = npalpha.reshape(w * h, 1)
                     stack = [npimg, npalpha]
+                else:
+                    stack = [npimg]
             else:
-                npimg.reshape((w * h, 3))
+                npimg = npimg.reshape(w * h, 3)
                 rbpp = 3
                 info_byte = 0x1  # rgb
 
                 if npalpha is not None:
-                    npalpha.reshape((w * h, 1))
-                    stack.append(npalpha)
+                    npalpha = npalpha.reshape(w * h, 1)
+                    stack = [npimg, npalpha]
                     rbpp += 1
                     info_byte |= 0x2  # alpha
-
+                else:
+                    stack = [npimg]
 
             if self.mask is not None:
                 mask_file, mxofs, myofs = self.mask
@@ -315,7 +339,7 @@ class GraphicsSprite(RealSprite):
                 mask_img = mask_img.crop((mxofs, myofs, mxofs + w, myofs + h))
                 mask_img = fix_palette(mask_img, f'{mask_file.path} {mxofs},{myofs} {w}x{h}')
                 npmask = np.asarray(mask_img)
-                npmask.reshape((w * h, 1))
+                npmask = npmask.reshape(w * h, 1)
                 stack.append(npmask)
                 rbpp += 1
                 info_byte |= 0x4  # mask
@@ -324,12 +348,11 @@ class GraphicsSprite(RealSprite):
                 raw_data = np.concatenate(stack, axis=1)
             else:
                 raw_data = stack[0]
-            raw_data.reshape(w * h * rbpp, order='c')
+            raw_data = raw_data.reshape(w * h * rbpp)
 
         else:
             info_byte |= 0x4  # pal/mask
-            raw_data = npimg
-            raw_data.reshape(w * h, order='c')
+            raw_data = npimg.reshape(w * h)
 
         encoder.count_composing(time.time() - t0)
         data = encoder.sprite_compress(np.ascontiguousarray(raw_data))
