@@ -513,7 +513,7 @@ class NewGRF(BaseNewGRF):
 
     @property
     def grfid_value(self):
-        return struct.unpack('<I', g.grfid)[0]
+        return struct.unpack('<I', self.grfid)[0]
 
     def add_railtype(self, *railtype_list):
         if self._railtype_table is None:

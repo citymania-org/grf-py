@@ -607,7 +607,7 @@ class Train(Vehicle):
                 'refit_cost',
                 'refittable_cargo_types',
                 'shorten_by',
-                'visual_effect',
+                'visual_effect_and_powered',
                 'bitmask_vehicle_info',
                 'misc_flags',
                 'refittable_cargo_classes',
