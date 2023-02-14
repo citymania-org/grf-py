@@ -253,7 +253,7 @@ ACTION0_TRAIN_PROPS = {
     0x0D: ('running_cost_factor', 'B'),  # Running cost factor (0 for wagons)  should be zero
     0x0E: ('running_cost_base', 'D'),  # Running cost base, see below    should be zero
     0x12: ('sprite_id', 'B'),  # Sprite ID (FD for new graphics)     yes
-    0x13: ('is_dual_headed', 'B'),  # Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
+    0x13: ('dual_headed', 'B'),  # Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
     0x14: ('cargo_capacity', 'B'),  # Cargo capacity  yes
     0x15: ('default_cargo_type', 'B'),  # Cargo type, see CargoTypes
     0x16: ('weight', 'B'),  # Weight in tons  should be zero
