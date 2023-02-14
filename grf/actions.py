@@ -1274,7 +1274,7 @@ class ExtendedSpriteLayout(AdvancedSpriteLayout):
 
 
 class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
-    def __init__(self, ranges, default, code, *, feature=None, ref_id=None, related_scope=False):
+    def __init__(self, code, ranges, default, *, feature=None, ref_id=None, related_scope=False):
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
