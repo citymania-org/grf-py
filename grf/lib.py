@@ -531,6 +531,10 @@ class RoadVehicle(Vehicle):
 
 
 class Train(Vehicle):
+    Flags = grf.TrainFlags
+    AIFlags = grf.AIFlags
+    RunningCost = grf.TrainRunningCost
+
     class EngineClass:
         STEAM = 0x0
         DIESEL = 0x8
@@ -546,6 +550,14 @@ class Train(Vehicle):
     # TODO doesn't show exact mph in the game
     def mph(speed):
         return (speed * 16 + 4) // 10
+
+    @staticmethod
+    def hp(value):
+        return int(value)
+
+    @staticmethod
+    def ton(value):
+        return int(value)
 
     def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
         super().__init__(callbacks)
