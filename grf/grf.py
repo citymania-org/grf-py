@@ -511,16 +511,30 @@ class NewGRF(BaseNewGRF):
         self.description = description
         self.format_version = format_version
 
+    def add_railtype(self, *railtype_list):
+        if self._railtype_table is None:
+            self._railtype_table = {}
+
+        if railtype_list and isinstance(railtype_list[0], (tuple, list)):
+            railtype_list = railtype_list[0]
+
+        rt_id = len(self._railtype_table)
+
+        if isinstance(railtype_list, (list, tuple)):
+            rtb = to_bytes(railtype_list[0])
+            self._railtype_table[rtb] = (rt_id, tuple(map(to_bytes, railtype_list)))
+        else:
+            rtb = to_bytes(railtype_list)
+            self._railtype_table[rtb] = (rt_id, None)
+
+        return rt_id
+
     def set_railtype_table(self, railtype_list):
         self._railtype_table = {}
+        res = []
         for i, rt in enumerate(railtype_list):
-            if isinstance(rt, (list, tuple)):
-                rtb = to_bytes(rt[0])
-                self._railtype_table[rtb] = (i, tuple(map(to_bytes, rt)))
-            else:
-                rtb = to_bytes(rt)
-                self._railtype_table[rtb] = (i, None)
-        return tuple(range(len(self._railtype_table)))
+            res.append(self.add_railtype(rt))
+        return res
 
     def get_railtype_id(self, railtype):
         rtbytes = to_bytes(railtype)
