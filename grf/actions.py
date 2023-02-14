@@ -964,7 +964,6 @@ class TrainFlags:
     NO_BREAKDOWN_SMOKE = 0x40
     USE_SPRITE_STACK = 0x80
 
-
 class AIFlags:
     CARGO = 0x00
     PASSENGER = 0x01
@@ -978,6 +977,14 @@ class TrainRunningCost:
     NONE = 0x0000
 
 
+class TrainVisualEffect:
+    DEFAULT = 0x00
+    STEAM = 0x10
+    DIESEL = 0x20
+    ELECTRIC = 0x30
+    DISABLE = 0x40
+
+
 def train_hpi(value):
     return value
 
@@ -987,6 +994,9 @@ def train_ton(value):
 
 
 def nml_te(value):
+    return int(float(value) * 255 + 0.5)
+
+def nml_drag(value):
     return int(float(value) * 255 + 0.5)
 
 

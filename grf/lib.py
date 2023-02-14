@@ -534,6 +534,7 @@ class Train(Vehicle):
     Flags = grf.TrainFlags
     AIFlags = grf.AIFlags
     RunningCost = grf.TrainRunningCost
+    VisualEffect = grf.TrainVisualEffect
 
     class EngineClass:
         STEAM = 0x0
@@ -558,6 +559,10 @@ class Train(Vehicle):
     @staticmethod
     def ton(value):
         return int(value)
+
+    @staticmethod
+    def visual_effect_and_powered(effect, *, position=0, wagon_power=True):
+        return effect | position | wagon_power * 0x7f
 
     def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
         super().__init__(callbacks)
