@@ -554,11 +554,11 @@ class Train(Vehicle):
 
     @staticmethod
     def hp(value):
-        return int(value)
+        return int(value + .5)
 
     @staticmethod
     def ton(value):
-        return int(value)
+        return int(value + .5)
 
     @staticmethod
     def visual_effect_and_powered(effect, *, position=0, wagon_power=True):
