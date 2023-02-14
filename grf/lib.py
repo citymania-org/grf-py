@@ -408,7 +408,7 @@ class Vehicle(grf.SpriteGenerator):
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
 
-    def _set_callbacks(self):
+    def _set_callbacks(self, g):
         if self.additional_text:
             if isinstance(self.additional_text, grf.StringRef):
                 self.callbacks.purchase_text = self.additional_text.get_global_id()
@@ -463,8 +463,8 @@ class RoadVehicle(Vehicle):
         self.liveries = liveries
         self._props = props
 
-    def _set_callbacks(self):
-        super()._set_callbacks()
+    def _set_callbacks(self, g):
+        super()._set_callbacks(g)
 
         if self.max_speed.precise_value >= 0x400:
             self.callbacks.change_properties = grf.Switch(
@@ -491,7 +491,7 @@ class RoadVehicle(Vehicle):
                 code='cargo_subtype',
             )
 
-        self._set_callbacks()
+        self._set_callbacks(g)
 
         # Liveries
         self.callbacks.cargo_subtype = grf.Switch(
@@ -644,7 +644,7 @@ class Train(Vehicle):
                 code='cargo_subtype',
             )
 
-        self._set_callbacks()
+        self._set_callbacks(g)
 
         if self.liveries:
             # Liveries
