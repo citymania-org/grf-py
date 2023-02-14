@@ -511,6 +511,10 @@ class NewGRF(BaseNewGRF):
         self.description = description
         self.format_version = format_version
 
+    @property
+    def grfid_value(self):
+        return struct.unpack('<I', g.grfid)[0]
+
     def add_railtype(self, *railtype_list):
         if self._railtype_table is None:
             self._railtype_table = {}
