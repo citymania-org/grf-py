@@ -953,6 +953,7 @@ class RVFlags:
     NO_BREAKDOWN_SMOKE = 0x40  # Disable breakdown smoke effect.
     USE_SPRITE_STACK = 0x80  # Compose vehicle from multiple sprites.
 
+
 class TrainFlags:
     TILT = 0x1
     USE_2CC = 0x2
@@ -964,11 +965,26 @@ class TrainFlags:
     USE_SPRITE_STACK = 0x80
 
 
+class AIFlags:
+    CARGO = 0x00
+    PASSENGER = 0x01
+
+
+class TrainRunningCost:
+    STEAM = 0x4C30
+    DIESEL = 0x4C36
+    ELECTRIC = 0x4C3C
+    ROADVEH = 0x4C48
+    NONE = 0x0000
+
+
 def train_hpi(value):
     return value
 
+
 def train_ton(value):
     return value
+
 
 def nml_te(value):
     return int(float(value) * 255 + 0.5)
