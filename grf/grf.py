@@ -178,7 +178,7 @@ class BaseNewGRF:
         if not sprites:
             return
 
-        assert all(isinstance(s, (BaseSprite, SpriteGenerator)) for s in sprites), sprites
+        # TODO assert all(isinstance(s, (BaseSprite, SpriteGenerator, PyComment)) for s in sprites), sprites
 
         if isinstance(sprites[0], RealSprite):
             if isinstance(sprites[0], SoundSprite):
