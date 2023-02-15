@@ -462,20 +462,18 @@ class BaseNewGRF:
         return wrapper
 
     def bind(self, cls):
+        def constructor(obj_self, *args, **kw):
+            cls.__init__(obj_self, *args, **kw)
+            self.add(obj_self)
 
-        @functools.wraps(cls)
-        def wrapper(*args, **kw):
-            gen = cls(*args, **kw)
-            self.add(gen)
-            return gen
-
-        # Expose attributes on the wrapper
-        for name in dir(cls):
-            obj = getattr(cls, name)
-            if not name.startswith('__'):
-                setattr(wrapper, name, obj)
-
-        return wrapper
+        return type(
+            'Bound' + cls.__name__,
+            (cls,),
+            {
+                'bound_newgrf': self,
+                '__init__': constructor,
+            },
+        )
 
 
 class NewGRF(BaseNewGRF):
