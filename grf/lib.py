@@ -143,6 +143,22 @@ class Callback:
         AUTOREPLACE_SELECTION = 0x34
         CHANGE_PROPERTIES = 0x36
 
+        # TODO Train only
+        class Properties:
+            LOADING_SPEED = 0x07
+            MAX_SPEED = 0x09
+            POWER = 0x0B
+            RUNNING_COST_FACTOR=0x0D
+            CARGO_CAPACITY = 0x14
+            WEIGHT = 0x16
+            COST_FACTOR = 0x17
+            TRACTIVE_EFFORT_COEFFICIENT = 0x1F
+            SHORTEN_BY = 0x21
+            # VISUAL_EFFECT_AND_POWERED  =0x22
+            BITMASK_VEHICLE_INFO = 0x25
+            CARGO_AGE_PERIOD = 0x2B
+            CURVE_SPEED_MOD = 0x2E
+
     class Station:
         AVAILABILITY = 0x13
         SPRITE_LAYOUT = 0x14
@@ -228,24 +244,54 @@ class Callback:
 
 
 class CallbackManager:
+
+    class Properties:
+        def __init__(self, domain, callbacks=None):
+            self._domain = domain
+            self._callbacks = {}
+            for k, v in (callbacks or {}).items():
+                if v is not None:
+                    setattr(self, k, v)
+
+        def is_set(self):
+            return any(self._callbacks.values())
+
+        def get_ranges(self):
+            return {k: v for k, v in self._callbacks.items() if v is not None}
+
+        def __setattr__(self, name, value):
+            if name.startswith('_') or name:
+                return super().__setattr__(name, value)
+
+            if name.lower() != name:
+                raise AttributeError(name)
+
+            prop_id = getattr(self._domain, name.upper())
+            if prop_id in self._callbacks:
+                raise ProgrammingError('Callback for property {name} is already defined')
+            self._callbacks[prop_id] = value
+
     def __init__(self, domain, callbacks=None):
         self._domain = domain
         self._callbacks = {}
         self.graphics = None
         self.purchase_graphics = None
-        for k, v in (callbacks or {}).items():
+        callbacks = callbacks or {}
+        prop_cb = callbacks.pop('properties', None)
+        for k, v in callbacks.items():
             if v is not None:
                 setattr(self, k, v)
+        self.properties = self.Properties(self._domain.Properties, prop_cb)
 
     def __setattr__(self, name, value):
-        if name.startswith('_') or name in ('graphics', 'purchase_graphics'):
+        if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties'):
             return super().__setattr__(name, value)
         if name.lower() != name:
             raise AttributeError(name)
 
         cb_id = getattr(self._domain, name.upper())
         if cb_id in self._callbacks:
-            raise ProgrammingError('Callback {name} already defined')
+            raise ProgrammingError('Callback {name} is already defined')
         self._callbacks[cb_id] = value
 
     def get_flags(self):
@@ -268,11 +314,21 @@ class CallbackManager:
     def make_switch(self):
         if self.graphics is None:
             raise ValueError('No graphics')
+
+        if self.properties.is_set():
+            if self._callbacks.get('change_properties') is not None:
+                raise ProgrammingError('Can''t use change_properties callback together with individual property callbacks.')
+            self.change_properties = grf.Switch(
+                code='extra_callback_info1_byte',
+                ranges=self.properties.get_ranges(),
+                default=self.graphics,
+            )
         # False - only purchase, True - general + purchase
         PURCHASE = {
             Callback.Vehicle.PURCHASE_TEXT: False,
             Callback.Vehicle.CHANGE_PROPERTIES: True,
             Callback.Vehicle.ARTICULATED_PART: True,
+            Callback.Vehicle.CHANGE_PROPERTIES: True,
         }
         callbacks = {}
         purchase_callbacks = {}
