@@ -128,7 +128,7 @@ class DefaultSound:
 
 class Callback:
     class Vehicle:
-        POWERED_WAGONS = 0x10
+        VISUAL_EFFECT_AND_POWERED = 0x10
         WAGON_LENGTH = 0x11
         LOAD_AMOUNT = 0x12
         REFIT_CAPACITY = 0x15
@@ -297,7 +297,7 @@ class CallbackManager:
     def get_flags(self):
         # TODO checeked only for vehicles
         FLAGS = {
-            Callback.Vehicle.POWERED_WAGONS: 0x1,
+            Callback.Vehicle.VISUAL_EFFECT_AND_POWERED: 0x1,
             Callback.Vehicle.WAGON_LENGTH: 0x2,
             Callback.Vehicle.LOAD_AMOUNT: 0x4,
             Callback.Vehicle.REFIT_CAPACITY: 0x8,
