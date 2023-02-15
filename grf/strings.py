@@ -107,6 +107,9 @@ class StringManager:
         return StringRef(self, nml.expression.Identifier(full_name, None), hash(full_name))
 
     def add(self, value, name=None):
+        if isinstance(value, StringRef):
+            assert name is None
+            return value
         if name is None:
             name = self._named_strings.get(value)
             if name is None:
@@ -128,6 +131,12 @@ class StringRef:
         self.manager = manager
         self.nmlexpr = nmlexpr
         self.hash = hash
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, value):
+        return self.hash == value.hash
 
     @property
     def string_nmlexpr(self):

@@ -466,10 +466,7 @@ class Vehicle(grf.SpriteGenerator):
 
     def _set_callbacks(self, g):
         if self.additional_text:
-            if isinstance(self.additional_text, grf.StringRef):
-                self.callbacks.purchase_text = self.additional_text.get_global_id()
-            else:
-                self.callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
+            self.callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
 
 
 class RoadVehicle(Vehicle):
@@ -540,21 +537,25 @@ class RoadVehicle(Vehicle):
                     ent2=(i,),
                 ))
 
-            self.callbacks.graphics = grf.Switch(
-                related_scope=True,
-                ranges=dict(enumerate(layouts)),
-                default=layouts[0],
-                code='cargo_subtype',
-            )
+            if len(self.liveries) > 1:
+                self.callbacks.graphics = grf.Switch(
+                    related_scope=True,
+                    ranges=dict(enumerate(layouts)),
+                    default=layouts[0],
+                    code='cargo_subtype',
+                )
+            else:
+                self.callbacks.graphics = layouts[0]
 
         self._set_callbacks(g)
 
         # Liveries
-        self.callbacks.cargo_subtype = grf.Switch(
-            ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
-            default=0x400,
-            code='cargo_subtype',
-        )
+        if len(self.liveries) > 1:
+            self.callbacks.cargo_subtype = grf.Switch(
+                ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
+                default=0x400,
+                code='cargo_subtype',
+            )
 
         if self.callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
@@ -680,29 +681,44 @@ class Train(Vehicle):
         self._articulated_parts.append((id, liveries, callbacks, props))
         return self
 
+    def _make_graphics(self, liveries):
+        assert liveries
+        res = [grf.Action1(
+            feature=grf.TRAIN,
+            set_count=len(self.liveries),
+            sprite_count=8,
+        )]
+        layouts = []
+        for i, l in enumerate(self.liveries):
+            res.extend(l['sprites'])
+            layouts.append(grf.GenericSpriteLayout(
+                ent1=(i,),
+                ent2=(i,),
+            ))
+
+        if len(self.liveries) <= 1:
+            return res, layouts[0]
+
+        return res, grf.Switch(
+            related_scope=True,
+            ranges=dict(enumerate(layouts)),
+            default=layouts[0],
+            code='cargo_subtype',
+        )
+
     def get_sprites(self, g):
         # Check in case property was changed after add_articulated
         if self._props.get('is_dual_headed') and self._articulated_parts:
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
+        res = []
         if self.liveries:
-            layouts = []
-            for i, l in enumerate(self.liveries):
-                layouts.append(grf.GenericSpriteLayout(
-                    ent1=(i,),
-                    ent2=(i,),
-                ))
-
-            self.callbacks.graphics = grf.Switch(
-                related_scope=True,
-                ranges=dict(enumerate(layouts)),
-                default=layouts[0],
-                code='cargo_subtype',
-            )
+            sprites, self.callbacks.graphics = self._make_graphics(self.liveries)
+            res.extend(sprites)
 
         self._set_callbacks(g)
 
-        if self.liveries:
+        if self.liveries and len(self.liveries) > 1:
             # Liveries
             self.callbacks.cargo_subtype = grf.Switch(
                 ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
@@ -727,7 +743,6 @@ class Train(Vehicle):
         if self.callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
 
-        res = []
         res.extend(self._gen_name_sprites())
 
         res.append(definition := grf.Define(
@@ -740,42 +755,14 @@ class Train(Vehicle):
             }
         ))
 
-        if self.liveries:
-            res.append(grf.Action1(
-                feature=grf.TRAIN,
-                set_count=len(self.liveries),
-                sprite_count=8,
-            ))
-
-            for l in self.liveries:
-                res.extend(l['sprites'])
-
         res.append(self.callbacks.make_map_action(definition))
 
         for apid, liveries, initial_callbacks, props in self._articulated_parts:
             callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
 
             if liveries:
-                res.append(grf.Action1(
-                    feature=grf.TRAIN,
-                    set_count=len(liveries),
-                    sprite_count=8,
-                ))
-
-                layouts = []
-                for i, l in enumerate(liveries):
-                    res.extend(l['sprites'])
-                    layouts.append(grf.GenericSpriteLayout(
-                        ent1=(i,),
-                        ent2=(i,),
-                    ))
-
-                callbacks.graphics = grf.Switch(
-                    related_scope=True,
-                    ranges=dict(enumerate(layouts)),
-                    default=layouts[0],
-                    code='cargo_subtype',
-                )
+                sprites, callbacks.graphics = self._make_graphics(liveries)
+                res.extend(sprites)
 
             if callbacks.get_flags():
                 props['cb_flags'] = props.get('cb_flags', 0) | callbacks.get_flags()
