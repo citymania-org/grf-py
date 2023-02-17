@@ -329,6 +329,7 @@ class CallbackManager:
             Callback.Vehicle.CHANGE_PROPERTIES: True,
             Callback.Vehicle.ARTICULATED_PART: True,
             Callback.Vehicle.CHANGE_PROPERTIES: True,
+            Callback.Vehicle.COLOUR_MAPPING: True,
         }
         callbacks = {}
         purchase_callbacks = {}
@@ -621,7 +622,7 @@ class Train(Vehicle):
     def visual_effect_and_powered(effect, *, position=0, wagon_power=True):
         return effect | position | wagon_power * 0x7f
 
-    def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
+    def __init__(self, *, id, name, max_speed, weight, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
         super().__init__(callbacks)
         for l in liveries or []:
             if 'name' not in l:
@@ -638,6 +639,7 @@ class Train(Vehicle):
         self.additional_text = additional_text
         self.liveries = liveries
         self.sound_effects = sound_effects
+        self.weight = weight
         REQUIRED_PROPS = ('engine_class', )
         missing_props = [p for p in REQUIRED_PROPS if p not in props]
         if missing_props:
@@ -706,6 +708,9 @@ class Train(Vehicle):
             code='cargo_subtype',
         )
 
+    def _set_articulated_callbacks(callbacks, g):
+        pass
+
     def get_sprites(self, g):
         # Check in case property was changed after add_articulated
         if self._props.get('is_dual_headed') and self._articulated_parts:
@@ -751,6 +756,8 @@ class Train(Vehicle):
             props={
                 'sprite_id': 0xfd,  # magic value for newgrf sprites
                 'max_speed': self.max_speed,
+                'weight_low': self.weight % 256,
+                'weight_high': self.weight // 256,
                 **self._props
             }
         ))

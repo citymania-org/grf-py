@@ -256,7 +256,7 @@ ACTION0_TRAIN_PROPS = {
     0x13: ('dual_headed', 'B'),  # Dual-headed flag; 1 if dual-headed engine, 0 otherwise  should be zero also for front
     0x14: ('cargo_capacity', 'B'),  # Cargo capacity  yes
     0x15: ('default_cargo_type', 'B'),  # Cargo type, see CargoTypes
-    0x16: ('weight', 'B'),  # Weight in tons  should be zero
+    0x16: ('weight_low', 'B'),  # Weight in tons  should be zero
     0x17: ('cost_factor', 'B'),  # Cost factor     should be zero
     0x18: ('ai_engine_rank', 'B'),  # Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
     0x19: ('engine_class', 'B'),  # Engine traction type (see below)    no
@@ -269,8 +269,8 @@ ACTION0_TRAIN_PROPS = {
     0x20: ('air_drag_coefficient', 'B'),  # Coefficient of air drag     should be zero
     0x21: ('shorten_by', 'B'),  # Make vehicle shorter by this amount, see below  yes
     0x22: ('visual_effect_and_powered', 'B'),  # Set visual effect type (steam/smoke/sparks) as well as position, see below  yes
-    0x23: ('extra_weight_per_wagon_low', 'B'),  # Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
-    0x24: ('extra_weight_per_wagon_high', 'B'),  # High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
+    0x23: ('extra_weight_per_wagon', 'B'),  # Set how much weight is added by making wagons powered (i.e. weight of engine), see below    should be zero
+    0x24: ('weight_high', 'B'),  # High byte of vehicle weight, weight will be prop.24*256+prop.16     should be zero
     0x25: ('bitmask_vehicle_info', 'B'),  # User-defined bit mask to set when checking veh. var. 42     yes
     0x26: ('retire_early', 'b'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)    no
     0x27: ('misc_flags', 'B'),  # Miscellaneous flags     partly
