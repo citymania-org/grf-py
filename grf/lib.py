@@ -268,7 +268,7 @@ class CallbackManager:
 
             prop_id = getattr(self._domain, name.upper())
             if prop_id in self._callbacks:
-                raise ProgrammingError('Callback for property {name} is already defined')
+                raise RuntimeError(f'Callback for property {name} is already defined')
 
             self._callbacks[prop_id] = value
 
@@ -292,7 +292,7 @@ class CallbackManager:
 
         cb_id = getattr(self._domain, name.upper())
         if cb_id in self._callbacks:
-            raise ProgrammingError('Callback {name} is already defined')
+            raise RuntimeError(f'Callback {name} is already defined')
         self._callbacks[cb_id] = value
 
     def get_flags(self):
@@ -318,7 +318,7 @@ class CallbackManager:
 
         if self.properties.is_set():
             if self._callbacks.get('change_properties') is not None:
-                raise ProgrammingError('Can''t use change_properties callback together with individual property callbacks.')
+                raise RuntimeError('Can''t use change_properties callback together with individual property callbacks.')
             self.change_properties = grf.Switch(
                 code='extra_callback_info1_byte',
                 ranges=self.properties.get_ranges(),
@@ -522,6 +522,7 @@ class RoadVehicle(Vehicle):
         super()._set_callbacks(g)
 
         if self.max_speed.precise_value >= 0x400:
+            # TODO only set speed property
             self.callbacks.change_properties = grf.Switch(
                 ranges={
                     0x15: self.max_speed.value,
