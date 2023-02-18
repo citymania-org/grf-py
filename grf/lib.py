@@ -687,18 +687,18 @@ class Train(Vehicle):
         assert liveries
         res = [grf.Action1(
             feature=grf.TRAIN,
-            set_count=len(self.liveries),
+            set_count=len(liveries),
             sprite_count=8,
         )]
         layouts = []
-        for i, l in enumerate(self.liveries):
+        for i, l in enumerate(liveries):
             res.extend(l['sprites'])
             layouts.append(grf.GenericSpriteLayout(
                 ent1=(i,),
                 ent2=(i,),
             ))
 
-        if len(self.liveries) <= 1:
+        if len(liveries) <= 1:
             return res, layouts[0]
 
         return res, grf.Switch(
@@ -708,7 +708,7 @@ class Train(Vehicle):
             code='cargo_subtype',
         )
 
-    def _set_articulated_callbacks(callbacks, g):
+    def _set_articulated_part_callbacks(self, g, position, callbacks):
         pass
 
     def get_sprites(self, g):
@@ -764,8 +764,11 @@ class Train(Vehicle):
 
         res.append(self.callbacks.make_map_action(definition))
 
+        position = 0
         for apid, liveries, initial_callbacks, props in self._articulated_parts:
+            position += 1
             callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
+            self._set_articulated_part_callbacks(g, position, callbacks)
 
             if liveries:
                 sprites, callbacks.graphics = self._make_graphics(liveries)
