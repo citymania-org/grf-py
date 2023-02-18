@@ -260,7 +260,7 @@ class CallbackManager:
             return {k: v for k, v in self._callbacks.items() if v is not None}
 
         def __setattr__(self, name, value):
-            if name.startswith('_') or name:
+            if name.startswith('_'):
                 return super().__setattr__(name, value)
 
             if name.lower() != name:
@@ -269,6 +269,7 @@ class CallbackManager:
             prop_id = getattr(self._domain, name.upper())
             if prop_id in self._callbacks:
                 raise ProgrammingError('Callback for property {name} is already defined')
+
             self._callbacks[prop_id] = value
 
     def __init__(self, domain, callbacks=None):
