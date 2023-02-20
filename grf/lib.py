@@ -905,3 +905,21 @@ class BaseCosts(grf.SpriteGenerator):
             for first, values in combine_ranges(self.costs.items())
         ]
 
+
+class SetPurchaseOrder(grf.SpriteGenerator):
+    def __init__(self, order):
+        super().__init__()
+        self.order = order
+
+    def get_sprites(self, g):
+        prev = None
+        res = []
+        for v in reversed(self.order):
+            if prev is not None:
+                res.append(grf.Define(
+                    feature=grf.TRAIN,
+                    id=v.id,
+                    props={'sort_purchase_list': prev.id}
+                ))
+            prev = v
+        return res
