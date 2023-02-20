@@ -907,7 +907,7 @@ class BaseCosts(grf.SpriteGenerator):
 
 
 class SetPurchaseOrder(grf.SpriteGenerator):
-    def __init__(self, order):
+    def __init__(self, *order):
         super().__init__()
         self.order = order
 

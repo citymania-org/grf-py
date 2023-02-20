@@ -11,7 +11,7 @@ install_requires = [
 
 setup(
     name='grf',
-    version='0.2.1',
+    setuptools_git_versioning={"enabled": True},
     description='Framework for making OpenTTD NewGRF files',
     author='dP',
     packages=find_packages(include=['grf']),
@@ -22,4 +22,5 @@ setup(
     },
     install_requires=install_requires,
     python_requires=">=3.6.9",
+    setup_requires=["setuptools-git-versioning<2"],
 )
