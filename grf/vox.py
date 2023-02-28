@@ -215,7 +215,9 @@ class VoxTrainFile:
             S2 = S * 2
             S4 = S * 4
             XY = 15 #7
-            xx = reader.voxels @ self.x_axis
+            stretched_x = self.x_axis.copy()
+            stretched_x[1] *= 1.5
+            xx = reader.voxels @ stretched_x
             yy = reader.voxels @ self.y_axis
             zz = reader.voxels @ self.z_axis
             cc = reader.voxels[:, 3]
@@ -345,13 +347,14 @@ class VoxTrainFile:
     def _debug_sprites(self, sprites):
         rx, ry = 0, 0
 
-        rx += im.size[0]
-        ry = max(ry, im.size[1])
+        for s in sprites:
+            rx += s.w
+            ry = max(ry, s.h)
         im = Image.new('RGBA', (rx + 10 * len(sprites) - 10, ry))
         x = 0
         for s in sprites:
-            im.paste(s, (x, 0))
-            x += s.size[0] + 10
+            im.paste(s.get_image()[0], (x, 0))
+            x += s.w + 10
         im = im.resize((im.size[0] * 10, im.size[1] * 10), Image.NEAREST)
         im.show()
 
@@ -426,4 +429,5 @@ class VoxTrainFile:
             make_sprite(5, 26, -11),  # -
             make_sprite(2, 3, 17),  # \
         )
+        self._debug_sprites(res)
         return res
