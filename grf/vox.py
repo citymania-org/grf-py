@@ -224,7 +224,7 @@ class VoxTrainFile:
 
             xmin, xmax = np.amin(xx), np.amax(xx)
             ymin, ymax = np.amin(yy), np.amax(yy)
-            self.w = (xmax - xmin + 2) * S2
+            self.w = int(xmax - xmin + 2 + .5) * S2
             self.h = int(ymax - ymin + 2 + .5) * S2
             im = Image.new('RGBA', (self.w, self.h), color=(0, 0, 0, 0))
             draw = ImageDraw.Draw(im)
@@ -240,7 +240,7 @@ class VoxTrainFile:
 
 
             for i in np.argsort(zz):
-                x = (xx[i] - xmin) * S2
+                x = int((xx[i] - xmin) * S2 + .5)
                 y = int((yy[i] - ymin) * S2 + .5)
                 c = cc[i]
                 cube(
@@ -250,7 +250,8 @@ class VoxTrainFile:
                     tuple(palette[c | VOX_SIDE_Z]),
                 )
 
-            origin = -xmin // 8, int(.5 - ymin) // 8
+            origin = int(.5 - xmin) // 8, int(.5 - ymin) // 8
+            # im.show()
             return im.resize((self.w // S2 // 8, self.h // S2 // 8), Image.BOX), origin
 
 
@@ -368,7 +369,7 @@ class VoxTrainFile:
             ( 0, 0, 1, 0),
             ( 0, 0, 0, 1)
         ), dtype=int)
-        x = np.array((1, -1, 0, 0), dtype=int)
+        x = np.array((1, -1, 0, 0), dtype=float)
         y = np.array((.5, .5, -2, 0), dtype=float)
         z = np.array((1., 1, 2 / 3**.5, 0))
 
@@ -429,5 +430,5 @@ class VoxTrainFile:
             make_sprite(5, 26, -11),  # -
             make_sprite(2, 3, 17),  # \
         )
-        self._debug_sprites(res)
+        # self._debug_sprites(res)
         return res
