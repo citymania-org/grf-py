@@ -313,8 +313,8 @@ ACTION0_RV_PROPS = {
     0x21: ('visual_effect', 'B'),  # Visual effect   yes
     0x22: ('cargo_age_period', 'W'),  # Custom cargo ageing period  yes
     0x23: ('shorten_by', 'B'),  # Make vehicle shorter, see train property 21     yes
-    0x24: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C    yes
-    0x25: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D     yes
+    0x24: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C    yes
+    0x25: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D     yes
     0x26: ('variant_group', 'W'),  # Vehicle variant group
     0x27: ('extra_flags', 'D'),  # extra flags
 }
@@ -342,8 +342,8 @@ ACTION0_SHIP_PROPS = {
     0x1B: ('sort_purchase_list', 'B*'), # Sort the purchase list
     0x1C: ('visual_effect', 'B'),  # Visual effect
     0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
-    0x1E: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
-    0x1F: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
+    0x1E: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
+    0x1F: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
     0x20: ('variant_group', 'W'),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
 }
@@ -370,8 +370,8 @@ ACTION0_AIRCRAFT_PROPS = {
     0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
     0x1B: ('sort_purchase_list', 'B*'),  # Sort the purchase list
     0x1C: ('cargo_age_period', 'W'),  # Custom cargo ageing period
-    0x1D: ('cargo_allow_refit', 'B n*B'),  # List of always refittable cargo types, see train property 2C
-    0x1E: ('cargo_disallow_refit', 'B n*B'),  # List of never refittable cargo types, see train property 2D
+    0x1D: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
+    0x1E: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
     0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
     0x20: ('variant_group', 'W'),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
