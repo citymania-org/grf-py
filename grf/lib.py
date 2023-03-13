@@ -295,6 +295,12 @@ class CallbackManager:
             raise RuntimeError(f'Callback {name} is already defined')
         self._callbacks[cb_id] = value
 
+    def __delattr__(self, name):
+        cb_id = getattr(self._domain, name.upper())
+        if cb_id not in self._callbacks:
+            raise RuntimeError(f'Callback {name} is not defined')
+        del self._callbacks[cb_id]
+
     def get_flags(self):
         # TODO checeked only for vehicles
         FLAGS = {
@@ -624,7 +630,7 @@ class Train(Vehicle):
     def visual_effect_and_powered(effect, *, position=0, wagon_power=True):
         return effect | position | wagon_power * 0x7f
 
-    def __init__(self, *, id, name, max_speed, weight, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
+    def __init__(self, *, id, name, max_speed, weight, length=None, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
         super().__init__(callbacks)
         for l in liveries or []:
             if 'name' not in l:
@@ -635,6 +641,14 @@ class Train(Vehicle):
             if len(sprites) != 8:
                 raise ValueError(f'Train livery expects 8 sprites, found {len(sprites)}')
 
+        REQUIRED_PROPS = ('engine_class', )
+        missing_props = [p for p in REQUIRED_PROPS if p not in props]
+        if missing_props:
+            raise ValueError('Missing required properties for Train: {}'.format(', '.join(missing_props)))
+
+        if length is not None and 'shorten_by' in props:
+            raise ValueError('Length and shorten_by properties are mutually exclusive')
+
         self.id = id
         self.name = name
         self.max_speed = max_speed
@@ -642,12 +656,50 @@ class Train(Vehicle):
         self.liveries = liveries
         self.sound_effects = sound_effects
         self.weight = weight
-        REQUIRED_PROPS = ('engine_class', )
-        missing_props = [p for p in REQUIRED_PROPS if p not in props]
-        if missing_props:
-            raise ValueError('Missing required properties for Train: {}'.format(', '.join(missing_props)))
+        self.length = length
         self._props = props
         self._articulated_parts = []
+
+        self._init_length_articulation()
+
+    def _init_length_articulation(self):
+        if self.length is None:
+            return
+
+        if self.length > 24:
+            raise ValueError("Max Train length is 24")
+
+        if self.length <= 8:
+            self._props['shorten_by'] = 8 - self.length
+            self._head_liveries = self.liveries
+            return
+
+        self._head_liveries = []
+        if self.length % 2 == 1:
+            central_length = 7
+            articulated_length = (self.length - 7) // 2
+        else:
+            central_length = 8
+            articulated_length = (self.length - 8) // 2
+        self._head_liveries = [{
+            'name': l['name'],
+            'sprites': [grf.EMPTY_SPRITE] * 8,
+        } for l in self.liveries]
+
+        self._props['shorten_by'] = 8 - articulated_length
+
+        # TODO auto assign articulated part id
+        self.add_articulated_part(
+            id=self.id + 1,
+            liveries=self.liveries,
+            shorten_by=8 - central_length,
+        )
+        self.add_articulated_part(
+            id=self.id + 2,
+            liveries=self._head_liveries,
+            shorten_by=8 - articulated_length,
+        )
+
 
     def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, **props):
         if not skip_props_check:
@@ -710,6 +762,30 @@ class Train(Vehicle):
             code='cargo_subtype',
         )
 
+    def _set_callbacks(self, g):
+        super()._set_callbacks(g)
+        if self.liveries and len(self.liveries) > 1:
+            # Liveries
+            self.callbacks.cargo_subtype = grf.Switch(
+                ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
+                default=0x400,
+                code='cargo_subtype',
+            )
+
+        if self.sound_effects:
+            self.callbacks.sound_effect = grf.Switch(
+                ranges=self.sound_effects,
+                default=self.callbacks.graphics,
+                code='extra_callback_info1_byte',
+            )
+
+        if self._articulated_parts:
+            self.callbacks.articulated_part = grf.Switch(
+                ranges={i + 1: ap[0] for i, ap in enumerate(self._articulated_parts)},
+                default=0x7fff,
+                code='extra_callback_info1_byte',
+            )
+
     def _set_articulated_part_callbacks(self, g, position, callbacks):
         pass
 
@@ -724,28 +800,6 @@ class Train(Vehicle):
             res.extend(sprites)
 
         self._set_callbacks(g)
-
-        if self.liveries and len(self.liveries) > 1:
-            # Liveries
-            self.callbacks.cargo_subtype = grf.Switch(
-                ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
-                default=0x400,
-                code='cargo_subtype',
-            )
-
-        if self.sound_effects:
-            self.callbacks.sound_effect = grf.Switch(
-                ranges=self.sound_effects,
-                default=self.callbacks.graphics,
-                code='extra_callback_info1 & 255',
-            )
-
-        if self._articulated_parts:
-            self.callbacks.articulated_part = grf.Switch(
-                ranges={i + 1: ap[0] for i, ap in enumerate(self._articulated_parts)},
-                default=0x7fff,
-                code='extra_callback_info1 & 255',
-            )
 
         if self.callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
