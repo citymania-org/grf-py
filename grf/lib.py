@@ -660,54 +660,57 @@ class Train(Vehicle):
         self._props = props
         self._articulated_parts = []
 
-        self._init_length_articulation()
-
-    def _init_length_articulation(self):
-        if self.length is None:
+        mid_shorten, art_shorten, art_liveries = self._calc_length_articulation(
+            length, self._props.get('shorten_by'), self.liveries)
+        if art_shorten is not None:
+            # TODO auto assign articulated part id
+            self._head_liveries = art_liveries
+            self._props['shorten_by'] = art_shorten
+            self._do_add_articulated_part(self.id + 1, mid_shorten, self.liveries, {})
+            self._do_add_articulated_part(self.id + 2, art_shorten, art_liveries, {})
+        else:
             self._head_liveries = self.liveries
-            return
+            if mid_shorten is not None:
+                self._props['shorten_by'] = mid_shorten
 
-        if self.length > 24:
-            raise ValueError("Max Train length is 24")
+    def _calc_length_articulation(self, length, shorten_by, liveries):
+        if length is None:
+            return shorten_by, None, None
 
-        if self.length <= 8:
-            self._props['shorten_by'] = 8 - self.length
-            self._head_liveries = self.liveries
-            return
+        if length > 24:
+            raise ValueError("Max length of Train part is 24")
+
+        if length <= 8:
+            return 8 - length, None, None
 
         if self.length % 2 == 1:
             central_length = 7
-            articulated_length = (self.length - 7) // 2
+            articulated_length = (length - 7) // 2
         else:
             central_length = 8
-            articulated_length = (self.length - 8) // 2
-        self._head_liveries = [{
+            articulated_length = (length - 8) // 2
+        articulated_liveries = [{
             'name': l['name'],
             'sprites': [grf.EMPTY_SPRITE] * 8,
-        } for l in self.liveries or []]
+        } for l in liveries or []]
 
-        self._props['shorten_by'] = 8 - articulated_length
+        return 8 - central_length, 8 - articulated_length, articulated_liveries
 
-        # TODO auto assign articulated part id
-        self.add_articulated_part(
-            id=self.id + 1,
-            liveries=self.liveries,
-            shorten_by=8 - central_length,
-        )
-        self.add_articulated_part(
-            id=self.id + 2,
-            liveries=self._head_liveries,
-            shorten_by=8 - articulated_length,
-        )
+    def _do_add_articulated_part(self, id, shorten_by, liveries, props, callbacks=None):
+        if shorten_by is not None:
+            props['shorten_by'] = shorten_by
+        self._articulated_parts.append((id, liveries, callbacks, props))
 
-
-    def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, **props):
+    def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, length=None, **props):
         if not skip_props_check:
             # TODO support flipping (id + 0x4000)
             if id >= 0x4000:
                 raise ValueError(f'Articulated part id too big ({id} >= 0x4000)')
             if self._props.get('is_dual_headed'):
                 raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
+
+            if length is not None and 'shorten_by' in props:
+                raise ValueError('Length and shorten_by properties are mutually exclusive')
 
             # REQUIRED_PROPS = ('id', 'liveries')
             # missing_props = [p for p in REQUIRED_PROPS if p not in props]
@@ -734,7 +737,16 @@ class Train(Vehicle):
             if invalid_props:
                 raise ValueError('Property not allowed for articulated part: {}'.format(', '.join(invalid_props)))
 
-        self._articulated_parts.append((id, liveries, callbacks, props))
+        mid_shorten, art_shorten, art_liveries = self._calc_length_articulation(
+            length, props.get('shorten_by'), liveries)
+
+        if art_shorten is None:
+            self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
+        else:
+            self._do_add_articulated_part(id, art_shorten, art_liveries, {})
+            self._do_add_articulated_part(id + 1, mid_shorten, liveries, props, callbacks)
+            self._do_add_articulated_part(id + 2, art_shorten, art_liveries, {})
+
         return self
 
     def _make_graphics(self, liveries):
