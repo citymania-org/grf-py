@@ -664,6 +664,7 @@ class Train(Vehicle):
 
     def _init_length_articulation(self):
         if self.length is None:
+            self._head_liveries = self.liveries
             return
 
         if self.length > 24:
@@ -674,7 +675,6 @@ class Train(Vehicle):
             self._head_liveries = self.liveries
             return
 
-        self._head_liveries = []
         if self.length % 2 == 1:
             central_length = 7
             articulated_length = (self.length - 7) // 2
@@ -684,7 +684,7 @@ class Train(Vehicle):
         self._head_liveries = [{
             'name': l['name'],
             'sprites': [grf.EMPTY_SPRITE] * 8,
-        } for l in self.liveries]
+        } for l in self.liveries or []]
 
         self._props['shorten_by'] = 8 - articulated_length
 
@@ -795,8 +795,8 @@ class Train(Vehicle):
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
         res = []
-        if self.liveries:
-            sprites, self.callbacks.graphics = self._make_graphics(self.liveries)
+        if self._head_liveries:
+            sprites, self.callbacks.graphics = self._make_graphics(self._head_liveries)
             res.extend(sprites)
 
         self._set_callbacks(g)
