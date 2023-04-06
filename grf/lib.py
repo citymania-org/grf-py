@@ -254,7 +254,7 @@ class CallbackManager:
                     setattr(self, k, v)
 
         def is_set(self):
-            return any(self._callbacks.values())
+            return any(v is not None for v in self._callbacks.values())
 
         def get_ranges(self):
             return {k: v for k, v in self._callbacks.items() if v is not None}
