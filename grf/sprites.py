@@ -118,9 +118,9 @@ class AlternativeSprites(RealSprite):
         assert all(isinstance(s, GraphicsSprite) for s in sprites), sprites
         assert len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites), sprites
 
+        self.sprites = sprites
         super().__init__()
         self._sprite_id = None
-        self.sprites = sprites
 
     @property
     def sprite_id(self):
@@ -128,12 +128,18 @@ class AlternativeSprites(RealSprite):
 
     @sprite_id.setter
     def sprite_id(self, value):
-        self.sprite_id = value
+        self._sprite_id = value
         for s in self.sprites:
             s.sprite_id = value
 
     def get_real_data(self, encoder):
-        sum(b'', (s.get_real_data(encoder) for s in self.sprites))
+        return b''.join(s.get_real_data(encoder) for s in self.sprites)
+
+    def get_zoom(self, zoom):
+        for s in self.sprites:
+            if s.zoom == zoom:
+                return s
+        return None
 
 
 class SoundSprite(RealSprite):

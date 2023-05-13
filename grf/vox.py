@@ -104,6 +104,7 @@ class VoxFile:
             data[y, x] = c
 
         for x, y, z, c in zip(xx, yy, zz, cc):
+            if c == 1: continue
             x -= xmin
             y -= ymin
             set_pixel(x, y, z, c | VOX_SIDE_ZL)

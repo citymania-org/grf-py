@@ -440,6 +440,7 @@ class BaseNewGRF:
                 if isinstance(sl, RealSprite):
                     if sl in written_sprites:
                         continue
+                    # print('data', sl.get_real_data(self._sprite_encoder), flush=True)
                     f.write(sl.get_real_data(self._sprite_encoder))
                     written_sprites.add(sl)
                 elif isinstance(sl, AlternativeSprites):
