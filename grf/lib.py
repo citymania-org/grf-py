@@ -666,7 +666,8 @@ class Train(Vehicle):
             # TODO auto assign articulated part id
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
-            self._do_add_articulated_part(self.id + 1, mid_shorten, self.liveries, {})
+            self._do_add_articulated_part(self.id, mid_shorten, self.liveries, {})
+            self.id += 1
             self._do_add_articulated_part(self.id + 2, art_shorten, art_liveries, {})
         else:
             self._head_liveries = self.liveries
@@ -743,8 +744,8 @@ class Train(Vehicle):
         if art_shorten is None:
             self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
         else:
-            self._do_add_articulated_part(id, art_shorten, art_liveries, {})
-            self._do_add_articulated_part(id + 1, mid_shorten, liveries, props, callbacks)
+            self._do_add_articulated_part(id + 1, art_shorten, art_liveries, {})
+            self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
             self._do_add_articulated_part(id + 2, art_shorten, art_liveries, {})
 
         return self
