@@ -461,13 +461,13 @@ class Vehicle(grf.SpriteGenerator):
     def __init__(self, callbacks):
         self.callbacks = CallbackManager(Callback.Vehicle, callbacks)
 
-    def _gen_name_sprites(self):
+    def _gen_name_sprites(self, vehicle_id):
         if isinstance(self.name, grf.StringRef):
-            return self.name.get_actions(grf.TRAIN, self.id)
+            return self.name.get_actions(grf.TRAIN, vehicle_id)
         else:
             return [grf.DefineStrings(
                 feature=grf.TRAIN,
-                offset=self.id,
+                offset=vehicle_id,
                 is_generic_offset=False,
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
@@ -570,7 +570,7 @@ class RoadVehicle(Vehicle):
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
 
         res = []
-        res.extend(self._gen_name_sprites())
+        res.extend(self._gen_name_sprites(self.id))
 
         res.append(definition := grf.Define(
             feature=grf.RV,
@@ -667,9 +667,10 @@ class Train(Vehicle):
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
             self._do_add_articulated_part(self.id, mid_shorten, self.liveries, {})
-            self.id += 1
+            self._main_part_id = self.id + 1
             self._do_add_articulated_part(self.id + 2, art_shorten, art_liveries, {})
         else:
+            self._main_part_id = self.id
             self._head_liveries = self.liveries
             if mid_shorten is not None:
                 self._props['shorten_by'] = mid_shorten
@@ -817,11 +818,11 @@ class Train(Vehicle):
         if self.callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
 
-        res.extend(self._gen_name_sprites())
+        res.extend(self._gen_name_sprites(self._main_part_id))
 
         res.append(definition := grf.Define(
             feature=grf.TRAIN,
-            id=self.id,
+            id=self._main_part_id,
             props={
                 'sprite_id': 0xfd,  # magic value for newgrf sprites
                 'max_speed': self.max_speed,
