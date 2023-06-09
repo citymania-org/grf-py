@@ -23,8 +23,7 @@ def debug_sprites(sprites, scale):
     im = im.resize((im.size[0] * scale, im.size[1] * scale), Image.NEAREST)
     im.show()
 
-# vox = grf.VoxFile("sprites/house1460.vox")
-vox = grf.VoxFile("/home/dp/Downloads/r1_stiles.vox")
+vox = grf.VoxFile("sprites/house1460.vox")
 g.add(grf.ReplaceOldSprites([(1460, 1)]))
 g.add(
     vox.make_house_sprite(zoom=grf.ZOOM_4X, xofs=-25, yofs=-33),
@@ -33,7 +32,7 @@ g.add(
 )
 
 debug_sprites((
-    (vox.make_house_sprite(zoom=grf.ZOOM_4X, xofs=-25, yofs=-33), 1),
+    (vox.make_house_sprite(zoom=grf.ZOOM_4X, xofs=-25, yofs=-33), 4),
     (vox.make_house_sprite(zoom=grf.ZOOM_2X, xofs=-25 * 2, yofs=-33 * 2), 2),
     (vox.make_house_sprite(zoom=grf.ZOOM_NORMAL, xofs=-25 * 4, yofs=-33 * 4), 1)),
     1)
