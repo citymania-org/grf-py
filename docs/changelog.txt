@@ -63,7 +63,7 @@ grftopy: Convert `grftopy` script into `decompile` sub-module.
 0.2.0
 ---------
 
-- Fixed automatic ref_id assignment.
+- Fixed automatic `ref_id` assignment.
 - Added support for string translations via NML lang directory.
 - Reimplemented `StringManager`, added `import_lang_dir`, `add`, `__getitem__`, and `__call__` methods.
 - Added `StringRef` class.
@@ -74,12 +74,12 @@ grftopy: Convert `grftopy` script into `decompile` sub-module.
 - Change vehicle `retire_early` Action0 property type to a signed byte.
 - Added `RunningCost` class of constants.
 - Added `VEHICLE_FEATURES` constant.
-- Allowed sprite generators to return other generators.
+- Allowed sprite generators to return to other generators.
 - Added `SpriteTable` and `VehicleSpriteTable` classes.
 - Added `DisableDefault` sprite generator for disabling default vehicles.
-- Added `BaseCosts` sprite generator for chaging base costs.
+- Added `BaseCosts` sprite generator for changing base costs.
 - Added VarAction 2 variables for rail types.
-- Renamed `RoadVehicle.Flags` to `RVFlags`, added more constants to it.
+- Renamed `RoadVehicle.Flags` to `RVFlags`, and added more constants to it.
 - Added `TrainFlags` and `CargoClass` classes of constants.
 - Added `train_hpi`, `train_ton`, and `nml_te` functions for unit conversions.
 - Added `set_cargo_table` and `map_cargo_labels` methods to `BaseNewGRF` class.
