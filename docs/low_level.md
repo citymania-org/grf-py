@@ -19,6 +19,7 @@ Some actions take `ref_id` argument that can be used to reference them from othe
 
 ## Action 0
 https://newgrf-specs.tt-wiki.net/wiki/Action0
+[Documentation on properties](entity_properties.md).
 
 ### Define(*, feature, id, props)
 - `id` - The ID of entity to define.
