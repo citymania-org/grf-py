@@ -15,7 +15,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles
 | 0x07 | loading_speed | int(0-255) | loading speed |
 
 
-## Trains
+## Trains (TRAIN, 0x00)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Trains
 
 | NFO# | Name | Type | Description |
@@ -59,7 +59,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Trains
 | 0x30 | extra_flags | int(0-4294967295) | extra flags |
 
 
-## Trains
+## Road vehicles (RV, 0x01)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/RoadVehicles
 
 | NFO# | Name | Type | Description |
@@ -96,7 +96,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/RoadVehicles
 | 0x27 | extra_flags | int(0-4294967295) | Extra flags |
 
 
-## Ships
+## Ships (SHIP, 0x02)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Ships
 
 | NFO# | Name | Type | Description |
@@ -128,11 +128,11 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Ships
 | 0x21 | extra_flags | int(0-4294967295) | Extra flags |
 
 
-# Aircraft
+# Aircraft (AIRCRAFT, 0x03)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 
 | NFO# | Name | Type | Description |
-| - | - | - | -
+| - | - | - | - |
 | 0x08 | sprite_id | int(0-255) | Sprite (`0xFF` for new graphics) |
 | 0x09 | is_helicopter | int(0-255) | Is helicopter? 2=no, 0=yes |
 | 0x0A | is_large | int(0-255) | Is large? 0=no, 1=yes (i.e. can't safely land on small airports) |
@@ -160,11 +160,11 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 | 0x21 | extra_flags | int(0-4294967295) | extra flags |
 
 
-# Stations
+# Stations (STATION, 0x04)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Stations
 
 | NFO# | Name | Type | Description |
-| - | - | - | -
+| - | - | - | - |
 | 0x08 | class | Label | Class ID |
 | 0x09 | layout | OldStationLayoutProperty() | Sprite layout |
 | 0x0A | copy_layout | int(0-255) | Copy sprite layout |
@@ -187,17 +187,17 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Stations
 | 0x1B | min_bridge_height | 8 bytes (TODO) | dvanced sprite layout with register modifiers |
 
 
-# Canals
+# Canals (CANAL, 0x05)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Canals
 
 Not supported
 
 
-# Bridges
+# Bridges (BRIDGE, 0x06)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Bridges
 
 | NFO# | Name | Type | Description |
-| - | - | - | -
+| - | - | - | - |
 | 0x00 | fallback_type | int(0-255) | Failback Type, a default TTD Bridge ID |
 | 0x08 | intro_year_since_1920 | int(0-255) | Year of availability, counted from 1920 (set to 1920 for first bridge if newstartyear<1930) |
 | 0x09 | min_length | int(0-255) | Minimum length, not counting ramps |
@@ -213,11 +213,11 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Bridges
 | 0x13 | cost_factor | int(0-65535) | Cost factor word access |
 
 
-# Houses
+# Houses (HOUSE, 0x07)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Houses
 
 | NFO# | Name | Type | Description |
-| - | - | - | -
+| - | - | - | - |
 | 0x08 | substitute | int(0-255) | Substitute building type |
 | 0x09 | flags | int(0-255) | Building flags |
 | 0x0A | availability_years | int(0-65535) | Availability years |
@@ -246,3 +246,210 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Houses
 | 0x21 | min_year | int(0-65535) | Long year (zero based) of minimum appearance |
 | 0x22 | max_year | int(0-65535) | Long year (zero based) of maximum appearance |
 | 0x23 | tile_acceptance | Not supported | Tile acceptance list |
+
+
+# Global settings (GLOBAL_VAR, 0x08)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Global_Settings
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | basecost | int(0-255) | Cost base multipliers |
+| 0x09 | cargo_table | Label | Cargo translation table |
+| 0x0A | currency_name | int(0-65535) | Currency display names |
+| 0x0B | currency_mult | int(0-4294967295) | Currency multipliers |
+| 0x0C | currency_options | int(0-65535) | Currency options |
+| 0x0D | currency_symbols | 0E | Currency symbols |
+| 0x0F | currency_euro_date | int(0-65535) | Euro introduction dates |
+| 0x10 | snowline_table | 12*32*B | Snow line height table |
+| 0x11 | grfid_overrides | 2*Label | GRFID overrides for engines |
+| 0x12 | railtype_table | Label | Railtype translation table |
+| 0x13 | lang_genders | MultiDictProperty |  Gender/case translation table |
+| 0x14 | lang_cases | MultiDictProperty |  Gender/case translation table |
+| 0x15 | lang_plural | int(0-255) | Plural form |
+| 0x16 | roadtype_table1 | int(0-255) | Road-/tramtype translation table |
+| 0x17 | roadtype_table2 | int(0-4294967295) | Road-/tramtype translation table |
+
+
+# Industry tiles (INDUSTRY_TILE, 0x09)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Industry_Tiles
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | building_type | int(0-255) | Substitute building type |
+| 0x09 | tile_override | int(0-255) | Industry tile override |
+| 0x0A | tile_acceptance_1 | int(0-65535) | Tile acceptance |
+| 0x0B | tile_acceptance_2 | int(0-65535) | Tile acceptance |
+| 0x0C | tile_acceptance_3 | int(0-65535) | Tile acceptance |
+| 0x0D | land_shape_flags | int(0-255) | Land shape flags |
+| 0x0E | cb_flags | int(0-255) | Callback flags |
+| 0x0F | anim_info | int(0-65535) | Animation information |
+| 0x10 | anim_speed | int(0-255) | Animation speed. |
+| 0x11 | cb25_triggers | int(0-255) | Triggers for callback 25 |
+| 0x12 | flags | int(0-255) | Special flags |
+| 0x13 | tile_acceptance_list | n*(BB) | Tile acceptance list |
+
+
+
+# Industries (INDUSTRY, 0x0A)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Industries
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | substitute_type | int(0-255) | Substitute industry type |
+| 0x09 | override_type | int(0-255) | Industry type override |
+| 0x0A | layouts | Layouts | Set industry layout(s) |
+| 0x0B | production_flags | int(0-255) | Industry production flags |
+| 0x0C | closure_message | int(0-65535) | Industry closure message |
+| 0x0D | production_increase_message | int(0-65535) | Production increase message |
+| 0x0E | production_decrease_message | int(0-65535) | Production decrease message |
+| 0x0F | func_cost | int(0-255) | Fund cost multiplier |
+| 0x10 | production_cargo | int(0-65535) | Production cargo types |
+| 0x11 | acceptance_cargo | int(0-4294967295) | Acceptance cargo types |
+| 0x12 | produciton_multipliers | int(0-255) | Production multipliers |
+| 0x13 | acceptance_multipliers | int(0-255) | Production multipliers |
+| 0x14 | minimal_distributed | int(0-255) | Minimal amount of cargo distributed |
+| 0x15 | random_sound | n*B | Random sound effects |
+| 0x16 | conflicting_indtypes | 3*B | Conflicting industry types |
+| 0x17 | mapgen_probability | int(0-255) | Probability in random game |
+| 0x18 | ingame_probability | int(0-255) | Probability during gameplay |
+| 0x19 | map_colour | int(0-255) | Map color |
+| 0x1A | special_flags | int(0-4294967295) | Special industry flags to define special behavior |
+| 0x1B | text_id | int(0-65535) | New industry text ID |
+| 0x1C | input_mult1 | int(0-4294967295) | Input cargo multipliers for the three input cargo types |
+| 0x1D | input_mult2 | int(0-4294967295) | Input cargo multipliers for the three input cargo types |
+| 0x1E | input_mult3 | int(0-4294967295) | Input cargo multipliers for the three input cargo types |
+| 0x1F | name | int(0-65535) | Industry name |
+| 0x20 | prospecting_chance | int(0-4294967295) | Prospecting success chance |
+| 0x21 | cb_flags1 | int(0-255) | Callback flags |
+| 0x22 | cb_flags2 | int(0-255) | Callback flags |
+| 0x23 | destruction_cost | int(0-4294967295) | Destruction cost multiplier |
+| 0x24 | station_text | int(0-65535) | Default text for nearby station |
+| 0x25 | production_types | n*B | Production cargo type list |
+| 0x26 | acceptance_types | n*B | Acceptance cargo type list |
+| 0x27 | produciton_multipliers | n*B | Production multiplier list |
+| 0x28 | input_multipliers | n*m*W | Input cargo multiplier list |
+
+
+# Cargo types (CARGO, 0x0B)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Cargos
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | bit_number | int(0-255) | Bit number for bitmasks |
+| 0x09 | type_text | int(0-65535) | TextID for the cargo type name |
+| 0x0A | unit_text | int(0-65535) | TextID for the name of one unit from the cargo type |
+| 0x0B | one_text | int(0-65535) | TextID to be displayed for 1 unit of cargo |
+| 0x0C | many_text | int(0-65535) | TextID to be displayed for multiple units of cargo |
+| 0x0D | abbr_text | int(0-65535) | TextID for cargo type abbreviation |
+| 0x0E | icon_sprite | int(0-65535) | Sprite number for the icon of the cargo |
+| 0x0F | weight | int(0-255) | Weight of one unit of the cargo |
+| 0x10 | penalty1 | int(0-255) | Penalty times |
+| 0x11 | penalty2 | int(0-255) | Penalty times |
+| 0x12 | base_price | int(0-4294967295) | Base price |
+| 0x13 | station_colour | int(0-255) | Color for the station list window |
+| 0x14 | colour | int(0-255) | Color for the cargo payment list window |
+| 0x15 | is_freight | int(0-255) | Freight status (for freight-weight-multiplier setting); 0=not freight, 1=is freight |
+| 0x16 | classes | int(0-65535) | Cargo classes |
+| 0x17 | label | int(0-4294967295) | Cargo label |
+| 0x18 | town_growth_sub | int(0-255) | Substitute type for town growth |
+| 0x19 | town_growth_mult | int(0-65535) | Multiplier for town growth |
+| 0x1A | cb_flags | int(0-255) | Callback flags |
+| 0x1B | units_text | int(0-65535) | TextID for displaying the units of a cargo |
+| 0x1C | amount_text | int(0-65535) | TextID for displaying the amount of cargo |
+| 0x1D | capacity_mult | int(0-65535) | Capacity mulitplier |
+
+
+# Sound effects (SOUND_EFFECT, 0x0C)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Sound_Effects
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | relative_volume | int(0-255) | Relative volume |
+| 0x09 | priority | int(0-255) | Priority |
+| 0x0A | override | int(0-255) | Override old sound |
+
+# Airports (AIRPORT, 0x0D)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Airports
+
+Not supported
+
+
+# Signals (SIGNAL, 0x0E)
+
+Not supported
+
+
+# Objects (OBJECT, 0x0F)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Objects
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | class | Label | Class label |
+| 0x09 | class_name_id | int(0-65535) | Text ID for class |
+| 0x0A | name_id | int(0-65535) | Text ID for this object |
+| 0x0B | climates_available | ClimateProperty | Climate availability |
+| 0x0C | size | SizeTupleProperty | Byte representing size |
+| 0x0D | build_cost_multiplier | int(0-255) | Object build cost factor (sets object removal cost factor as well) |
+| 0x0E | introduction_date | DateProperty | Introduction date |
+| 0x0F | end_of_life_date | int(0-4294967295) | End of life date |
+| 0x10 | flags | int(0-65535) | Object flags |
+| 0x11 | animation_info | int(0-65535) | Animation information |
+| 0x12 | animation_speed | int(0-255) | Animation speed |
+| 0x13 | animation_triggers | int(0-65535) | Animation triggers |
+| 0x14 | remove_cost_multiplier | int(0-255) | Object removal cost factor (set after object build cost factor) |
+| 0x15 | cb_flags | int(0-65535) | Callback flags, see below |
+| 0x16 | height | int(0-255) | Height of the building |
+| 0x17 | num_views | int(0-255) | Number of object views |
+| 0x18 | count_per_map256 | int(0-255) | Measure for number of objects placed upon map creation |
+
+
+# Railtypes (RAILTYPE, 0x10)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Railtypes
+
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | label | Label | Rail type label |
+| 0x09 | toolbar_caption | int(0-65535) | StringID: Build rail toolbar caption |
+| 0x0A | menu_text | int(0-65535) | StringID: Rail construction dropdown text |
+| 0x0B | build_window_caption | int(0-65535) | StringID: Build vehicle window caption |
+| 0x0C | autoreplace_text | int(0-65535) | StringID: Autoreplace text |
+| 0x0D | new_engine_text | int(0-65535) | StringID: New engine text |
+| 0x13 | construction_cost | int(0-65535) | Construction costs |
+| 0x16 | map_colour | int(0-255) | Minimap colour |
+| 0x17 | introduction_date | DateProperty | Introduction date |
+| 0x1A | sort_order | int(0-255) | Sort order |
+| 0x1B | name | int(0-65535) | StringID: Rail type name |
+| 0x1C | maintenance_cost | int(0-65535) | Infrastructure maintenance cost factor |
+| 0x0E | compatible_railtype_list | n*L | Compatible rail type list |
+| 0x0F | powered_railtype_list | n* | Powered rail type list |
+| 0x10 | railtype_flags | int(0-255) | Rail type flags |
+| 0x11 | curve_speed_multiplier | int(0-255) | Curve speed advantage multiplier |
+| 0x12 | station_graphics | int(0-255) | Station (and depot) graphics |
+| 0x14 | speed_limit | int(0-65535) | Speed limit |
+| 0x15 | acceleration_model | int(0-255) | Acceleration model |
+| 0x18 | requires_railtype_list | n*L | Introduction required rail type list |
+| 0x19 | introduces_railtype_list | n*L | Introduced rail type list |
+| 0x1D | alternative_railtype_list | n*L | Alternate rail type labels that shall be "redirected" to this rail type |
+
+
+# Airport tiles (AIRPORT_TILE, 0x11)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Airports
+
+Not supported
+
+
+# Road types (ROADTYPE, 0x12)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Roadtypes
+
+Not supported
+
+
+# Tram types (TRAMTYPE, 0x13)
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Tramtypes
+
+ Not supported
+
+
+# Road stops
+
+ Not supported
