@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
+from pathlib import Path
+
+root_path = Path(__file__).parent
 
 install_requires = [
     'nml==0.6.1',
@@ -11,7 +14,10 @@ install_requires = [
 
 setup(
     name='grf',
-    setuptools_git_versioning={"enabled": True},
+    setuptools_git_versioning={
+        "enabled": True,
+        "version_file": root_path / "VERSION",
+    },
     description='Framework for making OpenTTD NewGRF files',
     author='dP',
     packages=find_packages(include=['grf']),
