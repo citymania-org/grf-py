@@ -1,4 +1,41 @@
 ---------
+0.2.2
+---------
+
+- Fix graphics sprite composition.
+- Fix Train weight Action 0 properties (low and high bytes).
+
+- Use `AlternativeSprites` instead of sprite tuples.
+- Add `NewGRF.add_railtype` to add railtypes one-by-one.
+- Add `VEHICLE_NEVER_EXPIRES` constant.
+- Add `AIFlags` and `TrainRunningCost` enums.
+- Add `Flags`, `AIFlags`, `RuningCost` enums for Trains.
+- Add `Palette` enum.
+- Add `Train.hp` and `Train.ton` methods for converting metric units.
+- Add visual effect constants and methods
+- Make `NewGRF.bind` to make a subclass of the type instead of function and expose `bound_newgrf` property.
+- Change Switch parameter order from to `code, ranges, default`.
+- Rename `is_dual_headed` Action 0 Train property to `dual_headed` to match nml
+- Add `NewGRF.grfid_value` property.
+- Pass grf as an argument to `Vehicle._set_callbacks`.
+- Allow `visual_effect_and_powered` for `Train` articulated parts.
+- Don't check for sprite type when adding it for now (messes up decompiling).
+- Use setuptools-git-versioning to manage versions.
+- Update documentation.
+
+- lib: Fix `CallbackManager` exceptions.
+- lib: Add `length` property to a `Train` constructor, auto-articulate if > 8 (up to 24).
+- lib: Allow to use length > 8 (but <= 24) for articulated parts.
+- lib: Allow specifying property callbacks individually in `CallbackManager`.
+- lib: Add `SetPurchaseOrder` sprite generator.
+- lib: Rename `POWERED_WAGONS` callback to `VISUAL_EFFECT_AND_POWERED`.
+- lib: Allow to use `StringRef` as a livery name.
+- lib: Add `_set_articulated_part_callbacks` method to `Train`.
+
+- vox: Fix vox house example
+- vox: Experimental .vox renderer for trains
+
+---------
 0.2.1
 ---------
 
