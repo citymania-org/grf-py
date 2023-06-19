@@ -1092,10 +1092,10 @@ def read_pseudo_sprite(f, nfo_line, container, context):
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         context.count_action(data[0], l + size_bytes * 2 + 1)
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
-        if container == 1:
-            sprite = RealRemapSprite(context.get_v1_sprite_id(), data)
-            res.append(SpritePlaceholder(sprite.id))
-            return True, res, sprite
+        # if container == 1:
+        #     sprite = RealRemapSprite(context.get_v1_sprite_id(), data)
+        #     res.append(SpritePlaceholder(sprite.id))
+        #     return True, res, sprite
         try:
             res.extend(decode_pseudo_sprite(data, context))
         except Exception as e:
