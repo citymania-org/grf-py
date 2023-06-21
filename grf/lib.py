@@ -458,15 +458,16 @@ class Vehicle(grf.SpriteGenerator):
         SYNC_VARIANT_EXCLUSIVE_PREVIEW = 0x04
         SYNC_VARIANT_RELIABILITY = 0x08
 
-    def __init__(self, callbacks):
+    def __init__(self, feature, callbacks):
+        self.feature = feature
         self.callbacks = CallbackManager(Callback.Vehicle, callbacks)
 
     def _gen_name_sprites(self, vehicle_id):
         if isinstance(self.name, grf.StringRef):
-            return self.name.get_actions(grf.TRAIN, vehicle_id)
+            return self.name.get_actions(self.feature, vehicle_id)
         else:
             return [grf.DefineStrings(
-                feature=grf.TRAIN,
+                feature=self.feature,
                 offset=vehicle_id,
                 is_generic_offset=False,
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
@@ -503,7 +504,7 @@ class RoadVehicle(Vehicle):
         return RoadVehicle.Speed((speed * 16 + 4) // 5)
 
     def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, livery_refits=None, callbacks=None, **props):
-        super().__init__(callbacks)
+        super().__init__(grf.RV, callbacks)
         for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'RoadVehicle livery is missing the name')
@@ -631,7 +632,7 @@ class Train(Vehicle):
         return effect | position | wagon_power * 0x7f
 
     def __init__(self, *, id, name, max_speed, weight, length=None, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
-        super().__init__(callbacks)
+        super().__init__(grf.TRAIN, callbacks)
         for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'Train livery is missing the name')
