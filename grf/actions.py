@@ -909,8 +909,28 @@ ACTION0_RAILTYPE_PROPS = {
     0x1D: ('alternative_railtype_list', 'n*L'),  # Alternate rail type labels that shall be "redirected" to this rail type
 }
 
+ACTION0_ROADTYPE_PROPS = {
+    0x08: ('label', 'L'),  # Road type label
+    0x09: ('toolbar_caption', 'W'),  # StringID: Build road toolbar caption
+    0x0A: ('menu_text', 'W'),  # StringID: Road construction dropdown text
+    0x0B: ('build_window_caption', 'W'),  # StringID: Build vehicle window caption
+    0x0C: ('autoreplace_text', 'W'),  # StringID: Autoreplace text
+    0x0D: ('new_engine_text', 'W'),  # StringID: New engine text
+    0x0F: ('powered_roadtype_list', 'n*L'),  # Powered road type list[1]
+    0x10: ('roadtype_flags', 'B'),  # Road type flags
+    0x13: ('construction_cost', 'W'),  # Construction costs
+    0x14: ('speed_limit', 'W'),  # Speed limit
+    0x16: ('map_colour', 'B'),  # Minimap colour
+    0x17: ('introduction_date', DateProperty()), # Introduction date
+    0x18: ('requires_roadtype_list', 'n*L'),  # Introduction required road type list[1]
+    0x19: ('introduces_roadtype_list', 'n*L'),  # Introduced road type list[1]
+    0x1A: ('sort_order', 'B'),  # Sort order
+    0x1B: ('name', 'W'),  # StringID: Road type name
+    0x1C: ('maintenance_cost', 'W'),  # Infrastructure maintenance cost factor
+    0x1D: ('alternative_roadtype_list', 'n*L'),  # Alternate road type labels that shall be "redirected" to this road type
+}
+
 # TODO airport_tile
-# TODO road_type
 # TODO tram_type
 
 ACTION0_PROPS = {
@@ -928,6 +948,7 @@ ACTION0_PROPS = {
     SOUND_EFFECT: ACTION0_SOUND_EFFECT_PROPS,
     OBJECT: ACTION0_OBJECT_PROPS,
     RAILTYPE: ACTION0_RAILTYPE_PROPS,
+    ROADTYPE: ACTION0_ROADTYPE_PROPS,
 }
 
 ACTION0_PROP_DICT = {

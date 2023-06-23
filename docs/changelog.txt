@@ -12,10 +12,10 @@
 - Add `Flags`, `AIFlags`, `RuningCost` enums for Trains.
 - Add `Palette` enum.
 - Add `Train.hp` and `Train.ton` methods for converting metric units.
-- Add visual effect constants and methods
+- Add visual effect constants and methods.
 - Make `NewGRF.bind` to make a subclass of the type instead of function and expose `bound_newgrf` property.
 - Change Switch parameter order from to `code, ranges, default`.
-- Rename `is_dual_headed` Action 0 Train property to `dual_headed` to match nml
+- Rename `is_dual_headed` Action 0 Train property to `dual_headed` to match nml.
 - Add `NewGRF.grfid_value` property.
 - Pass grf as an argument to `Vehicle._set_callbacks`.
 - Allow `visual_effect_and_powered` for `Train` articulated parts.
@@ -23,6 +23,7 @@
 - Use setuptools-git-versioning to manage versions.
 - Update documentation.
 
+- lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Add `length` property to a `Train` constructor, auto-articulate if > 8 (up to 24).
 - lib: Allow to use length > 8 (but <= 24) for articulated parts.
@@ -32,8 +33,8 @@
 - lib: Allow to use `StringRef` as a livery name.
 - lib: Add `_set_articulated_part_callbacks` method to `Train`.
 
-- vox: Fix vox house example
-- vox: Experimental .vox renderer for trains
+- vox: Fix vox house example.
+- vox: Experimental .vox renderer for trains.
 
 ---------
 0.2.1

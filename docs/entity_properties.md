@@ -420,16 +420,16 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Railtypes
 | 0x1A | sort_order | int(0-255) | Sort order |
 | 0x1B | name | int(0-65535) | StringID: Rail type name |
 | 0x1C | maintenance_cost | int(0-65535) | Infrastructure maintenance cost factor |
-| 0x0E | compatible_railtype_list | n*L | Compatible rail type list |
-| 0x0F | powered_railtype_list | n* | Powered rail type list |
+| 0x0E | compatible_railtype_list | list[Label] | Compatible rail type list |
+| 0x0F | powered_railtype_list | list[Label] | Powered rail type list |
 | 0x10 | railtype_flags | int(0-255) | Rail type flags |
 | 0x11 | curve_speed_multiplier | int(0-255) | Curve speed advantage multiplier |
 | 0x12 | station_graphics | int(0-255) | Station (and depot) graphics |
 | 0x14 | speed_limit | int(0-65535) | Speed limit |
 | 0x15 | acceleration_model | int(0-255) | Acceleration model |
-| 0x18 | requires_railtype_list | n*L | Introduction required rail type list |
-| 0x19 | introduces_railtype_list | n*L | Introduced rail type list |
-| 0x1D | alternative_railtype_list | n*L | Alternate rail type labels that shall be "redirected" to this rail type |
+| 0x18 | requires_railtype_list | list[Label] | Introduction required rail type list |
+| 0x19 | introduces_railtype_list | list[Label] | Introduced rail type list |
+| 0x1D | alternative_railtype_list | list[Label] | Alternate rail type labels that shall be "redirected" to this rail type |
 
 
 # Airport tiles (AIRPORT_TILE, 0x11)
@@ -441,7 +441,26 @@ Not supported
 # Road types (ROADTYPE, 0x12)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Roadtypes
 
-Not supported
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | label | Label | Road type label |
+| 0x09 | toolbar_caption | int(0-65535) | StringID: Build road toolbar caption |
+| 0x0A | menu_text | int(0-65535) | StringID: Road construction dropdown text |
+| 0x0B | build_window_caption | int(0-65535) | StringID: Build vehicle window caption |
+| 0x0C | autoreplace_text | int(0-65535) | StringID: Autoreplace text |
+| 0x0D | new_engine_text | int(0-65535) | StringID: New engine text |
+| 0x0F | powered_roadtype_list | list[Label] | Powered road type list |
+| 0x10 | roadtype_flags | int(0-255) | Road type flags |
+| 0x13 | construction_cost | int(0-65535) | Construction costs |
+| 0x14 | speed_limit | int(0-65535) | Speed limit |
+| 0x16 | map_colour | int(0-255) | Minimap colour |
+| 0x17 | introduction_date | DateProperty | Introduction date |
+| 0x18 | requires_roadtype_list | list[Label] | Introduction required road type list |
+| 0x19 | introduces_roadtype_list | list[Label] | Introduced road type list |
+| 0x1A | sort_order | int(0-255) | Sort order |
+| 0x1B | name | int(0-65535) | StringID: Road type name |
+| 0x1C | maintenance_cost | int(0-65535) | Infrastructure maintenance cost factor |
+| 0x1D | alternative_roadtype_list | list[Label] | Alternate road type labels that shall be "redirected" to this road type |
 
 
 # Tram types (TRAMTYPE, 0x13)
