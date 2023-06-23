@@ -44,6 +44,6 @@ python setup.py install
 
 # Licensing
 
-Currently grf-py is licensed under GPL v3 which basically means any GRF you make with it should be licensed under GPL as well. In part this is due to it importing nml library which is also licensed under GPL. But I do plan to change the lincense to more permissive in future and allow importing grf-py in closed source projects as well. So if you need a more permissive license or have some other suggestions feel free to contact me (dP) via issues or discord.
+Currently grf-py is licensed under GPL v2+ which basically means any GRF you make with it should be licensed under GPL as well. In part this is due to it importing nml library which is also licensed under GPL. But I do plan to change the lincense to more permissive in future and allow importing grf-py in closed source projects as well. So if you need a more permissive license or have some other suggestions feel free to contact me (dP) via issues or discord.
 
 This also means that if you plan to make any contributions to grf-py please explicitly license them under some non-restrictive license so I won't have to undo them later when I decide to change the license. Preferably use public domain or CC-0, but BSD or MIT should also be fine.
