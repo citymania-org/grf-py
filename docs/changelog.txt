@@ -6,6 +6,7 @@
 - Fix Train weight Action 0 properties (low and high bytes).
 
 - Use `AlternativeSprites` instead of sprite tuples.
+- Add Action0 properties for road types.
 - Add `NewGRF.add_railtype` to add railtypes one-by-one.
 - Add `VEHICLE_NEVER_EXPIRES` constant.
 - Add `AIFlags` and `TrainRunningCost` enums.
