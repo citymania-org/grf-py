@@ -516,7 +516,7 @@ class RoadVehicle(Vehicle):
         # TODO doesn't show exact mph in the game
         return RoadVehicle.Speed((speed * 16 + 4) // 5)
 
-    def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, livery_refits=None, callbacks=None, purchase_sprite=None, **props):
+    def __init__(self, *, id, name, max_speed, length=None, liveries=None, additional_text=None, livery_refits=None, callbacks=None, purchase_sprite=None, **props):
         super().__init__(grf.RV, callbacks, purchase_sprite=purchase_sprite)
         for l in liveries or []:
             if 'name' not in l:
@@ -526,6 +526,13 @@ class RoadVehicle(Vehicle):
                 raise ValueError(f'RoadVehicle livery {l["name"]} is missing sprites')
             if len(sprites) != 8:
                 raise ValueError(f'RoadVehicle livery expects 8 sprites, found {len(sprites)}')
+
+        if length is not None:
+            if not 1 <= length <= 8:
+                raise ValueError('Invalid length (expected 1..8)')
+
+            if 'shorten_by' in props:
+                raise ValueError('Length and shorten_by properties are mutually exclusive')
 
         self.id = id
         self.name = name
@@ -537,6 +544,9 @@ class RoadVehicle(Vehicle):
         self.additional_text = additional_text
         self.liveries = liveries
         self._props = props
+
+        if length is not None:
+            self._props['shorten_by'] = 8 - length
 
     def _set_callbacks(self, g):
         super()._set_callbacks(g)

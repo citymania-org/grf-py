@@ -41,7 +41,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Trains
 | 0x1E | cb_flags | int(0-255) | Callback flags bit mask, see below  yes |
 | 0x1F | tractive_effort_coefficient | int(0-255) | Coefficient of tractive effort |
 | 0x20 | air_drag_coefficient | int(0-255) | Coefficient of air drag |
-| 0x21 | shorten_by | int(0-255) | Make vehicle shorter by this amount |
+| 0x21 | shorten_by | int(0-7) | Make vehicle shorter by this amount |
 | 0x22 | visual_effect_and_powered | int(0-255) | Set visual effect type (steam/smoke/sparks) as well as position |
 | 0x23 | extra_weight_per_wagon | int(0-255) | Set how much weight is added by making wagons powered (i.e. weight of engine) |
 | 0x24 | weight_high | int(0-255) | High byte of vehicle weight, weight will be prop.24*256+prop.16 |
@@ -89,7 +89,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/RoadVehicles
 | 0x20 | sort_purchase_list | int(0-65535) | Sort the purchase list(action) |
 | 0x21 | visual_effect | int(0-255) | Visual effect |
 | 0x22 | cargo_age_period | int(0-65535) | Custom cargo ageing period |
-| 0x23 | shorten_by | int(0-255) | Make vehicle shorter, see train property 0x21 |
+| 0x23 | shorten_by | int(0-7) | Make vehicle shorter, see train property 0x21 |
 | 0x24 | cargo_allow_refit | bytes | List of always refittable cargo types, see train property 0x2C |
 | 0x25 | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 0x2D |
 | 0x26 | variant_group | int(0-65535) | Vehicle variant group |

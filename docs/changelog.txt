@@ -28,6 +28,8 @@
 - lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Add `length` property to a `Train` constructor, auto-articulate if > 8 (up to 24).
+- lib: Add `length` property to `RoadVehicle` constructor (1..8).
+- lib: Add `purchase_sprite` property to `Train` and `RoadVehicle`.
 - lib: Allow to use length > 8 (but <= 24) for articulated parts.
 - lib: Allow specifying property callbacks individually in `CallbackManager`.
 - lib: Add `SetPurchaseOrder` sprite generator.

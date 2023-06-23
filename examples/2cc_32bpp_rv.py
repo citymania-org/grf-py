@@ -41,6 +41,7 @@ RoadVehicle(
     cargo_capacity=90,
     default_cargo_type=0,
     cost_factor=246,
+    length=8,
     misc_flags=grf.RVFlags.USE_2CC,
 )
 
