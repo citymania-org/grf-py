@@ -2,6 +2,7 @@
 0.2.2
 ---------
 
+- Change license to GPL v2+ (same as nml) instead of v3 to allow reusing v2 code/resources.
 - Fix graphics sprite composition.
 - Fix Train weight Action 0 properties (low and high bytes).
 

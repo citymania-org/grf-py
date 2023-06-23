@@ -458,9 +458,10 @@ class Vehicle(grf.SpriteGenerator):
         SYNC_VARIANT_EXCLUSIVE_PREVIEW = 0x04
         SYNC_VARIANT_RELIABILITY = 0x08
 
-    def __init__(self, feature, callbacks):
+    def __init__(self, feature, callbacks, purchase_sprite=None):
         self.feature = feature
         self.callbacks = CallbackManager(Callback.Vehicle, callbacks)
+        self.purchase_sprite = purchase_sprite
 
     def _gen_name_sprites(self, vehicle_id):
         if isinstance(self.name, grf.StringRef):
@@ -472,6 +473,18 @@ class Vehicle(grf.SpriteGenerator):
                 is_generic_offset=False,
                 strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
             )]
+
+    def _gen_purchase_sprites(self):
+        res = []
+
+        if self.purchase_sprite:
+            # Make sure purchase layouts go before main action 1
+            # TODO make Action1 referenceable and move to _set_callbacks
+            res.append(grf.SpriteSet(feature=self.feature, count=1))
+            res.append(self.purchase_sprite)
+            res.append(layout := grf.GenericSpriteLayout(ent1=(0,), ent2=(0,)))
+            self.callbacks.purchase_graphics = layout
+        return res
 
     def _set_callbacks(self, g):
         if self.additional_text:
@@ -503,8 +516,8 @@ class RoadVehicle(Vehicle):
         # TODO doesn't show exact mph in the game
         return RoadVehicle.Speed((speed * 16 + 4) // 5)
 
-    def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, livery_refits=None, callbacks=None, **props):
-        super().__init__(grf.RV, callbacks)
+    def __init__(self, *, id, name, max_speed, liveries=None, additional_text=None, livery_refits=None, callbacks=None, purchase_sprite=None, **props):
+        super().__init__(grf.RV, callbacks, purchase_sprite=purchase_sprite)
         for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'RoadVehicle livery is missing the name')
@@ -539,6 +552,8 @@ class RoadVehicle(Vehicle):
             )
 
     def get_sprites(self, g):
+        res = self._gen_purchase_sprites()
+
         if self.liveries:
             layouts = []
             for i, l in enumerate(self.liveries):
@@ -570,7 +585,6 @@ class RoadVehicle(Vehicle):
         if self.callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
 
-        res = []
         res.extend(self._gen_name_sprites(self.id))
 
         res.append(definition := grf.Define(
@@ -631,8 +645,9 @@ class Train(Vehicle):
     def visual_effect_and_powered(effect, *, position=0, wagon_power=True):
         return effect | position | wagon_power * 0x7f
 
-    def __init__(self, *, id, name, max_speed, weight, length=None, liveries=None, additional_text=None, sound_effects=None, callbacks=None, **props):
-        super().__init__(grf.TRAIN, callbacks)
+    def __init__(self, *, id, name, max_speed, weight, length=None, liveries=None, additional_text=None, sound_effects=None, callbacks=None, purchase_sprite=None, **props):
+        super().__init__(grf.TRAIN, callbacks, purchase_sprite=purchase_sprite)
+
         for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'Train livery is missing the name')
@@ -809,7 +824,8 @@ class Train(Vehicle):
         if self._props.get('is_dual_headed') and self._articulated_parts:
             raise RuntimeError('Articulated parts are not allowed for dual-headed engines (vehicle id {self.id})')
 
-        res = []
+        res = self._gen_purchase_sprites()
+
         if self._head_liveries:
             sprites, self.callbacks.graphics = self._make_graphics(self._head_liveries)
             res.extend(sprites)
