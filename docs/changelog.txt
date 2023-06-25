@@ -25,6 +25,7 @@
 - Use setuptools-git-versioning to manage versions.
 - Update documentation.
 
+- lib: Rename `kmhishph` method to `kmhish` in `Train` and `RoadVehicle`.
 - lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Add `length` property to a `Train` constructor, auto-articulate if > 8 (up to 24).

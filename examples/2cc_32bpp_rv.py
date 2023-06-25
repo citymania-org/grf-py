@@ -33,7 +33,7 @@ RoadVehicle(
                                                                      mask=(rv_mask_png, 0, 0))),
     }],
     introduction_date=date(1900, 1, 1),
-    max_speed=RoadVehicle.kmhishph(200),
+    max_speed=RoadVehicle.kmhish(200),
     vehicle_life=8,
     model_life=144,
     climates_available=grf.ALL_CLIMATES,

@@ -508,7 +508,7 @@ class RoadVehicle(Vehicle):
             return f'RoadVehicle.Speed({self.precise_value})'
 
     @staticmethod
-    def kmhishph(speed):
+    def kmhish(speed):
         return RoadVehicle.Speed(speed * 2)
 
     @staticmethod
@@ -635,7 +635,7 @@ class Train(Vehicle):
         MAGLEV = 0x32
 
     @staticmethod
-    def kmhishph(speed):
+    def kmhish(speed):
         return speed
 
     @staticmethod

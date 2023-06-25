@@ -42,7 +42,7 @@ Train(
     }],
     sound_effects=diesel_effects,
     engine_class=Train.EngineClass.DIESEL,
-    max_speed=Train.kmhishph(104),
+    max_speed=Train.kmhish(104),
     power=255,
     introduction_date=date(1900, 1, 1),
     weight=20,
