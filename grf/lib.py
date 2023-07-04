@@ -489,6 +489,7 @@ class Vehicle(grf.SpriteGenerator):
     def _set_callbacks(self, g):
         if self.additional_text:
             self.callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
+        return []
 
 
 class RoadVehicle(Vehicle):
@@ -549,7 +550,7 @@ class RoadVehicle(Vehicle):
             self._props['shorten_by'] = 8 - length
 
     def _set_callbacks(self, g):
-        super()._set_callbacks(g)
+        res = super()._set_callbacks(g)
 
         if self.max_speed.precise_value >= 0x400:
             # TODO only set speed property
@@ -560,6 +561,8 @@ class RoadVehicle(Vehicle):
                 default=self.callbacks.graphics,
                 code='extra_callback_info1_byte',
             )
+
+        return res
 
     def get_sprites(self, g):
         res = self._gen_purchase_sprites()
@@ -582,7 +585,7 @@ class RoadVehicle(Vehicle):
             else:
                 self.callbacks.graphics = layouts[0]
 
-        self._set_callbacks(g)
+        res.extend(self._set_callbacks(g))
 
         # Liveries
         if len(self.liveries) > 1:
@@ -803,7 +806,7 @@ class Train(Vehicle):
         )
 
     def _set_callbacks(self, g):
-        super()._set_callbacks(g)
+        res = super()._set_callbacks(g)
         if self.liveries and len(self.liveries) > 1:
             # Liveries
             self.callbacks.cargo_subtype = grf.Switch(
@@ -825,6 +828,7 @@ class Train(Vehicle):
                 default=0x7fff,
                 code='extra_callback_info1_byte',
             )
+        return res
 
     def _set_articulated_part_callbacks(self, g, position, callbacks):
         pass
@@ -840,7 +844,7 @@ class Train(Vehicle):
             sprites, self.callbacks.graphics = self._make_graphics(self._head_liveries)
             res.extend(sprites)
 
-        self._set_callbacks(g)
+        res.extend(self._set_callbacks(g))
 
         if self.callbacks.get_flags():
             self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()

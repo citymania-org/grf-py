@@ -26,6 +26,7 @@
 - Update documentation.
 
 - lib: Rename `kmhishph` method to `kmhish` in `Train` and `RoadVehicle`.
+- lib: Make `_set_callbacks` return list of sprites to allow adding graphics.
 - lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Add `length` property to a `Train` constructor, auto-articulate if > 8 (up to 24).
