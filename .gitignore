@@ -133,3 +133,6 @@ grf-py.sublime-workspace
 # ply generated files
 parser.out
 parsetab.py
+
+# Ignore any compiled grfs (like examples)
+*.grf
