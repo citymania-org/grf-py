@@ -97,6 +97,14 @@ def hex_str(s):
     return ':'.join('{:02x}'.format(ord(c)) for c in s)
 
 
+def get_constant(value, error):
+    if isinstance(value, int):
+        return value
+    if isinstance(value, Value):
+        return value.value
+    raise RuntimeError(error)
+
+
 class Node:
     def __init__(self):
         pass
@@ -296,9 +304,8 @@ class GenericVar(Node):
         assert and_mask <= 0xffffffff, and_mask
         if self.param is not None:
             # TODO dynamic param (var 7B)
-            if not isinstance(self.param, int):
-                self.param = 0
-            return True, struct.pack('<BBBI', self.var, self.param, 0x20 | shift, and_mask)
+            param = get_constant(self.param, 'Parameter should be a constant')
+            return True, struct.pack('<BBBI', self.var, param, 0x20 | shift, and_mask)
         else:
             return True, struct.pack('<BBI', self.var, 0x20 | shift, and_mask)
 
@@ -310,11 +317,7 @@ class Temp(Node):
         self.register = register
 
     def get_index(self):
-        if isinstance(self.register, int):
-            return self.register
-        if isinstance(self.register, Value):
-            return self.register.value
-        raise RuntimeError('Register number should be a simple value, not expression')
+        return get_constant(self.register, 'Register number should be a simple value, not expression')
 
     def format(self, parent_priority=0):
         if isinstance(self.register, int):
