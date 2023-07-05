@@ -4,7 +4,7 @@ import struct
 import pprint
 from collections.abc import Iterable
 
-from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes, read_dword, days_to_date
+from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes, read_dword, read_word, days_to_date
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND
@@ -336,6 +336,7 @@ ACTION0_TRAIN_PROPS = {
     0x2E: ('curve_speed_mod', 'W'),  # speed modifier    yes
     0x2F: ('variant_group', IDProperty()),  # Vehicle variant group
     0x30: ('extra_flags', 'D'),  # extra flags
+    0x31: ('extra_cb_flags', 'B'),  # extra callback flags
 }
 
 ACTION0_RV_PROPS = {
@@ -370,6 +371,7 @@ ACTION0_RV_PROPS = {
     0x25: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D     yes
     0x26: ('variant_group', IDProperty()),  # Vehicle variant group
     0x27: ('extra_flags', 'D'),  # extra flags
+    0x28: ('extra_cb_flags', 'B'),  # extra callback flags
 }
 
 ACTION0_SHIP_PROPS = {
@@ -399,6 +401,7 @@ ACTION0_SHIP_PROPS = {
     0x1F: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
     0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
+    0x22: ('extra_cb_flags', 'B'),  # extra callback flags
 }
 
 ACTION0_AIRCRAFT_PROPS = {
@@ -428,6 +431,7 @@ ACTION0_AIRCRAFT_PROPS = {
     0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
     0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
+    0x22: ('extra_cb_flags', 'B'),  # extra callback flags
 }
 
 

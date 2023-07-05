@@ -34,6 +34,7 @@
 - lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Fix incorect livery for `Train` wagons.
+- lib: Add `VehicleGroup` class to define vehicle groups in `SetPurchaseOrder`.
 - lib: Add `length` property to a `Train` constructor, auto-articulate if > 8 (up to 24).
 - lib: Add `length` property to `RoadVehicle` constructor (1..8).
 - lib: Add `purchase_sprite` property to `Train` and `RoadVehicle`.

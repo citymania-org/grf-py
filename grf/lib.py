@@ -1,3 +1,4 @@
+from collections import defaultdict
 from collections.abc import Iterable
 
 import grf
@@ -142,6 +143,7 @@ class Callback:
         SOUND_EFFECT = 0x33  # TODO some other also use it
         AUTOREPLACE_SELECTION = 0x34
         CHANGE_PROPERTIES = 0x36
+        NAME = 0x161
 
         # TODO Train only
         class Properties:
@@ -301,7 +303,7 @@ class CallbackManager:
             raise RuntimeError(f'Callback {name} is not defined')
         del self._callbacks[cb_id]
 
-    def get_flags(self):
+    def set_flag_props(self, props):
         # TODO checeked only for vehicles
         FLAGS = {
             Callback.Vehicle.VISUAL_EFFECT_AND_POWERED: 0x1,
@@ -312,11 +314,15 @@ class CallbackManager:
             Callback.Vehicle.CARGO_SUBTYPE: 0x20,
             Callback.Vehicle.COLOUR_MAPPING: 0x40,
             Callback.Vehicle.SOUND_EFFECT: 0x80,
+            Callback.Vehicle.NAME: 0x100,
         }
         res = 0
         for k in self._callbacks.keys():
             res |= FLAGS.get(k, 0)
-        return res
+        if res & 0xFF > 0:
+            props['cb_flags'] = props.get('cb_flags', 0) | (res & 0xFF)
+        if res & 0xFF00 > 0:
+            props['extra_cb_flags'] = props.get('extra_cb_flags', 0) | (res >> 8)
 
     def make_switch(self):
         if self.graphics is None:
@@ -337,6 +343,7 @@ class CallbackManager:
             Callback.Vehicle.ARTICULATED_PART: True,
             Callback.Vehicle.CHANGE_PROPERTIES: True,
             Callback.Vehicle.COLOUR_MAPPING: True,
+            Callback.Vehicle.NAME: False,
         }
         callbacks = {}
         purchase_callbacks = {}
@@ -596,8 +603,7 @@ class RoadVehicle(Vehicle):
                 code='cargo_subtype',
             )
 
-        if self.callbacks.get_flags():
-            self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
+        self.callbacks.set_flag_props(self._props)
 
         res.extend(self._gen_name_sprites(self.id))
 
@@ -863,8 +869,7 @@ class Train(Vehicle):
 
         res.extend(self._set_callbacks(g))
 
-        if self.callbacks.get_flags():
-            self._props['cb_flags'] = self._props.get('cb_flags', 0) | self.callbacks.get_flags()
+        self.callbacks.set_flag_props(self._props)
 
         res.extend(self._gen_name_sprites(self._main_part_id))
 
@@ -892,8 +897,7 @@ class Train(Vehicle):
                 sprites, callbacks.graphics = self._make_graphics(liveries, position)
                 res.extend(sprites)
 
-            if callbacks.get_flags():
-                props['cb_flags'] = props.get('cb_flags', 0) | callbacks.get_flags()
+            callbacks.set_flag_props(props)
 
             res.append(definition := grf.Define(
                 feature=grf.TRAIN,
@@ -1022,20 +1026,75 @@ class BaseCosts(grf.SpriteGenerator):
         ]
 
 
+class VariantGroup:
+    def __init__(self, name, first, *items):
+        self.name = name
+        self.first = first
+        self.items = items
+
+
 class SetPurchaseOrder(grf.SpriteGenerator):
     def __init__(self, *order):
         super().__init__()
-        self.order = order
+        self.flat_order = []
+        self._variant_group = {}
+        self._variant_callbacks = defaultdict(dict)
+        self._variant_callbacks_set = False
+
+        def process(order, group, level, callbacks):
+            for e in order:
+                if isinstance(e, VariantGroup):
+                    self.flat_order.append(e.first)
+                    if group is not None:
+                        self._variant_group[e.first] = group
+                    if e.name is not None:
+                        group_callbacks = {
+                            **callbacks,
+                            level: e.name,
+                        }
+
+                    if group_callbacks:
+                        self._variant_callbacks[e.first] = group_callbacks
+
+                    process(e.items, e.first, level + 1, group_callbacks)
+                else:
+                    self.flat_order.append(e)
+                    if group is not None:
+                        self._variant_group[e] = group
+                    if callbacks:
+                        self._variant_callbacks[e] = callbacks
+
+        process(order, None, 0, {})
+
+    def set_variant_callbacks(self, g):
+        for x, names in self._variant_callbacks.items():
+            c = x.callbacks.name = grf.Switch(
+                code='extra_callback_info1',
+                ranges = {
+                    0x20 | (level << 8): g.strings.add(name).get_global_id()
+                    for level, name in names.items()
+                },
+                default=0x400,
+            )
+        self._variant_callbacks_set = True
+        return self
 
     def get_sprites(self, g):
+        if not self._variant_callbacks_set:
+            raise RuntimeError(
+                'SetPurchaseOrder.set_variant_callbacks needs to be called before the'
+                ' sprite generation when using custom variant group names.')
         prev = None
         res = []
-        for v in reversed(self.order):
+        for v in reversed(self.flat_order):
             if prev is not None:
+                variant_props = {}
+                if v in self._variant_group:
+                    variant_props['variant_group'] = self._variant_group[v]
                 res.append(grf.Define(
                     feature=grf.TRAIN,
                     id=v.id,
-                    props={'sort_purchase_list': prev.id}
+                    props={'sort_purchase_list': prev.id, **variant_props}
                 ))
             prev = v
         return res

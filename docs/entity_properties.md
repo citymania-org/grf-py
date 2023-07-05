@@ -57,6 +57,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Trains
 | 0x2E | curve_speed_mod | int(0-65535) | speed modifier |
 | 0x2F | variant_group | IDProperty | Vehicle variant group |
 | 0x30 | extra_flags | int(0-4294967295) | extra flags |
+| 0x30 | extra_cb_flags | int(0-255) | extra callback flags |
 
 
 ## Road vehicles (RV, 0x01)
@@ -94,6 +95,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/RoadVehicles
 | 0x25 | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 0x2D |
 | 0x26 | variant_group | IDProperty | Vehicle variant group |
 | 0x27 | extra_flags | int(0-4294967295) | Extra flags |
+| 0x28 | extra_cb_flags | int(0-255) | extra callback flags |
 
 
 ## Ships (SHIP, 0x02)
@@ -126,6 +128,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Ships
 | 0x1F | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 0x2D |
 | 0x20 | variant_group | IDProperty | Vehicle variant group |
 | 0x21 | extra_flags | int(0-4294967295) | Extra flags |
+| 0x22 | extra_cb_flags | int(0-255) | extra callback flags |
 
 
 # Aircraft (AIRCRAFT, 0x03)
@@ -158,6 +161,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 | 0x1F | range | int(0-65535) | Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited |
 | 0x20 | variant_group | IDProperty | Vehicle variant group |
 | 0x21 | extra_flags | int(0-4294967295) | extra flags |
+| 0x22 | extra_cb_flags | int(0-255) | extra callback flags |
 
 
 # Stations (STATION, 0x04)
