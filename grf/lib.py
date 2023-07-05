@@ -836,7 +836,7 @@ class Train(Vehicle):
 
 
     def _gen_purchase_sprites(self):
-        if self.purchase_sprite is None and self.length > 8 and self.liveries is not None:
+        if self.purchase_sprite is None and (self.length or 8) > 8 and self.liveries is not None:
             # First part has no graphics so set purchase sprite
             self.purchase_sprite = self.liveries[0]['sprites'][6]
         return super()._gen_purchase_sprites()
