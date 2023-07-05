@@ -807,6 +807,7 @@ class Train(Vehicle):
 
     def _set_callbacks(self, g):
         res = super()._set_callbacks(g)
+
         if self.liveries and len(self.liveries) > 1:
             # Liveries
             self.callbacks.cargo_subtype = grf.Switch(
@@ -832,6 +833,14 @@ class Train(Vehicle):
 
     def _set_articulated_part_callbacks(self, g, position, callbacks):
         pass
+
+
+    def _gen_purchase_sprites(self):
+        if self.purchase_sprite is None and self.length > 8 and self.liveries is not None:
+            # First part has no graphics so set purchase sprite
+            self.purchase_sprite = self.liveries[0]['sprites'][6]
+        return super()._gen_purchase_sprites()
+
 
     def get_sprites(self, g):
         # Check in case property was changed after add_articulated
