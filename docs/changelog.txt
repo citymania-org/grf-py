@@ -7,6 +7,7 @@
 - Fix Train weight Action 0 properties (low and high bytes).
 - Fix compilation of generic var parameter in Action 2.
 - Fix `var(...)` call in `Switch` code not accepting `param` value without parentheses.
+- Fix default purchase sprite for auto-articulated trains.
 
 - Use `AlternativeSprites` instead of sprite tuples.
 - Add Action0 properties for road types.
