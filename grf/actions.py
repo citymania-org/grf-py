@@ -29,6 +29,39 @@ class Ref:
     def __int__(self):
         return self.value
 
+    def __eq__(self, ref):
+        return (
+            isinstance(ref, Ref) and
+            self.value == ref.value and
+            self.is_callback == ref.is_callback and
+            self.ref_id == ref.ref_id
+        )
+
+
+def get_ref_id(ref_obj):
+    if isinstance(ref_obj, Ref):
+        return ref_obj.value
+    if isinstance(ref_obj, int):
+        return ref_obj | 0x8000
+    if isinstance(ref_obj, SoundSprite):
+        return ref_obj.id | 0x8000
+    return ref_obj.ref_id
+
+
+def ref_eq(a, b):
+    return get_ref_id(a) == get_ref_id(b)
+
+
+def ref_dict_eq(a, b):
+    if len(a) != len(b):
+        return False
+    for k, v in a.items():
+        if k not in b:
+            return False
+        if get_ref_id(v) != get_ref_id(b[k]):
+            return False
+    return True
+
 
 class CB(Ref):
     def __init__(self, value):
@@ -48,6 +81,14 @@ class Range:
 
     def __repr__(self):
         return f'Range({self.low}, {self.high}, {self.ref})'
+
+    def __eq__(self, r):
+        return (
+            isinstance(r, Range) and
+            get_ref_id(self.ref) == get_ref_id(r.ref) and
+            self.low == r.low and
+            self.high == r.high
+        )
 
 
 def _py_dict(data, key_func, value_func, indent=12):
@@ -101,16 +142,6 @@ class ReferencingAction:
         if isinstance(ref, ReferenceableAction):
             return ref.py_ref()
         return repr(ref)
-
-
-def get_ref_id(ref_obj):
-    if isinstance(ref_obj, Ref):
-        return ref_obj.value
-    if isinstance(ref_obj, int):
-        return ref_obj | 0x8000
-    if isinstance(ref_obj, SoundSprite):
-        return ref_obj.id | 0x8000
-    return ref_obj.ref_id
 
 
 class SpriteRef:
@@ -1111,6 +1142,15 @@ class DefineMultiple(LazyBaseSprite):
         )
         '''
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, DefineMultiple) and
+            self.feature == action.feature and
+            self.first_id == action.first_id and
+            self.count == action.count and
+            self.props == action.props
+        )
+
 
 class Define(DefineMultiple):
     def __init__(self, *, feature, id, props):
@@ -1386,6 +1426,17 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
             default={default_str},
         )'''
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, Switch) and
+            self.feature == action.feature and
+            self.ref_id == action.ref_id and
+            self.related_scope == action.related_scope and
+            self.code == action.code and
+            self._ranges == action._ranges and
+            ref_eq(self.default, action.default)
+        )
+
 
 class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
     def __init__(self, *, scope, triggers, cmp_all, lowest_bit, groups, count=None, feature=None, ref_id=None):
@@ -1537,6 +1588,16 @@ class Action3(LazyBaseSprite, ReferencingAction):
             default={self._format_ref(context, self.default)},
         )'''
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, Action3) and
+            self.feature == action.feature and
+            self.ids == action.ids and
+            ref_dict_eq(self.maps, action.maps) and
+            ref_eq(self.default, action.default) and
+            self.wagon_override == action.wagon_override
+        )
+
 
 class Map(Action3):
     def __init__(self, definition, maps, default):
@@ -1610,6 +1671,15 @@ class DefineStrings(BaseSprite):
             strings=''' + pformat(self.strings, indent_first=0, indent=10 + 8) + '''
         )'''
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, DefineStrings) and
+            self.feature == action.feature and
+            self.lang == action.lang and
+            self.offset == action.offset and
+            self.is_generic_offset == action.is_generic_offset and
+            self.strings == action.strings
+        )
 
 # Action 5
 

@@ -272,9 +272,10 @@ class BaseNewGRF:
                     if isinstance(r, Ref):
                         if r.is_callback:
                             continue
-                        r = refids.get(r.ref_id)
-                        if r is None:
-                            raise RuntimeError(f'Unresolved direct reference {r} in action {s}')
+                        robj = refids.get(r.ref_id)
+                        if robj is None:
+                            raise RuntimeError(f'Unresolved direct reference {r} in action {s.py(None)}')
+                        r = robj
                         ref_count[id(r)] += 1
                         continue
 
