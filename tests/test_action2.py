@@ -22,7 +22,7 @@ def test_switch_var_param():
 			ref_id=0,
 			ranges={1: 0},
 			default=0,
-			code='var(0x62, param=0xAA, shift=0x1F, and=0xAD123456)',
+			code='var(0x62, param=(0xAA), shift=0x1F, and=0xAD123456)',
 		),
 		'02:00:00:89:62:aa:1f:56:34:12:ad:01:00:80:01:00:00:00:01:00:00:00:00:80',
 	)
@@ -53,6 +53,11 @@ def test_code_just_number():
 def test_code_var_param():
 	check_code(
 		grf.TRAIN,
-		'var(0x62, param=0, shift=0x1F, and=0xAD123456)',
-		[(True, '62:00:3f:56:34:12:ad')],
+		'var(0x62, param=0xAA, shift=0x1F, and=0xAD123456)',
+		[(True, '62:aa:3f:56:34:12:ad')],
+	)
+	check_code(
+		grf.TRAIN,
+		'var(0x62, param=(0xAA), shift=0x1F, and=0xAD123456)',
+		[(True, '62:aa:3f:56:34:12:ad')],
 	)
