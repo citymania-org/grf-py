@@ -576,6 +576,7 @@ class RoadVehicle(Vehicle):
                 ))
 
             if len(self.liveries) > 1:
+
                 self.callbacks.graphics = grf.Switch(
                     related_scope=True,
                     ranges=dict(enumerate(layouts)),
@@ -780,7 +781,7 @@ class Train(Vehicle):
 
         return self
 
-    def _make_graphics(self, liveries):
+    def _make_graphics(self, liveries, position):
         assert liveries
         res = [grf.Action1(
             feature=grf.TRAIN,
@@ -798,11 +799,18 @@ class Train(Vehicle):
         if len(liveries) <= 1:
             return res, layouts[0]
 
+        subtype_code = 'cargo_subtype'
+        if position > 0:
+            subtype_code=f'''
+                TEMP[0x10F]=-{position}
+                var(0x61, param=0xF2, shift=0, and=0xFF)
+            ''',
+
         return res, grf.Switch(
-            related_scope=True,
+            related_scope=False,
             ranges=dict(enumerate(layouts)),
             default=layouts[0],
-            code='cargo_subtype',
+            code=subtype_code,
         )
 
     def _set_callbacks(self, g):
@@ -850,7 +858,7 @@ class Train(Vehicle):
         res = self._gen_purchase_sprites()
 
         if self._head_liveries:
-            sprites, self.callbacks.graphics = self._make_graphics(self._head_liveries)
+            sprites, self.callbacks.graphics = self._make_graphics(self._head_liveries, 0)
             res.extend(sprites)
 
         res.extend(self._set_callbacks(g))
@@ -881,7 +889,7 @@ class Train(Vehicle):
             self._set_articulated_part_callbacks(g, position, callbacks)
 
             if liveries:
-                sprites, callbacks.graphics = self._make_graphics(liveries)
+                sprites, callbacks.graphics = self._make_graphics(liveries, position)
                 res.extend(sprites)
 
             if callbacks.get_flags():
