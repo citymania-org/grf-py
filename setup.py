@@ -9,7 +9,7 @@ install_requires = [
     'nml==0.6.1',
     'numpy==1.22.0',
     'Pillow==8.4.0',
-    'ply=3.11',
+    'ply==3.11',
     'spectra==0.0.11',
 ]
 
