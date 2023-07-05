@@ -55,7 +55,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Trains
 | 0x2C | cargo_allow_refit | bytes | refittable cargo types |
 | 0x2D | cargo_disallow_refit | bytes | refittable cargo types |
 | 0x2E | curve_speed_mod | int(0-65535) | speed modifier |
-| 0x2F | variant_group | int(0-65535) | Vehicle variant group |
+| 0x2F | variant_group | IDProperty | Vehicle variant group |
 | 0x30 | extra_flags | int(0-4294967295) | extra flags |
 
 
@@ -92,7 +92,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/RoadVehicles
 | 0x23 | shorten_by | int(0-7) | Make vehicle shorter, see train property 0x21 |
 | 0x24 | cargo_allow_refit | bytes | List of always refittable cargo types, see train property 0x2C |
 | 0x25 | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 0x2D |
-| 0x26 | variant_group | int(0-65535) | Vehicle variant group |
+| 0x26 | variant_group | IDProperty | Vehicle variant group |
 | 0x27 | extra_flags | int(0-4294967295) | Extra flags |
 
 
@@ -124,7 +124,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Ships
 | 0x1D | cargo_age_period | int(0-65535) | Custom cargo ageing period |
 | 0x1E | cargo_allow_refit | bytes | List of always refittable cargo types, see train property 0x2C |
 | 0x1F | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 0x2D |
-| 0x20 | variant_group | int(0-65535) | Vehicle variant group |
+| 0x20 | variant_group | IDProperty | Vehicle variant group |
 | 0x21 | extra_flags | int(0-4294967295) | Extra flags |
 
 
@@ -156,7 +156,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 | 0x1D | cargo_allow_refit | bytes | List of always refittable cargo types, see train property 2C |
 | 0x1E | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 2D |
 | 0x1F | range | int(0-65535) | Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited |
-| 0x20 | variant_group | int(0-65535) | Vehicle variant group |
+| 0x20 | variant_group | IDProperty | Vehicle variant group |
 | 0x21 | extra_flags | int(0-4294967295) | extra flags |
 
 

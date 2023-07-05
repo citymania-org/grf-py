@@ -215,6 +215,28 @@ class DateProperty(Property):
         return struct.pack('<I', value)
 
 
+class IDProperty(Property):
+    def _resolve(cls, value):
+        if isinstance(value, int):
+            return value
+        if hasattr(value, 'id'):
+            return value.id
+        return None
+
+    def validate(cls, value):
+        value = cls._resolve(value)
+        if not isinstance(value, int):
+            raise ValueError(f'int or object with id expected')
+
+    def read(cls, data, ofs):
+        value, ofs = read_word(data, ofs)
+        return value, ofs
+
+    def encode(cls, value):
+        value = cls._resolve(value)
+        return struct.pack('<H', value)
+
+
 class ClimateProperty(Property):
     def validate(cls, value):
         if not (0 <= value <= ALL_CLIMATES):
@@ -312,7 +334,7 @@ ACTION0_TRAIN_PROPS = {
     0x2C: ('cargo_allow_refit', 'n*B'), # refittable cargo types   yes
     0x2D: ('cargo_disallow_refit', 'n*B'),  # refittable cargo types    yes
     0x2E: ('curve_speed_mod', 'W'),  # speed modifier    yes
-    0x2F: ('variant_group', 'W'),  # Vehicle variant group
+    0x2F: ('variant_group', IDProperty()),  # Vehicle variant group
     0x30: ('extra_flags', 'D'),  # extra flags
 }
 
@@ -346,7 +368,7 @@ ACTION0_RV_PROPS = {
     0x23: ('shorten_by', 'B'),  # Make vehicle shorter, see train property 21     yes
     0x24: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C    yes
     0x25: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D     yes
-    0x26: ('variant_group', 'W'),  # Vehicle variant group
+    0x26: ('variant_group', IDProperty()),  # Vehicle variant group
     0x27: ('extra_flags', 'D'),  # extra flags
 }
 
@@ -375,7 +397,7 @@ ACTION0_SHIP_PROPS = {
     0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
     0x1E: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
     0x1F: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
-    0x20: ('variant_group', 'W'),  # Vehicle variant group
+    0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
 }
 
@@ -404,7 +426,7 @@ ACTION0_AIRCRAFT_PROPS = {
     0x1D: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
     0x1E: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
     0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
-    0x20: ('variant_group', 'W'),  # Vehicle variant group
+    0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
 }
 

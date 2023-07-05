@@ -27,6 +27,7 @@
 - Don't check for sprite type when adding it for now (messes up decompiling).
 - Use setuptools-git-versioning to manage versions.
 - Update documentation.
+- Allow to use objects with id as a variant_group value in Aciton0.
 
 - lib: Rename `kmhishph` method to `kmhish` in `Train` and `RoadVehicle`.
 - lib: Make `_set_callbacks` return list of sprites to allow adding graphics.
