@@ -1027,10 +1027,20 @@ class BaseCosts(grf.SpriteGenerator):
 
 
 class VariantGroup:
-    def __init__(self, name, first, *items):
+    def __init__(self, name, *items):
         self.name = name
-        self.first = first
+        if len(items) < 2:
+            raise ValueError('VariantGroup needs at least 2 vehicles')
+        if isinstance(items[0], VariantGroup):
+            raise ValueError('First element of a VariantGroup can''t be a VariantGroup')
         self.items = items
+
+    @property
+    def first(self):
+        x = self.items[0]
+        if isinstance(x, VariantGroup):
+            return x.first
+        return x
 
 
 class SetPurchaseOrder(grf.SpriteGenerator):
@@ -1044,30 +1054,31 @@ class SetPurchaseOrder(grf.SpriteGenerator):
         def process(order, group, level, callbacks):
             for e in order:
                 if isinstance(e, VariantGroup):
-                    self.flat_order.append(e.first)
-                    if group is not None:
-                        self._variant_group[e.first] = group
+                    x = e.first
                     if e.name is not None:
-                        group_callbacks = {
+                        cb = {
                             **callbacks,
                             level: e.name,
                         }
+                    else:
+                        cb = callbacks
 
-                    if group_callbacks:
-                        self._variant_callbacks[e.first] = group_callbacks
-
-                    process(e.items, e.first, level + 1, group_callbacks)
+                    process(e.items, x, level + 1, cb)
+                    if group is not None:
+                        self._variant_group[id(x)] = group
+                    else:
+                        self._variant_group.pop(id(x))
                 else:
                     self.flat_order.append(e)
                     if group is not None:
-                        self._variant_group[e] = group
+                        self._variant_group[id(e)] = group
                     if callbacks:
-                        self._variant_callbacks[e] = callbacks
+                        self._variant_callbacks[id(e)] = (e, callbacks)
 
         process(order, None, 0, {})
 
     def set_variant_callbacks(self, g):
-        for x, names in self._variant_callbacks.items():
+        for _, (x, names) in self._variant_callbacks.items():
             c = x.callbacks.name = grf.Switch(
                 code='extra_callback_info1',
                 ranges = {
@@ -1087,14 +1098,20 @@ class SetPurchaseOrder(grf.SpriteGenerator):
         prev = None
         res = []
         for v in reversed(self.flat_order):
+            variant_props = {}
+            sort_props = {}
             if prev is not None:
-                variant_props = {}
-                if v in self._variant_group:
-                    variant_props['variant_group'] = self._variant_group[v]
+                sort_props = {'sort_purchase_list': prev.id}
+
+            vg = self._variant_group.get(id(v))
+            if vg is not None:
+                variant_props = {'variant_group': vg}
+
+            if sort_props or variant_props:
                 res.append(grf.Define(
                     feature=grf.TRAIN,
                     id=v.id,
-                    props={'sort_purchase_list': prev.id, **variant_props}
+                    props={**sort_props, **variant_props}
                 ))
             prev = v
         return res

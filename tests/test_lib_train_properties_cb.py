@@ -1,26 +1,6 @@
-from nose.tools import eq_
+from grf import Train, TRAIN, Ref, DefineStrings, Define, Action3, Switch
 
-from grf import BaseNewGRF, Train, TRAIN, Ref, DefineStrings, Define, Action3, Switch
-
-
-def check_lib(obj, result):
-	g = BaseNewGRF()
-	g.add(obj)
-	sprites = g.generate_sprites()
-	sprites = g.resolve_refs(sprites)
-	sprites.extend(g.strings.get_actions())
-
-	for s in sprites:
-		print(s.py(None))
-	eq_(len(sprites), len(result))
-	for i, s, r in zip(range(len(sprites)), sprites, result):
-		if s != r:
-			print(f'Difference at position {i}')
-			print('Result:')
-			print(s.py(None))
-			print('Expected:')
-			print(r.py(None))
-			assert False
+from .common import check_lib
 
 
 def test_lib_train_basics():
