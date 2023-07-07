@@ -703,8 +703,8 @@ class Train(Vehicle):
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
             self._do_add_articulated_part(self.id, mid_shorten, self.liveries, {})
-            self._main_part_id = self.id + 1
-            self._do_add_articulated_part(self.id + 2, art_shorten, art_liveries, {})
+            self._main_part_id = f'__{self.id}_aa_head'
+            self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, {})
         else:
             self._main_part_id = self.id
             self._head_liveries = self.liveries
@@ -742,7 +742,7 @@ class Train(Vehicle):
     def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, length=None, **props):
         if not skip_props_check:
             # TODO support flipping (id + 0x4000)
-            if id >= 0x4000:
+            if isinstance(id, int) and id >= 0x4000:
                 raise ValueError(f'Articulated part id too big ({id} >= 0x4000)')
             if self._props.get('is_dual_headed'):
                 raise RuntimeError('Articulated parts are not allowed for dual-headed engines')
@@ -781,9 +781,9 @@ class Train(Vehicle):
         if art_shorten is None:
             self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
         else:
-            self._do_add_articulated_part(id + 1, art_shorten, art_liveries, {})
+            self._do_add_articulated_part(f'__{id}_aa_head', art_shorten, art_liveries, {})
             self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
-            self._do_add_articulated_part(id + 2, art_shorten, art_liveries, {})
+            self._do_add_articulated_part(f'__{id}_aa_tail', art_shorten, art_liveries, {})
 
         return self
 
@@ -839,7 +839,7 @@ class Train(Vehicle):
 
         if self._articulated_parts:
             self.callbacks.articulated_part = grf.Switch(
-                ranges={i + 1: ap[0] for i, ap in enumerate(self._articulated_parts)},
+                ranges={i + 1: g.resolve_id(self.feature, ap[0], articulated=True) for i, ap in enumerate(self._articulated_parts)},
                 default=0x7fff,
                 code='extra_callback_info1_byte',
             )
@@ -871,11 +871,12 @@ class Train(Vehicle):
 
         self.callbacks.set_flag_props(self._props)
 
-        res.extend(self._gen_name_sprites(self._main_part_id))
+        tid = g.resolve_id(self.feature, self._main_part_id)
+        res.extend(self._gen_name_sprites(tid))
 
         res.append(definition := grf.Define(
             feature=grf.TRAIN,
-            id=self._main_part_id,
+            id=tid,
             props={
                 'sprite_id': 0xfd,  # magic value for newgrf sprites
                 'max_speed': self.max_speed,
@@ -889,6 +890,7 @@ class Train(Vehicle):
 
         position = 0
         for apid, liveries, initial_callbacks, props in self._articulated_parts:
+            apid = g.resolve_id(self.feature, apid, articulated=True)
             position += 1
             callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
             self._set_articulated_part_callbacks(g, position, callbacks)
@@ -1050,6 +1052,7 @@ class SetPurchaseOrder(grf.SpriteGenerator):
         self._variant_group = {}
         self._variant_callbacks = defaultdict(dict)
         self._variant_callbacks_set = False
+        self._feature = None
 
         def process(order, group, level, callbacks):
             for e in order:
@@ -1074,8 +1077,12 @@ class SetPurchaseOrder(grf.SpriteGenerator):
                         self._variant_group[id(e)] = group
                     if callbacks:
                         self._variant_callbacks[id(e)] = (e, callbacks)
+                    if self._feature is None:
+                        self._feature = e.feature
 
         process(order, None, 0, {})
+        if self._feature is None:
+            raise ValueError('Could not detect feature.')
 
     def set_variant_callbacks(self, g):
         for _, (x, names) in self._variant_callbacks.items():
@@ -1109,8 +1116,8 @@ class SetPurchaseOrder(grf.SpriteGenerator):
 
             if sort_props or variant_props:
                 res.append(grf.Define(
-                    feature=grf.TRAIN,
-                    id=v.id,
+                    feature=self._feature,
+                    id=g.resolve_id(self._feature, v.id),
                     props={**sort_props, **variant_props}
                 ))
             prev = v
