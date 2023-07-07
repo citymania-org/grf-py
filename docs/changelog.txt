@@ -9,7 +9,7 @@
 - Fix `var(...)` call in `Switch` code not accepting `param` value without parentheses.
 - Fix default purchase sprite for auto-articulated trains.
 
-- Add `id_index_path` parameter to `BaseNewGRF` constructor and `reserve_ids` and `resolve_id` methods to manage auto-assigned (string) IDs.
+- Add `id_map_file` parameter to `BaseNewGRF` constructor and `reserve_ids` and `resolve_id` methods to manage auto-assigned (string) IDs.
 - Use `AlternativeSprites` instead of sprite tuples.
 - Add Action0 properties for road types.
 - Add `NewGRF.add_railtype` to add railtypes one-by-one.
@@ -32,6 +32,7 @@
 
 - lib: Rename `kmhishph` method to `kmhish` in `Train` and `RoadVehicle`.
 - lib: Make `_set_callbacks` return list of sprites to allow adding graphics.
+- lib: Make auto-articulated parts use auto-assigned(string) IDs.
 - lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Fix incorect livery for `Train` wagons.

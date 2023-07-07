@@ -26,10 +26,10 @@ def _do_check_lib(newgrf, obj, result):
 
 def check_lib(prepare, obj, result):
 	with tempfile.TemporaryDirectory() as tmp:
-		index_path = os.path.join(tmp, 'id_index.json')
-		with open(index_path, 'w') as f:
+		map_file = os.path.join(tmp, 'id_index.json')
+		with open(map_file, 'w') as f:
 			f.write('{"version": 1, "index": {}}')
-		newgrf = BaseNewGRF(id_index_path=index_path)
+		newgrf = BaseNewGRF(id_map_file=map_file)
 		if prepare is not None:
 			prepare(newgrf)
 		_do_check_lib(newgrf, obj, result)

@@ -152,19 +152,19 @@ class SpriteEncoder:
 
 
 class BaseNewGRF:
-    def __init__(self, *, id_index_path=None):
+    def __init__(self, *, id_map_file=None):
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
         self.strings = StringManager()
         self._sprite_encoder = SpriteEncoder()
-        self._id_index = IDIndex(id_index_path)
+        self._id_map = IDMap(id_map_file)
 
     def reserve_ids(self, feature, ids):
-        self._id_index.reserve_ids(feature, ids)
+        self._id_map.reserve_ids(feature, ids)
 
     def resolve_id(self, feature, value, *, articulated=False):
-        return self._id_index.resolve(feature, value, articulated=articulated)
+        return self._id_map.resolve(feature, value, articulated=articulated)
 
     def _add_sound(self, s):
         assert isinstance(s, SoundSprite)
@@ -461,7 +461,7 @@ class BaseNewGRF:
 
             f.write(b'\x00\x00\x00\x00')
 
-        self._id_index.save()
+        self._id_map.save()
         t.stop()
         self._sprite_encoder.print_time_report()
 
@@ -487,7 +487,7 @@ class BaseNewGRF:
         )
 
 
-class IDIndex:
+class IDMap:
     MIN_ID = 300
 
     def __init__(self, path=None):
@@ -500,9 +500,9 @@ class IDIndex:
 
     def _check_path(self):
         if self.path is None:
-            self.path = 'id_index.json'
+            self.path = 'id_map.json'
             print(f'WARNING: ID index is not configured, using default "{self.path}"')
-            print('Set id index path by passing id_index_path to NewGRF constructor.')
+            print('Set id index path by passing id_map_file to NewGRF constructor.')
 
     def _load(self):
         if self._loaded: return
@@ -572,8 +572,8 @@ class IDIndex:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_index_path=None):
-        super().__init__(id_index_path=id_index_path)
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_map_file=None):
+        super().__init__(id_map_file=id_map_file)
 
         if isinstance(grfid, str):
             grfid = grfid.encode('utf-8')
