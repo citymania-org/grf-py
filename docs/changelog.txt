@@ -48,6 +48,8 @@
 - lib: Allow to use `StringRef` as a livery name.
 - lib: Add `_set_articulated_part_callbacks` method to `Train`.
 - lib: Use assigned id for the first part when auto-articulating.
+- lib: Add `SetGlobalTrainDepotYOffset` sprite generator.
+- lib: Add `GlobalTrainMiscFlag` enum and `SetGlobalTrainMiscFlag` sprite generator.
 
 - vox: Fix vox house example.
 - vox: Experimental .vox renderer for trains.

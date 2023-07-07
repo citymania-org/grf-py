@@ -1120,3 +1120,48 @@ class SetPurchaseOrder(grf.SpriteGenerator):
                 ))
             prev = v
         return res
+
+
+class SetGlobalTrainDepotYOffset(grf.SpriteGenerator):
+    def __init__(self, offset):
+        self.offset = offset
+
+    def get_sprites(self, g):
+        return [
+            grf.ComputeParameters(
+                target=0x8e,
+                operation=0x00,
+                if_undefined=False,
+                source1=0xff,
+                source2=0xff,
+                value=self.offset,
+            )
+        ]
+
+
+class GlobalTrainMiscFlag:
+    DESERT_TREES_AND_FIELDS = 0
+    DESERT_PAVEMENT_AND_LIGHTS = 1
+    FIELDS_BOUNDING_BOX = 2
+    DEPOT_FULL_TRAIN_WIDTH = 3
+    AMBIENT_SOUND_CB = 4
+    THIRD_TRACK_CATENARIES = 5
+    SECOND_ROCKY_SET = 6
+    TTDPATCH_FLAG = 31
+
+
+class SetGlobalTrainMiscFlag(grf.SpriteGenerator):
+    def __init__(self, flag):
+        self.flag = flag
+
+    def get_sprites(self, g):
+        return [
+            grf.ComputeParameters(
+                target=0x9e,
+                operation=0x08,
+                if_undefined=False,
+                source1=0x9e,
+                source2=0xff,
+                value=1 << self.flag
+            )
+        ]

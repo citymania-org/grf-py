@@ -542,7 +542,7 @@ class IDMap:
             'version': 1,
             'index': index,
         }
-        jdata = json.dumps(data)
+        jdata = json.dumps(data, indent=4)
         with open(self.path, 'w') as f:
             f.write(jdata)
 
