@@ -536,13 +536,16 @@ class IDIndex:
     def save(self):
         self._check_path()
         index = {}
-        for (feature, name), value in self._index:
-            index.setdefault(feature, {})[name] = value
+        for (feature, name), value in self._index.items():
+            index.setdefault(feature.name, {})[name] = value
+        print('INDEX', index)
         data = {
             'version': 1,
             'index': index,
         }
-        json.dump(open(self.path, 'w'), data)
+        jdata = json.dumps(data)
+        with open(self.path, 'w') as f:
+            f.write(jdata)
 
     def reserve_ids(self, ids):
         self._manual_ids.update(ids)
@@ -564,7 +567,7 @@ class IDIndex:
             while (feature, i) in self._manual_ids:
                 i += 1
             self._next_id[feature] = i + 1
-            self._index[feature, i] = i
+            self._index[key] = i
             self._auto_ids.add((feature, i))
         return i
 
