@@ -1106,11 +1106,11 @@ class SetPurchaseOrder(grf.SpriteGenerator):
             variant_props = {}
             sort_props = {}
             if prev is not None:
-                sort_props = {'sort_purchase_list': prev.id}
+                sort_props = {'sort_purchase_list': g.resolve_id(self._feature, prev.id)}
 
             vg = self._variant_group.get(id(v))
             if vg is not None:
-                variant_props = {'variant_group': vg}
+                variant_props = {'variant_group': g.resolve_id(self._feature, vg.id)}
 
             if sort_props or variant_props:
                 res.append(grf.Define(
