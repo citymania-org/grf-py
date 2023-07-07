@@ -225,12 +225,20 @@ def read_extended_byte(data, offset):
     return data[offset + 1] | (data[offset + 2] << 8), offset + 3
 
 
+def encode_extended_byte(value):
+    if value < 255:
+        return struct.pack('<B', value)
+    else:
+        return struct.pack('<BH', 255, value)
+
+
 def read_word(data, offset):
     return data[offset] | (data[offset + 1] << 8), offset + 2
 
 
 def read_dword(data, offset):
     return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24), offset + 4
+
 
 
 class DataReader:

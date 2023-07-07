@@ -4,7 +4,8 @@ import struct
 import pprint
 from collections.abc import Iterable
 
-from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, DataReader, to_bytes, read_dword, read_word, days_to_date
+from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, \
+                    DataReader, to_bytes, read_dword, read_word, days_to_date, read_extended_byte, encode_extended_byte
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND
@@ -216,25 +217,34 @@ class DateProperty(Property):
 
 
 class IDProperty(Property):
-    def _resolve(cls, value):
+    def __init__(self, *, extended=False):
+        self.extended = extended
+
+    def _resolve(self, value):
         if isinstance(value, int):
             return value
         if hasattr(value, 'id'):
             return value.id
         return None
 
-    def validate(cls, value):
-        value = cls._resolve(value)
+    def validate(self, value):
+        value = self._resolve(value)
         if not isinstance(value, int):
             raise ValueError(f'int or object with id expected')
 
-    def read(cls, data, ofs):
-        value, ofs = read_word(data, ofs)
+    def read(self, data, ofs):
+        if self.extended:
+            value, ofs = read_extended_byte(data, ofs)
+        else:
+            value, ofs = read_word(data, ofs)
         return value, ofs
 
-    def encode(cls, value):
-        value = cls._resolve(value)
-        return struct.pack('<H', value)
+    def encode(self, value):
+        value = self._resolve(value)
+        if self.extended:
+            return encode_extended_byte(value)
+        else:
+            return struct.pack('<H', value)
 
 
 class ClimateProperty(Property):
@@ -313,7 +323,7 @@ ACTION0_TRAIN_PROPS = {
     0x17: ('cost_factor', 'B'),  # Cost factor     should be zero
     0x18: ('ai_engine_rank', 'B'),  # Engine rank for the AI (AI selects the highest-rank engine of those it can buy)     no
     0x19: ('engine_class', 'B'),  # Engine traction type (see below)    no
-    0x1A: ('sort_purchase_list', 'B*'), # Not a property, but an action: sort the purchase list.  no
+    0x1A: ('sort_purchase_list', IDProperty(extended=True)), # Not a property, but an action: sort the purchase list.  no
     0x1B: ('extra_power_per_wagon', 'W'),  # Power added by each wagon connected to this engine, see below   should be zero
     0x1C: ('refit_cost', 'B'),  # Refit cost, using 50% of the purchase price cost base   yes
     0x1D: ('refittable_cargo_types', 'D'),  # Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes     yes
@@ -363,7 +373,7 @@ ACTION0_RV_PROPS = {
     0x1D: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28    yes
     0x1E: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29    yes
     0x1F: ('introduction_date', DateProperty()),  # Long format introduction date   no
-    0x20: ('sort_purchase_list', 'B*'), # Sort the purchase list  no
+    0x20: ('sort_purchase_list', IDProperty(extended=True)), # Sort the purchase list  no
     0x21: ('visual_effect', 'B'),  # Visual effect   yes
     0x22: ('cargo_age_period', 'W'),  # Custom cargo ageing period  yes
     0x23: ('shorten_by', 'B'),  # Make vehicle shorter, see train property 21     yes
@@ -394,7 +404,7 @@ ACTION0_SHIP_PROPS = {
     0x18: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
     0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
-    0x1B: ('sort_purchase_list', 'B*'), # Sort the purchase list
+    0x1B: ('sort_purchase_list', IDProperty(extended=True)), # Sort the purchase list
     0x1C: ('visual_effect', 'B'),  # Visual effect
     0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
     0x1E: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
@@ -424,7 +434,7 @@ ACTION0_AIRCRAFT_PROPS = {
     0x18: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28
     0x19: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
     0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
-    0x1B: ('sort_purchase_list', 'B*'),  # Sort the purchase list
+    0x1B: ('sort_purchase_list', IDProperty(extended=True)),  # Sort the purchase list
     0x1C: ('cargo_age_period', 'W'),  # Custom cargo ageing period
     0x1D: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
     0x1E: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D

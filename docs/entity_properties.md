@@ -34,7 +34,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Trains
 | 0x17 | cost_factor | int(0-255) | Cost factor |
 | 0x18 | ai_engine_rank | int(0-255) | Engine rank for the AI (AI selects the highest-rank engine of those it can buy) |
 | 0x19 | engine_class | int(0-255) | Engine traction type |
-| 0x1A | sort_purchase_list | int(0-65535) | Not a property, but an action: sort the purchase list |
+| 0x1A | sort_purchase_list | IDProperty | Not a property, but an action: sort the purchase list |
 | 0x1B | extra_power_per_wagon | int(0-65535) | Power added by each wagon connected to this engine |
 | 0x1C | refit_cost | int(0-255) | Refit cost, using 50% of the purchase price cost base |
 | 0x1D | refittable_cargo_types | int(0-4294967295) | Bit mask of cargo types available for refitting, see column 2 (bit value) in CargoTypes |
@@ -87,7 +87,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/RoadVehicles
 | 0x1D | refittable_cargo_classes | int(0-65535) | Refittable cargo classes, see train prop. 0x28 |
 | 0x1E | non_refittable_cargo_classes | int(0-65535) | Non-refittable cargo classes, see train prop. 0x29 |
 | 0x1F | introduction_date | DateProperty | Long format introduction date |
-| 0x20 | sort_purchase_list | int(0-65535) | Sort the purchase list(action) |
+| 0x20 | sort_purchase_list | IDProperty | Sort the purchase list(action) |
 | 0x21 | visual_effect | int(0-255) | Visual effect |
 | 0x22 | cargo_age_period | int(0-65535) | Custom cargo ageing period |
 | 0x23 | shorten_by | int(0-7) | Make vehicle shorter, see train property 0x21 |
@@ -121,7 +121,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Ships
 | 0x18 | refit_classes | int(0-65535) | Refittable cargo classes, see train prop. 0x28 |
 | 0x19 | non_refit_classes | int(0-65535) | Non-refittable cargo classes, see train prop. 0x29 |
 | 0x1A | introduction_date | DateProperty | Long format introduction date |
-| 0x1B | sort_purchase_list | int(0-255) | Sort the purchase list |
+| 0x1B | sort_purchase_list | IDProperty | Sort the purchase list |
 | 0x1C | visual_effect | int(0-255) | Visual effect |
 | 0x1D | cargo_age_period | int(0-65535) | Custom cargo ageing period |
 | 0x1E | cargo_allow_refit | bytes | List of always refittable cargo types, see train property 0x2C |
@@ -154,7 +154,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 | 0x18 | refittable_cargo_classes | int(0-65535) | Refittable cargo classes, see train prop. 28 |
 | 0x19 | non_refittable_cargo_classes | int(0-65535) | Non-refittable cargo classes, see train prop. 29 |
 | 0x1A | introduction_date | DateProperty | Long format introduction date |
-| 0x1B | sort_purchase_list | int(0-255) | Sort the purchase list |
+| 0x1B | sort_purchase_list | IDProperty | Sort the purchase list |
 | 0x1C | cargo_age_period | int(0-65535) | Custom cargo ageing period |
 | 0x1D | cargo_allow_refit | bytes | List of always refittable cargo types, see train property 2C |
 | 0x1E | cargo_disallow_refit | bytes | List of never refittable cargo types, see train property 2D |
