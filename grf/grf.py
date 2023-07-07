@@ -521,9 +521,9 @@ class IDIndex:
         index = {}
         next_id = {}
         used_ids = set()
-        for feature_name, feature_index in data['index']:
+        for feature_name, feature_index in data['index'].items():
             feature = Feature.from_name(feature_name)
-            for name, fid in feature_index:
+            for name, fid in feature_index.items():
                 key = (feature, name)
                 index[key] = fid
                 used_ids.add(key)
@@ -538,7 +538,6 @@ class IDIndex:
         index = {}
         for (feature, name), value in self._index.items():
             index.setdefault(feature.name, {})[name] = value
-        print('INDEX', index)
         data = {
             'version': 1,
             'index': index,

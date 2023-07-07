@@ -175,7 +175,7 @@ class Feature(metaclass=FeatureMeta):
 
     @classmethod
     def from_name(cls, name):
-        return cls.FROM_NAME[name]
+        return cls._FROM_NAME[name]
 
     @classmethod
     def from_constant(cls, constant):
