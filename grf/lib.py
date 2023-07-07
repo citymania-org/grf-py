@@ -702,8 +702,8 @@ class Train(Vehicle):
             # TODO auto assign articulated part id
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
-            self._do_add_articulated_part(f'__{self.id}_aa_mid', mid_shorten, self.liveries, {})
-            self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, {})
+            self._do_add_articulated_part(f'__{self.id}_aa_mid', mid_shorten, self.liveries, self.liveries, {})
+            self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, self.liveries, {})
         else:
             self._head_liveries = self.liveries
             if mid_shorten is not None:
@@ -732,10 +732,10 @@ class Train(Vehicle):
 
         return 8 - central_length, 8 - articulated_length, articulated_liveries
 
-    def _do_add_articulated_part(self, id, shorten_by, liveries, props, callbacks=None):
+    def _do_add_articulated_part(self, id, shorten_by, liveries, mid_liveries, props, callbacks=None):
         if shorten_by is not None:
             props['shorten_by'] = shorten_by
-        self._articulated_parts.append((id, liveries, callbacks, props))
+        self._articulated_parts.append((id, liveries, mid_liveries, callbacks, props))
 
     def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, length=None, **props):
         if not skip_props_check:
@@ -777,11 +777,11 @@ class Train(Vehicle):
             length, props.get('shorten_by'), liveries)
 
         if art_shorten is None:
-            self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
+            self._do_add_articulated_part(id, mid_shorten, liveries, liveries, props, callbacks)
         else:
-            self._do_add_articulated_part(id, art_shorten, art_liveries, {})
-            self._do_add_articulated_part(f'__{id}_aa_mid', mid_shorten, liveries, props, callbacks)
-            self._do_add_articulated_part(f'__{id}_aa_tail', art_shorten, art_liveries, {})
+            self._do_add_articulated_part(id, art_shorten, art_liveries, liveries, {})
+            self._do_add_articulated_part(f'__{id}_aa_mid', mid_shorten, liveries, liveries, props, callbacks)
+            self._do_add_articulated_part(f'__{id}_aa_tail', art_shorten, art_liveries, liveries, {})
 
         return self
 
@@ -887,7 +887,7 @@ class Train(Vehicle):
         res.append(self.callbacks.make_map_action(definition))
 
         position = 0
-        for apid, liveries, initial_callbacks, props in self._articulated_parts:
+        for apid, liveries, _, initial_callbacks, props in self._articulated_parts:
             apid = g.resolve_id(self.feature, apid, articulated=True)
             position += 1
             callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
