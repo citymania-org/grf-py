@@ -702,11 +702,9 @@ class Train(Vehicle):
             # TODO auto assign articulated part id
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
-            self._do_add_articulated_part(self.id, mid_shorten, self.liveries, {})
-            self._main_part_id = f'__{self.id}_aa_head'
+            self._do_add_articulated_part(f'__{self.id}_aa_mid', mid_shorten, self.liveries, {})
             self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, {})
         else:
-            self._main_part_id = self.id
             self._head_liveries = self.liveries
             if mid_shorten is not None:
                 self._props['shorten_by'] = mid_shorten
@@ -781,8 +779,8 @@ class Train(Vehicle):
         if art_shorten is None:
             self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
         else:
-            self._do_add_articulated_part(f'__{id}_aa_head', art_shorten, art_liveries, {})
-            self._do_add_articulated_part(id, mid_shorten, liveries, props, callbacks)
+            self._do_add_articulated_part(id, art_shorten, art_liveries, {})
+            self._do_add_articulated_part(f'__{id}_aa_mid', mid_shorten, liveries, props, callbacks)
             self._do_add_articulated_part(f'__{id}_aa_tail', art_shorten, art_liveries, {})
 
         return self
@@ -871,7 +869,7 @@ class Train(Vehicle):
 
         self.callbacks.set_flag_props(self._props)
 
-        tid = g.resolve_id(self.feature, self._main_part_id)
+        tid = g.resolve_id(self.feature, self.id)
         res.extend(self._gen_name_sprites(tid))
 
         res.append(definition := grf.Define(

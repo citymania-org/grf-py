@@ -47,6 +47,7 @@
 - lib: Rename `POWERED_WAGONS` callback to `VISUAL_EFFECT_AND_POWERED`.
 - lib: Allow to use `StringRef` as a livery name.
 - lib: Add `_set_articulated_part_callbacks` method to `Train`.
+- lib: Use assigned id for the first part when auto-articulating.
 
 - vox: Fix vox house example.
 - vox: Experimental .vox renderer for trains.
