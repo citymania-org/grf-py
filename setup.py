@@ -6,9 +6,9 @@ from pathlib import Path
 root_path = Path(__file__).parent
 
 install_requires = [
-    'nml==0.6.1',
-    'numpy==1.22.0',
-    'Pillow==8.4.0',
+    'nml==0.7.4',
+    'numpy==1.25.0',
+    'Pillow==9.4.0',
     'ply==3.11',
     'spectra==0.0.11',
 ]
