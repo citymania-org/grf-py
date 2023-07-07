@@ -5,6 +5,7 @@ from .common import check_lib
 
 def test_lib_train_basics():
 	check_lib(
+		None,
 		Train(
 			id=0x1D1D,
 			name='Test Train',
@@ -48,6 +49,7 @@ def test_lib_train_basics():
 
 def test_lib_train_properties_cb():
 	check_lib(
+		None,
 		Train(
 			id=0x1D1D,
 			name='Test Train',
@@ -133,5 +135,3 @@ def test_lib_train_properties_cb():
 	        )
 		]
 	)
-
-

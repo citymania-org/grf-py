@@ -1,11 +1,11 @@
+import tempfile
+import os
+
 from nose.tools import eq_
 
 from grf import BaseNewGRF
 
-
-def check_lib(obj, result, *, newgrf=None):
-	if newgrf is None:
-		newgrf = BaseNewGRF()
+def _do_check_lib(newgrf, obj, result):
 	newgrf.add(obj)
 	sprites = newgrf.generate_sprites()
 	sprites = newgrf.resolve_refs(sprites)
@@ -22,3 +22,14 @@ def check_lib(obj, result, *, newgrf=None):
 			print('Expected:')
 			print(r.py(None))
 			assert False
+
+
+def check_lib(prepare, obj, result):
+	with tempfile.TemporaryDirectory() as tmp:
+		index_path = os.path.join(tmp, 'id_index.json')
+		with open(index_path, 'w') as f:
+			f.write('{"version": 1, "index": {}}')
+		newgrf = BaseNewGRF(id_index_path=index_path)
+		if prepare is not None:
+			prepare(newgrf)
+		_do_check_lib(newgrf, obj, result)

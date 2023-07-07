@@ -163,6 +163,8 @@ class FeatureMeta(type):
 
 
 class Feature(metaclass=FeatureMeta):
+    _FROM_NAME = {}
+
     def __init__(self, id, name):
         self.id = id
         self.name = name
@@ -171,8 +173,17 @@ class Feature(metaclass=FeatureMeta):
     def __repr__(self):
         return self.constant
 
+    @classmethod
+    def from_name(cls, name):
+        return cls.FROM_NAME[name]
 
-FeatureMeta.FEATURES = [None] * 0x14
+    @classmethod
+    def from_constant(cls, constant):
+        cls.from_name(constant.lower())
+
+
+
+FeatureMeta.FEATURES = [None] * 0x15
 for k, n in ((0x00, 'train'),
              (0x01, 'rv'),
              (0x02, 'ship'),
@@ -192,12 +203,15 @@ for k, n in ((0x00, 'train'),
              (0x10, 'railtype'),
              (0x11, 'airport_tile'),
              (0x12, 'roadtype'),
-             (0x13, 'Tramtype'),
+             (0x13, 'tramtype'),
+             (0x14, 'road_stop'),
             ):
-    FeatureMeta.FEATURES[k] = type.__call__(Feature, k, n)
+    obj = type.__call__(Feature, k, n)
+    FeatureMeta.FEATURES[k] = obj
+    Feature._FROM_NAME[n] = obj
 
 TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, BRIDGE, HOUSE, GLOBAL_VAR, INDUSTRY_TILE, INDUSTRY, CARGO, \
-SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE = FeatureMeta.FEATURES
+SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP = FeatureMeta.FEATURES
 
 CANAL = RIVER
 

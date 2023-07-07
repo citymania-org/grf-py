@@ -10,6 +10,7 @@ from .common import check_lib
 class DummyFeature:
     def __init__(self, id):
         self.id = id
+        self.feature = TRAIN
         self.callbacks = types.SimpleNamespace()
 
     def __hash__(self):
@@ -87,10 +88,9 @@ def test_lib_train_basics():
             ),
         )
     )
-    g = BaseNewGRF()
-    order.set_variant_callbacks(g)
 
     check_lib(
+        lambda g: order.set_variant_callbacks(g),
         order,
         [
             sortvg(11122, None, 11121),
@@ -112,3 +112,67 @@ def test_lib_train_basics():
         ],
         newgrf=g,
     )
+
+
+def test_lib_train_basics():
+    a1 = DummyFeature(11)
+    a2 = DummyFeature(12)
+    b1 = DummyFeature(21)
+    b2 = DummyFeature(22)
+    b3 = DummyFeature(23)
+    b4 = DummyFeature(24)
+    c1 = DummyFeature(31)
+    c2 = DummyFeature(32)
+    c3 = DummyFeature(33)
+    d1 = DummyFeature(41)
+    d2 = DummyFeature(42)
+
+    order = SetPurchaseOrder(
+        VariantGroup(
+            'A',
+            a1,
+            a2,
+        ),
+        VariantGroup(
+            'B',
+            b1,
+            b2,
+            b3,
+            b4,
+        ),
+        VariantGroup(
+            'C',
+            c1,
+            c2,
+            c3,
+        ),
+        VariantGroup(
+            'D',
+            d1,
+            d2,
+        ),
+    )
+
+    check_lib(
+        lambda g: order.set_variant_callbacks(g),
+        order,
+        [
+            sortvg(42, None, 41),
+            sortvg(41, 42),
+            sortvg(33, 41, 31),
+            sortvg(32, 33, 31),
+            sortvg(31, 32),
+            sortvg(24, 31, 21),
+            sortvg(23, 24, 21),
+            sortvg(22, 23, 21),
+            sortvg(21, 22),
+            sortvg(12, 21, 11),
+            sortvg(11, 12),
+
+            string(0xd000, 'A'),
+            string(0xd001, 'B'),
+            string(0xd002, 'C'),
+            string(0xd003, 'D'),
+        ],
+    )
+

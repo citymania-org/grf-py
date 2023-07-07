@@ -1,6 +1,7 @@
 import functools
 import heapq
 import inspect
+import json
 import struct
 import time
 import textwrap
@@ -151,12 +152,19 @@ class SpriteEncoder:
 
 
 class BaseNewGRF:
-    def __init__(self):
+    def __init__(self, *, id_index_path=None):
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
         self.strings = StringManager()
         self._sprite_encoder = SpriteEncoder()
+        self._id_index = IDIndex(id_index_path)
+
+    def reserve_ids(self, feature, ids):
+        self._id_index.reserve_ids(feature, ids)
+
+    def resolve_id(self, feature, value, *, articulated=False):
+        return self._id_index.resolve(feature, value, articulated=articulated)
 
     def _add_sound(self, s):
         assert isinstance(s, SoundSprite)
@@ -453,6 +461,7 @@ class BaseNewGRF:
 
             f.write(b'\x00\x00\x00\x00')
 
+        self._id_index.save()
         t.stop()
         self._sprite_encoder.print_time_report()
 
@@ -478,9 +487,91 @@ class BaseNewGRF:
         )
 
 
+class IDIndex:
+    MIN_ID = 300
+
+    def __init__(self, path=None):
+        self.path = path
+        self._loaded = False
+        self._index = {}
+        self._next_id = {}
+        self._auto_ids = set()
+        self._manual_ids = set()
+
+    def _check_path(self):
+        if self.path is None:
+            self.path = 'id_index.json'
+            print(f'WARNING: ID index is not configured, using default "{self.path}"')
+            print('Set id index path by passing id_index_path to NewGRF constructor.')
+
+    def _load(self):
+        if self._loaded: return
+        self._check_path()
+
+        try:
+            data = json.load(open(self.path))
+        except FileNotFoundError:
+            # TODO link docs on how to create empty index
+            # Creating index automatically is dangerous as it may mask the error.
+            raise RuntimeError(f'ERROR: ID index file is not found in "{self.path}".')
+
+        assert data['version'] == 1
+
+        # Load into temporaries first in case of exception
+        index = {}
+        next_id = {}
+        used_ids = set()
+        for feature_name, feature_index in data['index']:
+            feature = Feature.from_name(feature_name)
+            for name, fid in feature_index:
+                key = (feature, name)
+                index[key] = fid
+                used_ids.add(key)
+                next_id[feature] = max(next_id.get(feature, 0), fid)
+        self._loaded = True
+        self._index = index
+        self._next_id = next_id
+        self._auto_ids = used_ids
+
+    def save(self):
+        self._check_path()
+        index = {}
+        for (feature, name), value in self._index:
+            index.setdefault(feature, {})[name] = value
+        data = {
+            'version': 1,
+            'index': index,
+        }
+        json.dump(open(self.path, 'w'), data)
+
+    def reserve_ids(self, ids):
+        self._manual_ids.update(ids)
+
+    def resolve(self, feature, value, *, articulated=False):
+        self._load()
+        key = (feature, value)
+        if isinstance(value, int):
+            if key in self._auto_ids:
+                raise RuntimeError(f'ID {value} can''t be used for feature {feature!r} as it was previously auto-assigned.')
+            self._manual_ids.add(key)
+            return value
+
+        assert isinstance(value, str), type(value)
+        i = self._index.get(key)
+        # TODO use separate articulated range
+        if i is None:
+            i = self._next_id.get(feature, self.MIN_ID)
+            while (feature, i) in self._manual_ids:
+                i += 1
+            self._next_id[feature] = i + 1
+            self._index[feature, i] = i
+            self._auto_ids.add((feature, i))
+        return i
+
+
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None):
-        super().__init__()
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_index_path=None):
+        super().__init__(id_index_path=id_index_path)
 
         if isinstance(grfid, str):
             grfid = grfid.encode('utf-8')
