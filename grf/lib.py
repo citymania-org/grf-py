@@ -145,7 +145,8 @@ class Callback:
         CHANGE_PROPERTIES = 0x36
         NAME = 0x161
 
-        class TrainProperties:
+    class Train(Vehicle):
+        class Properties:
             LOADING_SPEED = 0x07
             MAX_SPEED = 0x09
             POWER = 0x0B
@@ -160,7 +161,8 @@ class Callback:
             CARGO_AGE_PERIOD = 0x2B
             CURVE_SPEED_MOD = 0x2E
 
-        class RoadVehicleProperties:
+    class RoadVehicle(Vehicle):
+        class Properties:
             LOADING_SPEED = 0x07
             RUNNING_COST_FACTOR = 0x09
             CARGO_CAPACITY = 0x0F
@@ -257,6 +259,28 @@ class Callback:
         AUTOSLOPING = 0x15d
 
 
+FEATURE_CALLBACKS = {
+    grf.TRAIN: Callback.Train,
+    grf.RV: Callback.RoadVehicle,
+    # TODO ship
+    # TODO aircraft
+    grf.STATION: Callback.Station,
+    grf.HOUSE: Callback.House,
+    # TODO GLOBAL_VAR
+    grf.INDUSTRY_TILE: Callback.IndustryTile,
+    grf.INDUSTRY: Callback.Industry,
+    grf.CARGO: Callback.Cargo,
+    grf.SOUND_EFFECT: Callback.Sound,
+    grf.AIRPORT: Callback.Airport,
+    grf.SIGNAL: Callback.Signal,
+    grf.OBJECT: Callback.Canal,
+    grf.RAILTYPE: Callback.AirportTile,
+    # TODO airport_tille
+    # grf.ROADTYPE:
+    # grf.TRAMTYPE:
+    # grf.ROAD_STOP:
+}
+
 class CallbackManager:
 
     class Properties:
@@ -286,8 +310,9 @@ class CallbackManager:
 
             self._callbacks[prop_id] = value
 
-    def __init__(self, domain, callbacks=None, properties=None):
-        self._domain = domain
+    def __init__(self, feature, callbacks=None):
+        self.feature = feature
+        self._domain = FEATURE_CALLBACKS[feature]
         self._callbacks = {}
         self.graphics = None
         self.purchase_graphics = None
@@ -296,15 +321,19 @@ class CallbackManager:
         for k, v in callbacks.items():
             if v is not None:
                 setattr(self, k, v)
-        self.properties = self.Properties(properties, prop_cb)
+        prop_domain = getattr(self._domain, 'Properties', None)
+        if prop_domain is not None:
+            self.properties = self.Properties(prop_domain, prop_cb)
 
     def __setattr__(self, name, value):
-        if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties'):
+        if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties', 'feature'):
             return super().__setattr__(name, value)
         if name.lower() != name:
             raise AttributeError(name)
 
-        cb_id = getattr(self._domain, name.upper())
+        cb_id = getattr(self._domain, name.upper(), None)
+        if cb_id is None:
+            raise AttributeError(f'No callback {name} for feature {self.feature}')
         if cb_id in self._callbacks:
             raise RuntimeError(f'Callback {name} is already defined')
         self._callbacks[cb_id] = value
@@ -477,9 +506,9 @@ class Vehicle(grf.SpriteGenerator):
         SYNC_VARIANT_EXCLUSIVE_PREVIEW = 0x04
         SYNC_VARIANT_RELIABILITY = 0x08
 
-    def __init__(self, feature, callbacks, purchase_sprite=None, properties=Callback.Vehicle.TrainProperties):
+    def __init__(self, feature, callbacks, purchase_sprite=None):
         self.feature = feature
-        self.callbacks = CallbackManager(Callback.Vehicle, callbacks, properties=properties)
+        self.callbacks = CallbackManager(self.feature, callbacks)
         self.purchase_sprite = purchase_sprite
 
     def _gen_name_sprites(self, vehicle_id):
@@ -537,7 +566,7 @@ class RoadVehicle(Vehicle):
         return RoadVehicle.Speed((speed * 16 + 4) // 5)
 
     def __init__(self, *, id, name, max_speed, length=None, liveries=None, additional_text=None, livery_refits=None, callbacks=None, purchase_sprite=None, **props):
-        super().__init__(grf.RV, callbacks, purchase_sprite=purchase_sprite, properties=Callback.Vehicle.RoadVehicleProperties)
+        super().__init__(grf.RV, callbacks, purchase_sprite=purchase_sprite)
         for l in liveries or []:
             if 'name' not in l:
                 raise ValueError(f'RoadVehicle livery is missing the name')
@@ -678,7 +707,7 @@ class Train(Vehicle):
         return effect | position | wagon_power * 0x7f
 
     def __init__(self, *, id, name, max_speed, weight, length=None, liveries=None, additional_text=None, sound_effects=None, callbacks=None, purchase_sprite=None, **props):
-        super().__init__(grf.TRAIN, callbacks, purchase_sprite=purchase_sprite, properties=Callback.Vehicle.TrainProperties)
+        super().__init__(grf.TRAIN, callbacks, purchase_sprite=purchase_sprite)
 
         for l in liveries or []:
             if 'name' not in l:
@@ -902,7 +931,7 @@ class Train(Vehicle):
         for apid, liveries, _, initial_callbacks, props in self._articulated_parts:
             apid = g.resolve_id(self.feature, apid, articulated=True)
             position += 1
-            callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
+            callbacks = CallbackManager(self.feature, initial_callbacks)
             self._set_articulated_part_callbacks(g, position, callbacks)
 
             if liveries:
