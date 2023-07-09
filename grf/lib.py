@@ -145,7 +145,7 @@ class Callback:
         CHANGE_PROPERTIES = 0x36
         NAME = 0x161
 
-        # TODO Train only
+    class Train(Vehicle):
         class Properties:
             LOADING_SPEED = 0x07
             MAX_SPEED = 0x09
@@ -160,6 +160,20 @@ class Callback:
             BITMASK_VEHICLE_INFO = 0x25
             CARGO_AGE_PERIOD = 0x2B
             CURVE_SPEED_MOD = 0x2E
+
+    class RoadVehicle(Vehicle):
+        class Properties:
+            LOADING_SPEED = 0x07
+            RUNNING_COST_FACTOR = 0x09
+            CARGO_CAPACITY = 0x0F
+            COST_FACTOR = 0x11
+            POWER = 0x13
+            WEIGHT = 0x14
+            MAX_SPEED = 0x15
+            TRACTIVE_EFFORT_COEFFICIENT = 0x18
+            # VISUAL_EFFECT = 0x21
+            CARGO_AGE_PERIOD = 0x22
+            SHORTEN_BY = 0x23
 
     class Station:
         AVAILABILITY = 0x13
@@ -245,6 +259,28 @@ class Callback:
         AUTOSLOPING = 0x15d
 
 
+FEATURE_CALLBACKS = {
+    grf.TRAIN: Callback.Train,
+    grf.RV: Callback.RoadVehicle,
+    # TODO ship
+    # TODO aircraft
+    grf.STATION: Callback.Station,
+    grf.HOUSE: Callback.House,
+    # TODO GLOBAL_VAR
+    grf.INDUSTRY_TILE: Callback.IndustryTile,
+    grf.INDUSTRY: Callback.Industry,
+    grf.CARGO: Callback.Cargo,
+    grf.SOUND_EFFECT: Callback.Sound,
+    grf.AIRPORT: Callback.Airport,
+    grf.SIGNAL: Callback.Signal,
+    grf.OBJECT: Callback.Canal,
+    grf.RAILTYPE: Callback.AirportTile,
+    # TODO airport_tille
+    # grf.ROADTYPE:
+    # grf.TRAMTYPE:
+    # grf.ROAD_STOP:
+}
+
 class CallbackManager:
 
     class Properties:
@@ -274,8 +310,9 @@ class CallbackManager:
 
             self._callbacks[prop_id] = value
 
-    def __init__(self, domain, callbacks=None):
-        self._domain = domain
+    def __init__(self, feature, callbacks=None):
+        self.feature = feature
+        self._domain = FEATURE_CALLBACKS[feature]
         self._callbacks = {}
         self.graphics = None
         self.purchase_graphics = None
@@ -284,15 +321,19 @@ class CallbackManager:
         for k, v in callbacks.items():
             if v is not None:
                 setattr(self, k, v)
-        self.properties = self.Properties(self._domain.Properties, prop_cb)
+        prop_domain = getattr(self._domain, 'Properties', None)
+        if prop_domain is not None:
+            self.properties = self.Properties(prop_domain, prop_cb)
 
     def __setattr__(self, name, value):
-        if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties'):
+        if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties', 'feature'):
             return super().__setattr__(name, value)
         if name.lower() != name:
             raise AttributeError(name)
 
-        cb_id = getattr(self._domain, name.upper())
+        cb_id = getattr(self._domain, name.upper(), None)
+        if cb_id is None:
+            raise AttributeError(f'No callback {name} for feature {self.feature}')
         if cb_id in self._callbacks:
             raise RuntimeError(f'Callback {name} is already defined')
         self._callbacks[cb_id] = value
@@ -467,7 +508,7 @@ class Vehicle(grf.SpriteGenerator):
 
     def __init__(self, feature, callbacks, purchase_sprite=None):
         self.feature = feature
-        self.callbacks = CallbackManager(Callback.Vehicle, callbacks)
+        self.callbacks = CallbackManager(self.feature, callbacks)
         self.purchase_sprite = purchase_sprite
 
     def _gen_name_sprites(self, vehicle_id):
@@ -596,7 +637,7 @@ class RoadVehicle(Vehicle):
         res.extend(self._set_callbacks(g))
 
         # Liveries
-        if len(self.liveries) > 1:
+        if self.liveries and len(self.liveries) > 1:
             self.callbacks.cargo_subtype = grf.Switch(
                 ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
                 default=0x400,
@@ -890,7 +931,7 @@ class Train(Vehicle):
         for apid, liveries, _, initial_callbacks, props in self._articulated_parts:
             apid = g.resolve_id(self.feature, apid, articulated=True)
             position += 1
-            callbacks = CallbackManager(Callback.Vehicle, initial_callbacks)
+            callbacks = CallbackManager(self.feature, initial_callbacks)
             self._set_articulated_part_callbacks(g, position, callbacks)
 
             if liveries:
