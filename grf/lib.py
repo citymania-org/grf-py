@@ -608,7 +608,7 @@ class RoadVehicle(Vehicle):
         res.extend(self._set_callbacks(g))
 
         # Liveries
-        if len(self.liveries) > 1:
+        if self.liveries and len(self.liveries) > 1:
             self.callbacks.cargo_subtype = grf.Switch(
                 ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
                 default=0x400,
