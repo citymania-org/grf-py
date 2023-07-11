@@ -9,6 +9,15 @@
 - Fix `var(...)` call in `Switch` code not accepting `param` value without parentheses.
 - Fix default purchase sprite for auto-articulated trains.
 
+- Rename `speed` Action 0 property for ships to `max_speed` for consinstency with other vehile types.
+- Rename Action 0 ship properties to match nml:
+	- `cargo_type` to `default_cargo_type`
+	- `sound` to `sound_effect`
+	- `ocean_speed` to `ocean_speed_fraction`
+	- `canal_speed` to `canal_speed_fraction`
+	- `flags` to `misc_flags`
+	- `refit_classes` to `refittable_cargo_classes`
+	- `non_refit_classes` to `non_refittable_cargo_classes`
 - Add `id_map_file` parameter to `BaseNewGRF` constructor and `reserve_ids` and `resolve_id` methods to manage auto-assigned (string) IDs.
 - Use `AlternativeSprites` instead of sprite tuples.
 - Add Action0 properties for road types.
@@ -31,9 +40,11 @@
 - Allow to use objects with id as a variant_group value in Aciton0.
 - Use IDProperty for `sort_purchase_list` in Action 0 for vehicles.
 
+- lib: Add `Ship` sprite generator.
 - lib: Rename `kmhishph` method to `kmhish` in `Train` and `RoadVehicle`.
 - lib: Make `_set_callbacks` return list of sprites to allow adding graphics.
 - lib: Make auto-articulated parts use auto-assigned(string) IDs.
+- lib: Support road vehicle property callbacks in `CallbackMananger`.
 - lib: Fix RoadVehicle name.
 - lib: Fix `CallbackManager` exceptions.
 - lib: Fix incorect livery for `Train` wagons.

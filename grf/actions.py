@@ -389,20 +389,20 @@ ACTION0_SHIP_PROPS = {
     0x08: ('sprite_id', 'B'),  # Sprite (FF for new graphics)
     0x09: ('is_refittable', 'B'),  # Refittable (0 no, 1 yes)
     0x0A: ('cost_factor', 'B'),  # Cost factor
-    0x0B: ('speed', 'B'),  # Speed in mph*3.2
-    0x0C: ('cargo_type', 'B'),  # Cargo type, see CargoTypes
-    0x0D: ('capacity', 'W'),  # Capacity
+    0x0B: ('max_speed', 'B'),  # Speed in mph*3.2
+    0x0C: ('default_cargo_type', 'B'),  # Cargo type, see CargoTypes
+    0x0D: ('cargo_capacity', 'W'),  # Capacity
     0x0F: ('running_cost_factor', 'B'),  # Running cost factor
-    0x10: ('sound', 'B'),  # Sound effect type (4=cargo ship, 5=passenger ship)
+    0x10: ('sound_effect', 'B'),  # Sound effect type (4=cargo ship, 5=passenger ship)
     0x11: ('refittable_cargo_types', 'D'),  # v≥1     Bit mask of cargo types available for refitting, see column 2 (bit values) in CargoTypes
     0x12: ('cb_flags', 'B'),  # Callback flags bit mask, see below
     0x13: ('refit_cost', 'B'),  #  Refit cost, using 1/32 of the default refit cost base
-    0x14: ('ocean_speed', 'B'),  # Ocean speed fraction, sets fraction of top speed available in the ocean; e.g. 00=100%, 80=50%, FF=0.4%
-    0x15: ('canal_speed', 'B'),  # Canal speed fraction, same as above but for canals and rivers
+    0x14: ('ocean_speed_fraction', 'B'),  # Ocean speed fraction, sets fraction of top speed available in the ocean; e.g. 00=100%, 80=50%, FF=0.4%
+    0x15: ('canal_speed_fraction', 'B'),  # Canal speed fraction, same as above but for canals and rivers
     0x16: ('retire_early', 'b'),  # Retire vehicle early, this many years before the end of phase 2 (see Action0General)
-    0x17: ('flags', 'B'),  # Miscellaneous vehicle flags
-    0x18: ('refit_classes', 'W'),  # Refittable cargo classes, see train prop. 28
-    0x19: ('non_refit_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
+    0x17: ('misc_flags', 'B'),  # Miscellaneous vehicle flags
+    0x18: ('refittable_cargo_classes', 'W'),  # Refittable cargo classes, see train prop. 28
+    0x19: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes, see train prop. 29
     0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
     0x1B: ('sort_purchase_list', IDProperty(extended=True)), # Sort the purchase list
     0x1C: ('visual_effect', 'B'),  # Visual effect
