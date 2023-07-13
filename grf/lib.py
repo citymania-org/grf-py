@@ -573,6 +573,7 @@ class Vehicle(grf.SpriteGenerator):
 
 
 class RoadVehicle(Vehicle):
+    Flags = grf.RVFlags
 
     class Speed:
         def __init__(self, precise_value):
@@ -976,6 +977,7 @@ def _check_speed(speed, array, unit):
 
 
 class Ship(Vehicle):
+    Flags = grf.ShipFlags
 
     @staticmethod
     def kmh(speed):
