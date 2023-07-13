@@ -206,10 +206,53 @@ class PaletteRemap(BaseSprite):
 WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
+class Mask:
+    class Compose:
+        DEFAULT = 0
+
+    def __init__(self, xofs=0, yofs=0, compose=Compose.DEFAULT):
+        self.xofs = xofs
+        self.yofs = yofs
+
+    def get_image(self):
+        raise NotImplementedError
+
+
+class FileMask(Mask):
+    def __init__(self, file, *args, **kw):
+        assert(isinstance(file, ImageFile))
+        super().__init__(*args, **kw)
+        self.file = file
+
+    def get_image(self):
+        return self.file.get_image()
+
+    def __str__(self):
+        return str(self.file.path)
+
+
+class ImageMask(Mask):
+    def __init__(self, image, *args, **kw):
+        assert(isinstance(file, ImageFile))
+        super.__init__(*args, **kw)
+        self.image = image
+        self._converted_image = None
+
+    def get_image(self):
+        if self._converted_image is None:
+            self._converted_image = convert_image(self.image)
+        return self._converted_image
+
+    def __str__(self):
+        w, h = self.image.size()
+        return f'Image({w}*{h} {self.xofs:+},{self.yofs:+})'
+
+
 class GraphicsSprite(RealSprite):
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None, crop=True):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
+        assert mask is None or isinstance(mask, Mask)
         super().__init__()
         self.w = w
         self.h = h
@@ -225,9 +268,6 @@ class GraphicsSprite(RealSprite):
         return f'{self.w}x{self.h}'
 
     def get_image(self):
-        raise NotImplementedError
-
-    def get_mask_image(self):
         raise NotImplementedError
 
     def draw(self, img):
@@ -337,13 +377,12 @@ class GraphicsSprite(RealSprite):
                     stack = [npimg]
 
             if self.mask is not None:
-                mask_file, mxofs, myofs = self.mask
-                mask_img, mask_bpp = self.get_mask_image()
+                mask_img, mask_bpp = self.mask.get_image()
                 if mask_bpp != BPP_8:
-                    raise RuntimeError(f'Mask {mask_file.path} is not an 8bpp image')
-                mxofs, myofs = self.x + mxofs + crop_x, self.y + myofs + crop_y
+                    raise RuntimeError(f'Mask {self.mask} is not an 8bpp image')
+                mxofs, myofs = self.x + self.mask.xofs + crop_x, self.y + self.mask.yofs + crop_y
                 mask_img = mask_img.crop((mxofs, myofs, mxofs + w, myofs + h))
-                mask_img = fix_palette(mask_img, f'{mask_file.path} {mxofs},{myofs} {w}x{h}')
+                mask_img = fix_palette(mask_img, self.mask)
                 npmask = np.asarray(mask_img)
                 npmask = npmask.reshape(w * h, 1)
                 stack.append(npmask)
@@ -403,16 +442,10 @@ EMPTY_SPRITE = EmptyGraphicsSprite()
 class ImageSprite(GraphicsSprite):
     def __init__(self, image, *, mask=None, **kw):
         self._image = convert_image(image)
-        if mask:
-            mask_image, xofs, yofs = mask
-            mask = convert_image(mask_image), xofs, yofs
         super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
 
     def get_image(self):
         return self._image
-
-    def get_mask_image(self):
-        return self.mask[0] if self.mask else None
 
 
 class ImageFile:
@@ -454,10 +487,6 @@ class FileSprite(GraphicsSprite):
             self.w, self.h = img.size
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
         return img, bpp
-
-    def get_mask_image(self):
-        mask_file, _, _ = self.mask
-        return mask_file.get_image()
 
     def get_colourkey(self):
         return self.file.colourkey

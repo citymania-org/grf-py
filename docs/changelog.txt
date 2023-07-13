@@ -1,4 +1,9 @@
 ---------
+0.?.?
+---------
+- Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
+
+---------
 0.2.2
 ---------
 
