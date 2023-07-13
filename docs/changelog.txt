@@ -2,6 +2,7 @@
 0.?.?
 ---------
 - Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
+- Add `mode` argument to mask with option to overdraw sprite.
 
 ---------
 0.2.2

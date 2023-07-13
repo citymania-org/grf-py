@@ -207,12 +207,14 @@ WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
 class Mask:
-    class Compose:
+    class Mode:
         DEFAULT = 0
+        OVERDRAW = 1
 
-    def __init__(self, xofs=0, yofs=0, compose=Compose.DEFAULT):
+    def __init__(self, xofs=0, yofs=0, mode=Mode.DEFAULT):
         self.xofs = xofs
         self.yofs = yofs
+        self.mode = mode
 
     def get_image(self):
         raise NotImplementedError
@@ -384,6 +386,17 @@ class GraphicsSprite(RealSprite):
                 mask_img = mask_img.crop((mxofs, myofs, mxofs + w, myofs + h))
                 mask_img = fix_palette(mask_img, self.mask)
                 npmask = np.asarray(mask_img)
+                if self.mask.mode == Mask.Mode.OVERDRAW:
+                    npmask = npmask.reshape(w * h)
+                    has_mask = (npmask != 0)
+                    if npimg.shape[1] == 3:
+                        npimg[has_mask] = (127, 127, 127)
+                        if npalpha is not None:
+                            npalpha = npalpha.reshape(w * h)
+                            npalpha[has_mask] = 255
+                            npalpha = npalpha.reshape(w * h, 1)
+                    else:
+                        npimg[has_mask] = (127, 127, 127, 255)
                 npmask = npmask.reshape(w * h, 1)
                 stack.append(npmask)
                 rbpp += 1
