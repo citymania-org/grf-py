@@ -1052,6 +1052,15 @@ class TrainFlags:
     NO_BREAKDOWN_SMOKE = 0x40
     USE_SPRITE_STACK = 0x80
 
+
+class ShipFlags:
+    USE_2CC = 0x2
+    AUTOREFIT = 0x10
+    USE_CARGO_MULT = 0x20
+    NO_BREAKDOWN_SMOKE = 0x40
+    USE_SPRITE_STACK = 0x80
+
+
 class AIFlags:
     CARGO = 0x00
     PASSENGER = 0x01
