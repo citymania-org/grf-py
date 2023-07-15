@@ -5,7 +5,7 @@
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
-
+- lib: Add `EngineOverride` sprite generator.
 
 ---------
 0.2.2

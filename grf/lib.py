@@ -1327,3 +1327,24 @@ class SetGlobalTrainMiscFlag(grf.SpriteGenerator):
                 value=1 << self.flag
             )
         ]
+
+
+class EngineOverride(grf.SpriteGenerator):
+    def __init__(self, target, *, source=None):
+        self.target = target
+        self.source = source
+
+    def py(self, context):
+        return f'EngineOverride(target={self.target!r}, source={self.source!r})'
+
+    def get_sprites(self, g):
+        source = self.source if self.source is not None else g.grfid
+        return [
+            grf.Define(
+                feature=grf.GLOBAL_VAR,
+                id=0,
+                props={
+                    'grfid_overrides': (source, self.target),
+                }
+            )
+        ]
