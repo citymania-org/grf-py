@@ -153,7 +153,7 @@ def date_to_days(d):
     return (d - datetime.date(1, 1, 1)).days + 366
 
 def days_to_date(days):
-    if days < 366: return days
+    if days < 366 or days > 3652424: return days
     return datetime.date(1, 1, 1) + datetime.timedelta(days=days-366)
 
 
