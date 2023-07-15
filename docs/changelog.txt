@@ -4,7 +4,7 @@
 - Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
-- lib: Add `Ship.Flags` and `RoadVehicle.Flags` for uniform access to flags.
+- lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 
 
 ---------

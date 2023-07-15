@@ -155,7 +155,7 @@ def write_resource(name, extension, data, tries=100):
     open(folder / name, 'wb').write(data)
 
 
-def read_property(data, ofs, fmt):
+def read_property(name, data, ofs, fmt):
     if not isinstance(fmt, str):
         if isinstance(fmt, Property):
             return fmt.read(data, ofs)
@@ -242,7 +242,7 @@ def read_property(data, ofs, fmt):
 
         return res, d.offset
 
-    raise ValueError(f'Unknown format {fmt}')
+    raise ValueError(f'Unknown format {fmt} for property {name}')
 
 
 def decode_action0(data, context):
@@ -258,12 +258,12 @@ def decode_action0(data, context):
         name, fmt, *_ = propdict[prop]
         try:
             if num_info == 1:
-                value, ofs = read_property(data, ofs, fmt)
+                value, ofs = read_property(name, data, ofs, fmt)
                 props[name] = value
             else:
                 res = []
                 for _ in range(num_info):
-                    value, ofs = read_property(data, ofs, fmt)
+                    value, ofs = read_property(name, data, ofs, fmt)
                     res.append(value)
                 props[name] = res
         except Exception as e:
@@ -1474,6 +1474,49 @@ def save_sound_resources(container, f, resource_dir, resource_dir_rel, context, 
             out_sprites[s.id] = PyCode(f"g.add(RAWSound('{resource_dir_rel}/{fname}'))")
 
 
+def read(f, context):
+    gen = grf.BaseNewGRF()
+    first = f.read(1)
+    container = None
+    comment = lambda text: gen.add(PyComment(text))
+    if first == b'\00':
+        header_bytes = first + f.read(9)
+        comment(f'New container header: {hex_str(header_bytes)}')
+        data_offest, compression = struct.unpack('<IB', f.read(5))
+        header_offset = f.tell() - 1
+        comment(f'Offset: {data_offest} compresion: {compression}')
+        magic_sprite_bytes = f.read(5 + 4)
+        comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
+        container = 2
+    else:
+        f.seek(0, 0)
+        comment(f'Old container, no header!')
+        container = 1
+        # magic_sprite_bytes = f.read(5 + 2)
+        # comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
+
+    # print('Magic sprite:', hex_str(f.read(4)))
+    nfo_line = 1
+    real_sprites = defaultdict(list)
+    while (res := read_pseudo_sprite(f, nfo_line, container, context))[0]:
+        gen.add(*res[1])
+        if (sprite := res[2]) is not None:
+            real_sprites[sprite.id].append(sprite)
+        nfo_line += 1
+
+    if container == 2:
+        real_data_offset = f.tell() - header_offset
+        while (res := read_real_sprite(f, nfo_line, context))[0] is not None:
+            sprite = res[0]
+            real_sprites[sprite.id].append(sprite)
+            gen.add(*res[1])
+            nfo_line += 1
+
+        if data_offest != real_data_offset:
+            comment(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
+    return gen, container, real_sprites
+
+
 def decompile(in_grf_path):
     out_dir_name = in_grf_path.name
     if '.' in out_dir_name:
@@ -1491,47 +1534,9 @@ def decompile(in_grf_path):
     resource_dir.mkdir()
     print(f'Started decompiling `{in_grf_path}` into directory `{out_dir}`.')
 
-    context = ParsingContext()
     with open(in_grf_path, 'rb') as f:
-        first = f.read(1)
-        container = None
-        gen = grf.BaseNewGRF()
-        comment = lambda text: gen.add(PyComment(text))
-        if first == b'\00':
-            header_bytes = first + f.read(9)
-            comment(f'New container header: {hex_str(header_bytes)}')
-            data_offest, compression = struct.unpack('<IB', f.read(5))
-            header_offset = f.tell() - 1
-            comment(f'Offset: {data_offest} compresion: {compression}')
-            magic_sprite_bytes = f.read(5 + 4)
-            comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
-            container = 2
-        else:
-            f.seek(0, 0)
-            comment(f'Old container, no header!')
-            container = 1
-            # magic_sprite_bytes = f.read(5 + 2)
-            # comment(f'Magic sprite: {hex_str(magic_sprite_bytes)}')
-
-        # print('Magic sprite:', hex_str(f.read(4)))
-        nfo_line = 1
-        real_sprites = defaultdict(list)
-        while (res := read_pseudo_sprite(f, nfo_line, container, context))[0]:
-            gen.add(*res[1])
-            if (sprite := res[2]) is not None:
-                real_sprites[sprite.id].append(sprite)
-            nfo_line += 1
-
-        if container == 2:
-            real_data_offset = f.tell() - header_offset
-            while (res := read_real_sprite(f, nfo_line, context))[0] is not None:
-                sprite = res[0]
-                real_sprites[sprite.id].append(sprite)
-                gen.add(*res[1])
-                nfo_line += 1
-
-            if data_offest != real_data_offset:
-                comment(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
+        context = ParsingContext()
+        gen, container, real_sprites = read(f, context)
 
         res_sprites = defaultdict(list)
         save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
