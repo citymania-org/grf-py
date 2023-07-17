@@ -743,7 +743,7 @@ ACTION0_HOUSE_PROPS = {
     0x08: ('substitute', 'B'),  # Substitute building type
     0x09: ('flags', 'B'),  # Building flags
     0x0A: ('availability_years', 'W'),  # Availability years
-    0x0B: ('poopulation', 'B'),  # Population
+    0x0B: ('population', 'B'),  # Population
     0x0C: ('mail_mult', 'B'),  # Mail generation multiplier
     0x0D: ('passengers_acceptance', 'B'),  # Passenger acceptance
     0x0E: ('mail_acceptance', 'B'),  # Mail acceptance
