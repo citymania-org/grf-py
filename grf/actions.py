@@ -1251,6 +1251,38 @@ class SpriteSet(Action1):
         )'''
 
 
+class Action1Extended(LazyBaseSprite):
+    def __init__(self, feature, first_set, set_count, sprite_count):
+        assert isinstance(feature, Feature)
+        super().__init__()
+        self.feature = feature
+        self.first_set = first_set
+        self.set_count = set_count
+        self.sprite_count = sprite_count
+
+    def _encode(self):
+        return struct.pack(
+            "<BBBBHBHBH",
+            0x01,
+            self.feature.id,
+            0x00,
+            0xFF,
+            self.first_set,
+            0xFF,
+            self.set_count,
+            0xFF,
+            self.sprite_count,
+        )
+
+    def py(self, context):
+        return f"""
+        Action1Extended(
+            feature={self.feature},
+            first_set={self.first_set},
+            set_count={self.set_count},
+            sprite_count={self.sprite_count},
+        )"""
+
 # Action 2
 
 class GenericSpriteLayout(BaseSprite, ReferenceableAction):
