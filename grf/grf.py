@@ -12,7 +12,7 @@ import nml.spriteencoder
 import numpy as np
 
 from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, SpriteRef, \
-                     Define, DefineMultiple, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
+                     Define, DefineMultiple, Action1, Action1Extended, SpriteSet, GenericSpriteLayout, RandomSwitch, \
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, \
                      IndustryProductionCallback, Action3, Map, DefineStrings, ReplaceNewSprites, \
                      ModifySprites, If, SetDescription, ReplaceOldSprites, ErrorMessage, Comment, \
