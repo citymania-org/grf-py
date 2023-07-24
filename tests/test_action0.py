@@ -2,16 +2,11 @@ from nose.tools import eq_
 
 import grf
 
-
-def encode_action(action, result):
-	result = ''.join(result.split()).lower()
-	encoded = action._encode()
-	encoded_hex = grf.hex_str(encoded)
-	eq_(encoded_hex, result)
+from .common import check_action
 
 
 def test_train_basic_properties():
-	encode_action(
+	check_action(
 		grf.Define(
 			feature=grf.TRAIN,
 			id=0,

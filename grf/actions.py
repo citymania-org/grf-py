@@ -1219,16 +1219,27 @@ class Define(DefineMultiple):
 # Action 1
 
 class Action1(LazyBaseSprite):
-    def __init__(self, feature, set_count, sprite_count):
+    def __init__(self, feature, set_count, sprite_count, *, first_set=None):
         assert isinstance(feature, Feature)
         super().__init__()
         self.feature = feature
         self.set_count = set_count
         self.sprite_count = sprite_count
+        self.first_set = first_set
 
     def _encode(self):
-        return struct.pack('<BBBBH', 0x01,
-                           self.feature.id, self.set_count, 0xFF, self.sprite_count)
+        if self.set_count <= 255 and self.first_set is None:
+            # Basic format
+            return struct.pack('<BBBBH', 0x01,
+                               self.feature.id, self.set_count, 0xFF, self.sprite_count)
+
+        # Extended format (OpenTTD >= 1.2.2)
+        return struct.pack('<BBBBHBHBH', 0x01,
+                           self.feature.id,
+                           0x00,
+                           0xFF, self.first_set or 0,
+                           0xFF, self.set_count,
+                           0xFF, self.sprite_count)
 
     def py(self, context):
         return f'''
@@ -1236,6 +1247,7 @@ class Action1(LazyBaseSprite):
             feature={self.feature},
             set_count={self.set_count},
             sprite_count={self.sprite_count},
+            first_set={self.first_set},
         )'''
 
 

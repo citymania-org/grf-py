@@ -285,11 +285,20 @@ def decode_action0(data, context):
 
 
 def decode_action1(data, context):
-    sprite_count, _ = read_extended_byte(data, 2)
     feature = grf.Feature(data[0])
     set_count = data[1]
+    if set_count == 0:
+        # Extended format (OpenTTD >= 1.2.2)
+        offset = 2
+        first_set, offset = read_extended_byte(data, offset)
+        set_count, offset = read_extended_byte(data, offset)
+        sprite_count, offset = read_extended_byte(data, offset)
+    else:
+        # Basic format
+        sprite_count, _ = read_extended_byte(data, 2)
+        first_set = None
     context.set_graphics(set_count * sprite_count, feature.name)
-    if set_count == 1:
+    if set_count == 1 and first_set is None:
         return [grf.SpriteSet(
             feature=feature,
             count=sprite_count,
@@ -298,7 +307,8 @@ def decode_action1(data, context):
         return [grf.Action1(
             feature=feature,
             set_count=set_count,
-            sprite_count=sprite_count
+            sprite_count=sprite_count,
+            first_set=first_set,
         )]
 
 

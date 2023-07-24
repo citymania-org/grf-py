@@ -3,7 +3,8 @@ import os
 
 from nose.tools import eq_
 
-from grf import BaseNewGRF
+from grf import BaseNewGRF, hex_str
+
 
 def _do_check_lib(newgrf, obj, result):
 	newgrf.add(obj)
@@ -33,3 +34,10 @@ def check_lib(prepare, obj, result):
 		if prepare is not None:
 			prepare(newgrf)
 		_do_check_lib(newgrf, obj, result)
+
+
+def check_action(action, result):
+	result = ''.join(result.split()).lower()
+	encoded = action._encode()
+	encoded_hex = hex_str(encoded)
+	eq_(encoded_hex, result)
