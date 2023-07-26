@@ -319,7 +319,7 @@ class CallbackManager:
             return {k: v for k, v in self._callbacks.items() if v is not None}
 
         def get_normal_ranges(self):
-            return {k: (v["normal"] if isinstance(v, dict) else v) for k, v in self._callbacks.items() if v is not None}
+            return {k: (v["default"] if isinstance(v, dict) else v) for k, v in self._callbacks.items() if v is not None}
 
         def get_purchase_ranges(self):
             return {k: (v["purchase"] if isinstance(v, dict) else v) for k, v in self._callbacks.items() if v is not None}
@@ -401,7 +401,7 @@ class CallbackManager:
                 raise RuntimeError('Can''t use change_properties callback together with individual property callbacks.')
             if self.properties.is_split():
                 self.change_properties = {
-                        "normal": grf.Switch(
+                        "default": grf.Switch(
                             code='extra_callback_info1_byte',
                             ranges=self.properties.get_normal_ranges(),
                             default=self.graphics,
@@ -431,7 +431,7 @@ class CallbackManager:
         purchase_callbacks = {}
         for k, c in self._callbacks.items():
             if isinstance(c, dict):
-                callbacks[k] = c["normal"]
+                callbacks[k] = c["default"]
                 purchase_callbacks[k] = c["purchase"]
             else:
                 pdata = PURCHASE.get(k)
