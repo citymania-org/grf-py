@@ -312,8 +312,17 @@ class CallbackManager:
         def is_set(self):
             return any(v is not None for v in self._callbacks.values())
 
+        def is_split(self):
+            return any(isinstance(v, dict) for v in self._callbacks.values())
+
         def get_ranges(self):
             return {k: v for k, v in self._callbacks.items() if v is not None}
+
+        def get_normal_ranges(self):
+            return {k: (v["normal"] if isinstance(v, dict) else v) for k, v in self._callbacks.items() if v is not None}
+
+        def get_purchase_ranges(self):
+            return {k: (v["purchase"] if isinstance(v, dict) else v) for k, v in self._callbacks.items() if v is not None}
 
         def __setattr__(self, name, value):
             if name.startswith('_'):
@@ -390,11 +399,25 @@ class CallbackManager:
         if self.properties.is_set():
             if self._callbacks.get('change_properties') is not None:
                 raise RuntimeError('Can''t use change_properties callback together with individual property callbacks.')
-            self.change_properties = grf.Switch(
-                code='extra_callback_info1_byte',
-                ranges=self.properties.get_ranges(),
-                default=self.graphics,
-            )
+            if self.properties.is_split():
+                self.change_properties = {
+                        "normal": grf.Switch(
+                            code='extra_callback_info1_byte',
+                            ranges=self.properties.get_normal_ranges(),
+                            default=self.graphics,
+                        ),
+                        "purchase": grf.Switch(
+                            code='extra_callback_info1_byte',
+                            ranges=self.properties.get_purchase_ranges(),
+                            default=self.graphics,
+                        ),
+                    }
+            else:
+                self.change_properties = grf.Switch(
+                    code='extra_callback_info1_byte',
+                    ranges=self.properties.get_ranges(),
+                    default=self.graphics,
+                )
         # False - only purchase, True - general + purchase
         PURCHASE = {
             Callback.Vehicle.PURCHASE_TEXT: False,
@@ -407,11 +430,15 @@ class CallbackManager:
         callbacks = {}
         purchase_callbacks = {}
         for k, c in self._callbacks.items():
-            pdata = PURCHASE.get(k)
-            if pdata is not False:
-                callbacks[k] = c
-            if pdata is not None:
-                purchase_callbacks[k] = c
+            if isinstance(c, dict):
+                callbacks[k] = c["normal"]
+                purchase_callbacks[k] = c["purchase"]
+            else:
+                pdata = PURCHASE.get(k)
+                if pdata is not False:
+                    callbacks[k] = c
+                if pdata is not None:
+                    purchase_callbacks[k] = c
 
         maps = {}
         if purchase_callbacks:
