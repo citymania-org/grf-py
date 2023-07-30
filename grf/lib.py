@@ -342,6 +342,8 @@ class CallbackManager:
         prop_domain = getattr(self._domain, 'Properties', None)
         if prop_domain is not None:
             self.properties = self.Properties(prop_domain, prop_cb)
+        else:
+            self.properties = None
 
     def __setattr__(self, name, value):
         if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties', 'feature'):
@@ -387,7 +389,7 @@ class CallbackManager:
         if self.graphics is None:
             raise ValueError('No graphics')
 
-        if self.properties.is_set():
+        if self.properties is not None and self.properties.is_set():
             if self._callbacks.get('change_properties') is not None:
                 raise RuntimeError('Can''t use change_properties callback together with individual property callbacks.')
             self.change_properties = grf.Switch(
