@@ -1,12 +1,14 @@
 ---------
 0.?.?
 ---------
+- Fix auto-assigned IDs overlapping when adding vehicles.
 - Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
 - Add support for the extended format in Action1.
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 - lib: Add `EngineOverride` sprite generator.
+- lib: Set correct flags and track_type on auto-articulated parts.
 
 ---------
 0.2.2
