@@ -344,13 +344,15 @@ class CallbackManager:
         self.graphics = None
         self.purchase_graphics = None
         callbacks = callbacks or {}
-        prop_cb = callbacks.pop('properties', None)
+
+        self._properties_domain = getattr(self._domain, 'Properties', None)
+        if self._properties_domain is not None:
+            prop_cb = callbacks.pop('properties', None)
+            self.properties = self.Properties(self._properties_domain, prop_cb)
+
         for k, v in callbacks.items():
             if v is not None:
                 setattr(self, k, v)
-        prop_domain = getattr(self._domain, 'Properties', None)
-        if prop_domain is not None:
-            self.properties = self.Properties(prop_domain, prop_cb)
 
     def __setattr__(self, name, value):
         if name.startswith('_') or name in ('graphics', 'purchase_graphics', 'properties', 'feature'):
@@ -396,7 +398,7 @@ class CallbackManager:
         if self.graphics is None:
             raise ValueError('No graphics')
 
-        if self.properties.is_set():
+        if self._properties_domain is not None and self.properties.is_set():
             if self._callbacks.get('change_properties') is not None:
                 raise RuntimeError('Can''t use change_properties callback together with individual property callbacks.')
             if self.properties.is_split():
@@ -778,11 +780,17 @@ class Train(Vehicle):
         mid_shorten, art_shorten, art_liveries = self._calc_length_articulation(
             length, self._props.get('shorten_by'), self.liveries)
         if art_shorten is not None:
-            # TODO auto assign articulated part id
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
-            self._do_add_articulated_part(f'__{self.id}_aa_mid', mid_shorten, self.liveries, self.liveries, {})
-            self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, self.liveries, {})
+            art_props = {}
+            flags = self._props.get('misc_flags')
+            if flags is not None:
+                copy_flags = self.Flags.TILT | self.Flags.MULTIPLE_UNIT | self.Flags.USE_2CC
+                art_props['misc_flags'] = flags & copy_flags
+            if 'track_type' in self._props:
+                art_props['track_type'] = self._props['track_type']
+            self._do_add_articulated_part(f'__{self.id}_aa_mid', mid_shorten, self.liveries, self.liveries, art_props)
+            self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, self.liveries, art_props)
         else:
             self._head_liveries = self.liveries
             if mid_shorten is not None:
@@ -813,7 +821,10 @@ class Train(Vehicle):
 
     def _do_add_articulated_part(self, id, shorten_by, liveries, mid_liveries, props, callbacks=None):
         if shorten_by is not None:
-            props['shorten_by'] = shorten_by
+            props = {
+                **props,
+                'shorten_by': shorten_by,
+            }
         self._articulated_parts.append((id, liveries, mid_liveries, callbacks, props))
 
     def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, length=None, **props):

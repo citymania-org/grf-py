@@ -527,7 +527,7 @@ class IDMap:
                 key = (feature, name)
                 index[key] = fid
                 used_ids.add(key)
-                next_id[feature] = max(next_id.get(feature, 0), fid)
+                next_id[feature] = max(next_id.get(feature, 0), fid + 1)
         self._loaded = True
         self._index = index
         self._next_id = next_id
