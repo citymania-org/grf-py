@@ -378,6 +378,7 @@ class BaseNewGRF:
                             reserved_ids.discard(r.ref_id)
 
         roots = [(r, v[0].feature) for r, v in actions.items() if ref_count[r] <= 0]
+
         # print('SPRITES', sprites)
         # print('ACTIONS', actions)
         # print('OREF', ordered_refs)

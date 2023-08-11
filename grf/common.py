@@ -165,9 +165,10 @@ class FeatureMeta(type):
 class Feature(metaclass=FeatureMeta):
     _FROM_NAME = {}
 
-    def __init__(self, id, name):
+    def __init__(self, id, name, class_name):
         self.id = id
         self.name = name
+        self.class_name = class_name
         self.constant = name.upper()
 
     def __repr__(self):
@@ -184,29 +185,30 @@ class Feature(metaclass=FeatureMeta):
 
 
 FeatureMeta.FEATURES = [None] * 0x15
-for k, n in ((0x00, 'train'),
-             (0x01, 'rv'),
-             (0x02, 'ship'),
-             (0x03, 'aircraft'),
-             (0x04, 'station'),
-             (0x05, 'canal'),
-             (0x06, 'bridge'),
-             (0x07, 'house'),
-             (0x08, 'global_var'),
-             (0x09, 'industry_tile'),
-             (0x0a, 'industry'),
-             (0x0b, 'cargo'),
-             (0x0c, 'sound_effect'),
-             (0x0d, 'airport'),
-             (0x0e, 'signal'),
-             (0x0f, 'object'),
-             (0x10, 'railtype'),
-             (0x11, 'airport_tile'),
-             (0x12, 'roadtype'),
-             (0x13, 'tramtype'),
-             (0x14, 'road_stop'),
-            ):
-    obj = type.__call__(Feature, k, n)
+for k, n, cn in (
+            (0x00, 'train', 'Train'),
+            (0x01, 'rv', 'RV'),
+            (0x02, 'ship', 'Ship'),
+            (0x03, 'aircraft', 'Aircraft'),
+            (0x04, 'station', 'Station'),
+            (0x05, 'canal', 'Canal'),
+            (0x06, 'bridge', 'Bridge'),
+            (0x07, 'house', 'House'),
+            (0x08, 'global_var', 'GlobalVar'),
+            (0x09, 'industry_tile', 'IndustryTile'),
+            (0x0a, 'industry', 'Industry'),
+            (0x0b, 'cargo', 'Cargo'),
+            (0x0c, 'sound_effect', 'SoundEffect'),
+            (0x0d, 'airport', 'Airport'),
+            (0x0e, 'signal', 'Signal'),
+            (0x0f, 'object', 'Object'),
+            (0x10, 'railtype', 'Railtype'),
+            (0x11, 'airport_tile', 'AirportTile'),
+            (0x12, 'roadtype', 'Roadtype'),
+            (0x13, 'tramtype', 'Tramtype'),
+            (0x14, 'road_stop', 'RoadStop'),
+        ):
+    obj = type.__call__(Feature, k, n, cn)
     FeatureMeta.FEATURES[k] = obj
     Feature._FROM_NAME[n] = obj
 

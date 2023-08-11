@@ -6,6 +6,12 @@
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
 - Add support for the extended format in Action1.
+- lib: Fix `CallbackManager.make_switches` for non-vehicle features.
+- lib: `CallbackManager` rewrite:
+	- Support all features (non-vehicles may still be incomplete).
+	- Make `CallbackManager` abstract class, use `make_callback_manager` function instead.
+	- Support splitting callbacks for default and purchase branch with `DualCallback`.
+	- Use `graphics.purchase` instead of `purchase_graphics` attribute.
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 - lib: Add `EngineOverride` sprite generator.
 - lib: Set correct flags and track_type on auto-articulated parts.
