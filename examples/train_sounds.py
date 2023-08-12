@@ -57,4 +57,4 @@ Train(
     refittable_cargo_types=1,
 )
 
-g.write('grfpy_train_sound_example.grf')
+grf.main(g, 'grfpy_train_sound_example.grf')

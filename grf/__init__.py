@@ -14,3 +14,4 @@ from .actions import RVFlags, TrainFlags, CargoClass, train_hpi, train_ton, \
 from .strings import StringRef
 from .lib import *
 from . import decompile
+from .utils import main
