@@ -112,6 +112,9 @@ class RealSprite(BaseSprite, IntermediateSprite):
     def get_real_data(self, encoder):
         raise NotImplementedError
 
+    def get_watched_files(self):
+        raise NotImplementedError
+
 
 class AlternativeSprites(RealSprite):
     def __init__(self, *sprites):
@@ -140,6 +143,12 @@ class AlternativeSprites(RealSprite):
             if s.zoom == zoom:
                 return s
         return None
+
+    def get_watched_files(self):
+        res = []
+        for s in self.sprites:
+            res.extend(s.get_watched_files())
+        return res
 
 
 class SoundSprite(RealSprite):
@@ -202,6 +211,9 @@ class PaletteRemap(BaseSprite):
     def remap_array(self, a):
         return self.remap[a]
 
+    def get_watched_files(self):
+        return ()
+
 
 WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
@@ -219,6 +231,9 @@ class Mask:
     def get_image(self):
         raise NotImplementedError
 
+    def get_watched_files(self):
+        raise NotImplementedError
+
 
 class FileMask(Mask):
     def __init__(self, file, *args, **kw):
@@ -231,6 +246,9 @@ class FileMask(Mask):
 
     def __str__(self):
         return str(self.file.path)
+
+    def get_watched_files(self):
+        return (self.file,)
 
 
 class ImageMask(Mask):
@@ -248,6 +266,9 @@ class ImageMask(Mask):
     def __str__(self):
         w, h = self.image.size()
         return f'Image({w}*{h} {self.xofs:+},{self.yofs:+})'
+
+    def get_watched_files(self):
+        return ()
 
 
 class GraphicsSprite(RealSprite):
@@ -426,6 +447,15 @@ class GraphicsSprite(RealSprite):
             yofs,
         ) + data
 
+    def get_image_watched_files(self):
+        raise NotImplementedError
+
+    def get_watched_files(self):
+        res = self.get_image_watched_files()
+        if self.mask is not None:
+            res = res + self.mask.get_watched_files()
+        return res
+
 
 class EmptyGraphicsSprite(GraphicsSprite):
     def __init__(self):
@@ -449,6 +479,10 @@ class EmptyGraphicsSprite(GraphicsSprite):
             0,
         )
 
+    def get_watched_files(self):
+        return ()
+
+
 EMPTY_SPRITE = EmptyGraphicsSprite()
 
 
@@ -460,12 +494,20 @@ class ImageSprite(GraphicsSprite):
     def get_image(self):
         return self._image
 
+    def get_image_watched_files(self):
+        return ()
+
 
 class ImageFile:
     def __init__(self, path, colourkey=None):
         self.path = path
         self.colourkey = colourkey
         self._image = None
+
+    def unload(self):
+        if self._image is not None:
+            self._image[0].close()
+            self._image = None
 
     def get_image(self):
         if self._image:
@@ -504,6 +546,9 @@ class FileSprite(GraphicsSprite):
     def get_colourkey(self):
         return self.file.colourkey
 
+    def get_image_watched_files(self):
+        return (self.file,)
+
 
 class RAWSound(SoundSprite):
     def __init__(self, file):
@@ -519,6 +564,9 @@ class RAWSound(SoundSprite):
 
     def get_hash(self):
         return self.file
+
+    def get_watched_files(self):
+        return (self.file,)
 
 
 class NMLFileSpriteWrapper:
@@ -539,3 +587,5 @@ class NMLFileSpriteWrapper:
     xrel = property(lambda self: type('XSize', (object, ), {'value': self.sprite.xofs}))
     yrel = property(lambda self: type('YSize', (object, ), {'value': self.sprite.yofs}))
 
+    def get_watched_files(self):
+        return (self.file.value,)

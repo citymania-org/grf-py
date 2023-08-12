@@ -21,7 +21,7 @@ from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INI
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite, \
-                     PaletteRemap, AlternativeSprites
+                     PaletteRemap, AlternativeSprites, ImageFile
 from .strings import StringManager
 
 
@@ -465,6 +465,18 @@ class BaseNewGRF:
         self._id_map.save()
         t.stop()
         self._sprite_encoder.print_time_report()
+
+        watched = set()
+        for s in sprites:
+            if isinstance(s, RealSprite):
+                for f in s.get_watched_files():
+                    if isinstance(f, ImageFile):
+                        watched.add(f.path)
+                        f.unload()
+                    else:
+                        watched.add(f)
+
+        return watched
 
     def wrap(self, func):
         def wrapper(*args, **kw):
