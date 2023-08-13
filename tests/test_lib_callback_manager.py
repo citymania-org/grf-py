@@ -363,14 +363,97 @@ def test_dual_callback():
     cbm.no_such_callback = 0
 
 
-# def test_properties_callbacks():
-#     cbm = make_callback_manager(
-#         feature=TRAIN,
-#         callbacks={
-#             'graphics': 0xE0,
-#             'articulated_part': DualCallback(
-#                 default=1234,
-#                 purchase=5678,
-#             )
-#         },
-#     )
+def test_properties_callbacks():
+    cbm = make_callback_manager(
+        feature=TRAIN,
+        callbacks={
+            'graphics': 0xE0,
+            'properties': {
+                'max_speed': 123,
+            }
+        },
+    )
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='extra_callback_info1_byte',
+                ranges={9: 123},
+                default=224,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={54: Ref(254)},
+                default=224,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=253,
+                related_scope=False,
+                code='current_callback',
+                ranges={54: Ref(254)},
+                default=224,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=Ref(253),
+            ),
+        ]
+    )
+
+    cbm.properties.max_speed.default = 234
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='extra_callback_info1_byte',
+                ranges={9: 123},
+                default=224,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={54: Ref(254)},
+                default=224,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=253,
+                related_scope=False,
+                code='extra_callback_info1_byte',
+                ranges={9: 234},
+                default=224,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='current_callback',
+                ranges={54: Ref(253)},
+                default=224,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=Ref(254),
+            ),
+        ]
+    )

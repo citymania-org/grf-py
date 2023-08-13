@@ -15,7 +15,8 @@ def _do_check_lib(newgrf, obj, expected):
 	def print_sprites():
 		print('Generated output: ')
 		for s in result:
-			print(s.py(None).rstrip(), end=',\n')
+			print(s.py(None).rstrip(), end=',')
+		print()
 
 	for i, s, r in zip(range(len(result)), result, expected):
 		if s != r:

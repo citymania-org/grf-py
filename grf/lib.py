@@ -626,7 +626,7 @@ class CallbackManager(object):
         def is_set(self):
             return any(v.is_set() for v in self._callbacks.values())
 
-        def get_switches(self, default):
+        def make_switches(self, default):
             default_ranges = {}
             purchase_ranges = {}
             same_switch = True
@@ -708,7 +708,7 @@ class CallbackManager(object):
         if hasattr(self, 'properties') and self.properties.is_set():
             if self.change_properties.is_set():
                 raise RuntimeError('Can''t use change_properties callback together with individual property callbacks.')
-            default, purchase = self.properties.get_switches(self.graphics.default)
+            default, purchase = self.properties.make_switches(self.graphics.default)
             if default is not None:
                 default_callbacks[Callback.Vehicle.CHANGE_PROPERTIES] = default
             if purchase is not None:
@@ -781,7 +781,6 @@ def _make_callback_class(feature):
         props[name] = CallbackDescriptor.create(data['class'], cb_id)
 
     props['__slots__'] = slots
-    print(feature, slots)
 
     return type(f'{feature.class_name}CallbackManager', (CallbackManager, ), props)
 
