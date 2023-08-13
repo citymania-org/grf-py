@@ -922,7 +922,7 @@ class Vehicle(grf.SpriteGenerator):
 
     def _set_callbacks(self, g):
         if self.additional_text:
-            self.callbacks.purchase_text = g.strings.add(self.additional_text).get_global_id()
+            self.callbacks.additional_text = g.strings.add(self.additional_text).get_global_id()
         return []
 
 
