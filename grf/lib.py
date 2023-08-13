@@ -611,11 +611,12 @@ class CallbackDescriptor:
 
 
 class CallbackManager(object):
+    __slots__ = ('_callbacks')
 
     graphics = CallbackDescriptor.create(GraphicsCallback, 0)
 
     class Properties:
-        __slots__ = ('__callbacks__',)
+        __slots__ = ('_callbacks',)
 
         def __init__(self, callbacks=None):
             self._callbacks = {}
@@ -780,6 +781,7 @@ def _make_callback_class(feature):
         props[name] = CallbackDescriptor.create(data['class'], cb_id)
 
     props['__slots__'] = slots
+    print(feature, slots)
 
     return type(f'{feature.class_name}CallbackManager', (CallbackManager, ), props)
 
@@ -788,7 +790,6 @@ def make_callback_manager(feature, callbacks=None):
     idx = make_callback_manager.CLASSES
     cls = idx.get(feature)
     if cls is None:
-        # TODO props
         cls = _make_callback_class(feature)
         idx[feature] = cls
     return cls(callbacks=callbacks)

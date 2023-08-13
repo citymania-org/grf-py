@@ -1,6 +1,6 @@
 from nose.tools import raises
 
-from grf import TRAIN, HOUSE, GraphicsCallback, make_callback_manager, SpriteGenerator, Action3, Switch, DefineMultiple
+from grf import TRAIN, HOUSE, DualCallback, GraphicsCallback, make_callback_manager, SpriteGenerator, Action3, Switch, DefineMultiple, Ref
 
 from .common import check_lib
 
@@ -168,56 +168,209 @@ def test_split_graphics():
         ]
     )
 
-# def test_split_callback():
-#     check_lib(
-#         None,
-#         CBGenerator(
-#             TRAIN,
-#             {
-#                 'graphics': 0xE0,
-#                 'purchase_text': Callback(
-#                     default=1234,
-#                     purchase=5678,
-#                 ),
-#             },
-#         ),
-#         [
-#             Action3(
-#                 feature=TRAIN,
-#                 wagon_override=False,
-#                 ids=[0],
-#                 maps={},
-#                 default=0xE0,
+
+def test_dual_callback():
+    cbm = make_callback_manager(
+        feature=TRAIN,
+        callbacks={
+            'graphics': 0xE0,
+            'articulated_part': DualCallback(
+                default=1234,
+                purchase=5678,
+            )
+        },
+    )
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 5678},
+                default=224,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 1234},
+                default=224,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=Ref(254),
+            ),
+        ]
+    )
+
+    cbm.articulated_part.default = 345
+    cbm.articulated_part.purchase = 789
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 789},
+                default=0xE0,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 345},
+                default=0xE0,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=Ref(254),
+            ),
+        ]
+    )
+
+    cbm.articulated_part.purchase = None
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 345},
+                default=0xE0,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={},
+                default=Ref(255),
+            ),
+        ]
+    )
+
+    cbm.articulated_part = 123
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 123},
+                default=0xE0,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 123},
+                default=0xE0,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=Ref(254),
+            ),
+        ]
+    )
+
+    cbm.articulated_part.default = 567
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 123},
+                default=0xE0,
+            ),
+            Switch(
+                feature=TRAIN,
+                ref_id=254,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 567},
+                default=0xE0,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=Ref(254),
+            ),
+        ]
+    )
+
+    cbm.articulated_part.default = None
+    check_lib(
+        None,
+        CBGenerator(cbm),
+        [
+            Switch(
+                feature=TRAIN,
+                ref_id=255,
+                related_scope=False,
+                code='current_callback',
+                ranges={22: 123},
+                default=0xE0,
+            ),
+            Action3(
+                feature=TRAIN,
+                wagon_override=False,
+                ids=[0],
+                maps={255: Ref(255)},
+                default=0xE0,
+            ),
+
+        ]
+    )
+
+
+@raises(AttributeError)
+def test_dual_callback():
+    cbm = make_callback_manager(
+        feature=TRAIN,
+        callbacks={
+            'graphics': 0xE0,
+        },
+    )
+    cbm.no_such_callback = 0
+
+
+# def test_properties_callbacks():
+#     cbm = make_callback_manager(
+#         feature=TRAIN,
+#         callbacks={
+#             'graphics': 0xE0,
+#             'articulated_part': DualCallback(
+#                 default=1234,
+#                 purchase=5678,
 #             )
-
-#         ]
-#     )
-
-
-
-# def test_split_property():
-#     check_lib(
-#         None,
-#         CBGenerator(
-#             TRAIN,
-#             {
-#                 'graphics': 0xE0,
-#                 'properties': {
-#                     'power': Callback(
-#                         default=1234,
-#                         purchase=5678,
-#                     )
-#                 },
-#             },
-#         ),
-#         [
-#             Action3(
-#                 feature=TRAIN,
-#                 wagon_override=False,
-#                 ids=[0],
-#                 maps={},
-#                 default=0xE0,
-#             )
-
-#         ]
+#         },
 #     )
