@@ -2,6 +2,7 @@
 0.?.?
 ---------
 - Fix auto-assigned IDs overlapping when adding vehicles.
+- Add sprite cache.
 - Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.

@@ -2,6 +2,7 @@ import functools
 import heapq
 import inspect
 import json
+import os
 import struct
 import time
 import textwrap
@@ -10,6 +11,7 @@ from collections import defaultdict
 from PIL import Image, ImageDraw
 import nml.spriteencoder
 import numpy as np
+from frozendict import frozendict
 
 from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, SpriteRef, \
                      Define, DefineMultiple, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
@@ -20,6 +22,7 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
+from .cache import SpriteCache
 from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite, \
                      PaletteRemap, AlternativeSprites, ImageFile
 from .strings import StringManager
@@ -128,6 +131,8 @@ class SpriteEncoder:
         self.conversion_time = 0
         self.composing_time = 0
         self.compression_time = 0
+        self.num_sprites = 0
+        self.num_cached = 0
 
     def count_loading(self, t):
         self.loading_time += t
@@ -149,16 +154,18 @@ class SpriteEncoder:
         print(f'   Graphics conversion time: {self.conversion_time:.02f}')
         print(f'   Graphics composing time: {self.composing_time:.02f}')
         print(f'   Graphics compression time: {self.compression_time:.02f}')
+        print(f'Total {self.num_sprites} sprites, cached {self.num_cached}')
 
 
 class BaseNewGRF:
-    def __init__(self, *, id_map_file=None):
+    def __init__(self, *, id_map_file=None, sprite_cache_path='.cache'):
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
         self.strings = StringManager()
         self._sprite_encoder = SpriteEncoder()
         self._id_map = IDMap(id_map_file)
+        self.sprite_cache_path = sprite_cache_path
 
     def reserve_ids(self, feature, ids):
         self._id_map.reserve_ids(feature, ids)
@@ -402,7 +409,7 @@ class BaseNewGRF:
         return res
 
 
-    def write(self, filename):
+    def write(self, filename, clean_build=False):
         t = Timer()
         t.start(f'Evaluating sprite generators')
         sprites = self.generate_sprites()
@@ -427,6 +434,9 @@ class BaseNewGRF:
                 next_sprite_id += 1
             data_offset += s.get_data_size() + 5
 
+        sprite_cache = SpriteCache(self.sprite_cache_path)
+        sprite_cache.load(clean_build=clean_build)
+
         with open(filename, 'wb') as f:
             t.log(f'Writing pseudo sprites')
             f.write(b'\x00\x00GRF\x82\x0d\x0a\x1a\x0a')  # file header
@@ -446,22 +456,69 @@ class BaseNewGRF:
 
             t.log(f'Writing real sprites')
             written_sprites = set()
+            file_mod_date = {}
+
+            def get_sprite_data(s):
+                if not isinstance(s, GraphicsSprite):
+                    return None
+
+                hash_data = s.get_hash()
+                if hash_data is None:
+                    return None
+
+                files = s.get_watched_files()
+                files_data = {}
+                for f in files:
+                    fmod = file_mod_date.get(f)
+                    if fmod is None:
+                        if isinstance(f, ImageFile):
+                            f = f.path
+                        fmod = file_mod_date[f] = os.path.getmtime(f)
+                    files_data[f] = fmod
+                data = frozendict({
+                    'class': s.__class__.__name__,
+                    'data': hash_data,
+                    'files': frozendict(files_data),
+                })
+                return data
+
+            def write_sprite(s):
+                sprite_data = None
+                if isinstance(s, GraphicsSprite):
+                    sprite_data = get_sprite_data(s)
+                if sprite_data is not None:
+                    data = sprite_cache.get(sprite_data)
+                    if data is None:
+                        data = s.get_real_data(self._sprite_encoder)
+                        # skip 4 bytes of sprite_id
+                        sprite_cache.set(sprite_data, data[4:])
+                    else:
+                        # cached sprite doesn't have id
+                        f.write(struct.pack('<I', s.sprite_id))
+                        self._sprite_encoder.num_cached += 1
+                else:
+                    data = s.get_real_data(self._sprite_encoder)
+
+                self._sprite_encoder.num_sprites += 1
+
+                f.write(data)
+                written_sprites.add(s)
+
             for sl in sprites:
                 if isinstance(sl, RealSprite):
                     if sl in written_sprites:
                         continue
                     # print('data', sl.get_real_data(self._sprite_encoder), flush=True)
-                    f.write(sl.get_real_data(self._sprite_encoder))
-                    written_sprites.add(sl)
+                    write_sprite(sl)
                 elif isinstance(sl, AlternativeSprites):
                     for s in sl.sprites:
                         if s in written_sprites:
                             continue
-                        f.write(s.get_real_data(self._sprite_encoder))
-                        written_sprites.add(s)
+                        write_sprite(s)
 
             f.write(b'\x00\x00\x00\x00')
 
+        sprite_cache.save()
         self._id_map.save()
         t.stop()
         self._sprite_encoder.print_time_report()

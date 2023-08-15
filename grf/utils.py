@@ -61,7 +61,7 @@ async def reload_newgrfs():
 
 def build_func(g, grf_file, args):
     print(f'Building {grf_file}')
-    g.write(grf_file)
+    g.write(grf_file, clean_build=False if args is None else args.clean)
 
 
 def watch_func(g, grf_file, args):
@@ -128,7 +128,7 @@ def main(g, grf_file):
 
     # Create a parser for the 'build' command
     build_parser = subparsers.add_parser('build', help='Build newgrf')
-    # create_parser.add_argument('--name', required=True, help='Name of the item')
+    build_parser.add_argument('--clean', action='store_true', help='Clean build (don''t use sprite cache)')
     # create_parser.add_argument('--size', type=int, required=True, help='Size of the item')
     build_parser.set_defaults(func=build_func)
 

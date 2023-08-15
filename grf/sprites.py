@@ -4,6 +4,7 @@ import struct
 import time
 
 import numpy as np
+from frozendict import frozendict
 from PIL import Image
 
 from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE, ALL_COLOURS, SAFE_COLOURS, \
@@ -218,6 +219,22 @@ class PaletteRemap(BaseSprite):
 WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
+def combine_sprite_hash(*args, **kw):
+    res = {}
+    for x in args:
+        if x is None:
+            return None
+        res.update(x)
+
+    for k, v in kw.items():
+        if callable(v):
+            v = v()
+            if v is None:
+                return None
+        res[k] = v
+    return frozendict(res)
+
+
 class Mask:
     class Mode:
         DEFAULT = 0
@@ -233,6 +250,13 @@ class Mask:
 
     def get_watched_files(self):
         raise NotImplementedError
+
+    def get_hash(self):
+        return frozendict({
+            'xofs': self.xofs,
+            'yofs': self.yofs,
+            'mode': self.mode,
+        })
 
 
 class FileMask(Mask):
@@ -270,6 +294,9 @@ class ImageMask(Mask):
     def get_watched_files(self):
         return ()
 
+    def get_hash(self):
+        return None
+
 
 class GraphicsSprite(RealSprite):
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None, crop=True):
@@ -289,6 +316,16 @@ class GraphicsSprite(RealSprite):
     @property
     def name(self):
         return f'{self.w}x{self.h}'
+
+    def get_hash(self):
+        return combine_sprite_hash(
+            w=self.w,
+            h=self.h,
+            xofs=self.xofs,
+            yofs=self.yofs,
+            crop=self.crop,
+            mask=None if self.mask is None else self.mask.get_hash,
+        )
 
     def get_image(self):
         raise NotImplementedError
@@ -548,6 +585,13 @@ class FileSprite(GraphicsSprite):
 
     def get_image_watched_files(self):
         return (self.file,)
+
+    def get_hash(self):
+        return combine_sprite_hash(
+            super().get_hash(),
+            x=self.x,
+            y=self.y,
+        )
 
 
 class RAWSound(SoundSprite):
