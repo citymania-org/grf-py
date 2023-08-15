@@ -1014,7 +1014,7 @@ class RoadVehicle(Vehicle):
 
         # Liveries
         if self.liveries and len(self.liveries) > 1:
-            self.callbacks.cargo_subtype = grf.Switch(
+            self.callbacks.cargo_subtype_text = grf.Switch(
                 ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
                 default=0x400,
                 code='cargo_subtype',
@@ -1237,7 +1237,7 @@ class Train(Vehicle):
 
         if self.liveries and len(self.liveries) > 1:
             # Liveries
-            self.callbacks.cargo_subtype = grf.Switch(
+            self.callbacks.cargo_subtype_text = grf.Switch(
                 ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
                 default=0x400,
                 code='cargo_subtype',
@@ -1404,7 +1404,7 @@ class Ship(Vehicle):
 
         # Liveries
         if self.liveries and len(self.liveries) > 1:
-            self.callbacks.cargo_subtype = grf.Switch(
+            self.callbacks.cargo_subtype_text = grf.Switch(
                 ranges={i: g.strings.add(l['name']).get_global_id() for i, l in enumerate(self.liveries)},
                 default=0x400,
                 code='cargo_subtype',
