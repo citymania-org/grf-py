@@ -544,16 +544,18 @@ class BaseNewGRF:
                         data = s.get_real_data(self._sprite_encoder)
                         # skip 4 bytes of sprite_id
                         sprite_cache.set(sprite_data, data[4:])
+                        f.write(data)
                     else:
                         # cached sprite doesn't have id
                         f.write(struct.pack('<I', s.sprite_id))
                         self._sprite_encoder.num_cached += 1
+                        f.write(data)
                 else:
                     data = s.get_real_data(self._sprite_encoder)
+                    f.write(data)
 
                 self._sprite_encoder.num_sprites += 1
 
-                f.write(data)
                 written_sprites.add(s)
 
             for sl, unload_files in sprite_order:

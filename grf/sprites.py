@@ -317,7 +317,7 @@ class GraphicsSprite(RealSprite):
     def name(self):
         return f'{self.w}x{self.h}'
 
-    def get_hash(self):
+    def get_hash_base(self):
         return combine_sprite_hash(
             w=self.w,
             h=self.h,
@@ -326,6 +326,9 @@ class GraphicsSprite(RealSprite):
             crop=self.crop,
             mask=None if self.mask is None else self.mask.get_hash,
         )
+
+    def get_hash(self):
+        raise NotImplementedError
 
     def get_image(self):
         raise NotImplementedError
@@ -519,6 +522,10 @@ class EmptyGraphicsSprite(GraphicsSprite):
     def get_watched_files(self):
         return ()
 
+    def get_hash(self):
+        # Empty sprite is always the same so just return non-none
+        return True
+
 
 EMPTY_SPRITE = EmptyGraphicsSprite()
 
@@ -527,6 +534,9 @@ class ImageSprite(GraphicsSprite):
     def __init__(self, image, *, mask=None, **kw):
         self._image = convert_image(image)
         super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
+
+    def get_hash(self):
+        return None
 
     def get_image(self):
         return self._image
@@ -593,7 +603,7 @@ class FileSprite(GraphicsSprite):
 
     def get_hash(self):
         return combine_sprite_hash(
-            super().get_hash(),
+            super().get_hash_base(),
             x=self.x,
             y=self.y,
         )
