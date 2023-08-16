@@ -240,9 +240,7 @@ class Mask:
         DEFAULT = 0
         OVERDRAW = 1
 
-    def __init__(self, xofs=0, yofs=0, mode=Mode.DEFAULT):
-        self.xofs = xofs
-        self.yofs = yofs
+    def __init__(self, mode=Mode.DEFAULT):
         self.mode = mode
 
     def get_image(self):
@@ -253,23 +251,39 @@ class Mask:
 
     def get_hash(self):
         return frozendict({
-            'xofs': self.xofs,
-            'yofs': self.yofs,
+            'class': self.__class__.__name__,
             'mode': self.mode,
         })
 
 
 class FileMask(Mask):
-    def __init__(self, file, *args, **kw):
+    def __init__(self, file, x=0, y=0, w=None, h=None, *args, **kw):
         assert(isinstance(file, ImageFile))
         super().__init__(*args, **kw)
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
         self.file = file
 
     def get_image(self):
-        return self.file.get_image()
+        img, bpp = self.file.get_image()
+        if self.w is None or self.h is None:
+            self.w, self.h = img.size
+        img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
+        return img, bpp
 
     def __str__(self):
         return str(self.file.path)
+
+    def get_hash(self):
+        return combine_sprite_hash(
+            super().get_hash(),
+            x=self.x,
+            y=self.y,
+            w=self.w,
+            h=self.h,
+        )
 
     def get_watched_files(self):
         return (self.file,)
@@ -345,9 +359,9 @@ class GraphicsSprite(RealSprite):
         img, bpp = self.get_image()
         w, h, xofs, yofs = self.w, self.h, self.xofs, self.yofs
         if w is None:
-            w = img[0].size[0]
+            w = img.size[0]
         if h is None:
-            h = img[0].size[1]
+            h = img.size[1]
 
         encoder.count_loading(time.time() - t0)
         t0 = time.time()
@@ -439,15 +453,20 @@ class GraphicsSprite(RealSprite):
                 else:
                     stack = [npimg]
 
-            if self.mask is not None:
-                mask_img, mask_bpp = self.mask.get_image()
+            mask = self.mask
+            if mask is not None:
+                mask_img, mask_bpp = mask.get_image()
                 if mask_bpp != BPP_8:
-                    raise RuntimeError(f'Mask {self.mask} is not an 8bpp image')
-                mxofs, myofs = self.x + self.mask.xofs + crop_x, self.y + self.mask.yofs + crop_y
-                mask_img = mask_img.crop((mxofs, myofs, mxofs + w, myofs + h))
-                mask_img = fix_palette(mask_img, self.mask)
+                    raise RuntimeError(f'Mask {mask} is not an 8bpp image')
+                mask_img = fix_palette(mask_img, mask)
+                if mask_img.size != (self.w, self.h):
+                    print(mask)
+                    raise RuntimeError(f'Mask {mask} size {mask_img.size} doesn'f't match image size {(self.w, self.h)}')
                 npmask = np.asarray(mask_img)
-                if self.mask.mode == Mask.Mode.OVERDRAW:
+                npmask = npmask[crop_y: crop_y + h, crop_x: crop_x + w]
+                if mask.mode == Mask.Mode.OVERDRAW:
+                    npimg = npimg.copy()
+                    stack[0] = npimg
                     npmask = npmask.reshape(w * h)
                     has_mask = (npmask != 0)
                     if npimg.shape[1] == 3:

@@ -9,6 +9,7 @@
 - Add `ShipFlags` enum.
 - Add support for the extended format in Action1.
 - Add `main` function to handle command line arguments.
+- Remove `Mask` offset, add `FileMask` absolute positioning.
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
 - lib: `CallbackManager` rewrite:
 	- Support all features (non-vehicles may still be incomplete).
