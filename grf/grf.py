@@ -24,7 +24,7 @@ from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .cache import SpriteCache
 from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite, \
-                     PaletteRemap, AlternativeSprites, ImageFile
+                     PaletteRemap, AlternativeSprites, ImageFile, ResourceFile
 from .strings import StringManager
 
 
@@ -408,6 +408,62 @@ class BaseNewGRF:
                 res.append(s)
         return res
 
+    def _enumerate_sprites(self, sprites):
+        # We want repeatable result so can't check sprite cache for better ordering
+        next_sprite_id = 1
+        unordered_sprites = []
+        ordered_sprites = []
+        for s in sprites:
+            if isinstance(s, RealSprite):
+                img_watched = [f for f in s.get_watched_files() if isinstance(f, ResourceFile)]
+                if img_watched:
+                    # We'll assign them later
+                    unordered_sprites.append((s, img_watched))
+                    continue
+                s.sprite_id = next_sprite_id
+                next_sprite_id += 1
+                ordered_sprites.append(s)
+
+        # Try to order sprites in a way that minimizes memory consumption for loaded images
+
+        img_index = defaultdict(list)
+        sprite_priority = {}
+        sprite_idx = {}
+        q = []
+        for s, files in unordered_sprites:
+            for f in files:
+                img_index[id(f)].append(id(s))
+            sprite_idx[id(s)] = (s, files)
+            p = len(files)
+            sprite_priority[id(s)] = p
+            heapq.heappush(q, (p, id(s)))
+
+        last_use = {}
+        processed_sprites = set()
+        while q:
+            _, sid = heapq.heappop(q)
+            if sid in processed_sprites:
+                continue
+            processed_sprites.add(sid)
+            s, files = sprite_idx[sid]
+            ordered_sprites.append(s)
+            s.sprite_id = next_sprite_id
+            next_sprite_id += 1
+            for f in files:
+                last_use[id(f)] = (sid, f)
+                for x in img_index[id(f)]:
+                    sprite_priority[x] -= 1
+                    heapq.heappush(q, (sprite_priority[x], x))
+
+        unload_files = defaultdict(list)
+        for sid, f in last_use.values():
+            unload_files[sid].append(f)
+
+        res = []
+        for s in ordered_sprites:
+            res.append((s, unload_files.get(id(s))))
+
+        return res
 
     def write(self, filename, clean_build=False):
         t = Timer()
@@ -426,19 +482,15 @@ class BaseNewGRF:
         sprites.extend(self.strings.get_actions())
 
         t.log(f'Enumerating {len(sprites)} real sprites')
+        sprite_order = self._enumerate_sprites(sprites)
         data_offset = 14
-        next_sprite_id = 1
         for s in sprites:
-            if isinstance(s, (AlternativeSprites, RealSprite)):
-                s.sprite_id = next_sprite_id
-                next_sprite_id += 1
             data_offset += s.get_data_size() + 5
 
+        t.log(f'Writing pseudo sprites')
         sprite_cache = SpriteCache(self.sprite_cache_path)
         sprite_cache.load(clean_build=clean_build)
-
         with open(filename, 'wb') as f:
-            t.log(f'Writing pseudo sprites')
             f.write(b'\x00\x00GRF\x82\x0d\x0a\x1a\x0a')  # file header
             f.write(struct.pack('<I', data_offset))
             f.write(b'\x00')  # compression(1)
@@ -504,7 +556,7 @@ class BaseNewGRF:
                 f.write(data)
                 written_sprites.add(s)
 
-            for sl in sprites:
+            for sl, unload_files in sprite_order:
                 if isinstance(sl, RealSprite):
                     if sl in written_sprites:
                         continue
@@ -515,6 +567,10 @@ class BaseNewGRF:
                         if s in written_sprites:
                             continue
                         write_sprite(s)
+
+                if unload_files:
+                    for rf in unload_files:
+                        rf.unload()
 
             f.write(b'\x00\x00\x00\x00')
 
@@ -529,7 +585,6 @@ class BaseNewGRF:
                 for f in s.get_watched_files():
                     if isinstance(f, ImageFile):
                         watched.add(f.path)
-                        f.unload()
                     else:
                         watched.add(f)
 

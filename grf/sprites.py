@@ -535,7 +535,12 @@ class ImageSprite(GraphicsSprite):
         return ()
 
 
-class ImageFile:
+class ResourceFile:
+    def unload(self):
+        raise NotImplementedError
+
+
+class ImageFile(ResourceFile):
     def __init__(self, path, colourkey=None):
         self.path = path
         self.colourkey = colourkey
