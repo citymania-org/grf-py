@@ -133,6 +133,7 @@ class SpriteEncoder:
         self.compression_time = 0
         self.num_sprites = 0
         self.num_cached = 0
+        self.num_uncacheable = 0
 
     def count_loading(self, t):
         self.loading_time += t
@@ -154,7 +155,7 @@ class SpriteEncoder:
         print(f'   Graphics conversion time: {self.conversion_time:.02f}')
         print(f'   Graphics composing time: {self.composing_time:.02f}')
         print(f'   Graphics compression time: {self.compression_time:.02f}')
-        print(f'Total {self.num_sprites} sprites, cached {self.num_cached}')
+        print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}')
 
 
 class BaseNewGRF:
@@ -553,22 +554,22 @@ class BaseNewGRF:
                 else:
                     data = s.get_real_data(self._sprite_encoder)
                     f.write(data)
+                    self._sprite_encoder.num_uncacheable += 1
 
                 self._sprite_encoder.num_sprites += 1
 
                 written_sprites.add(s)
 
             for sl, unload_files in sprite_order:
-                if isinstance(sl, RealSprite):
-                    if sl in written_sprites:
-                        continue
-                    # print('data', sl.get_real_data(self._sprite_encoder), flush=True)
-                    write_sprite(sl)
-                elif isinstance(sl, AlternativeSprites):
+                if isinstance(sl, AlternativeSprites):
                     for s in sl.sprites:
                         if s in written_sprites:
                             continue
                         write_sprite(s)
+                elif isinstance(sl, RealSprite):
+                    if sl in written_sprites:
+                        continue
+                    write_sprite(sl)
 
                 if unload_files:
                     for rf in unload_files:
