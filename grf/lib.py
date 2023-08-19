@@ -897,16 +897,11 @@ class Vehicle(grf.SpriteGenerator):
             if len(sprites) != 8:
                 raise ValueError(f'{self.__class__.__name__} livery expects 8 sprites, found {len(sprites)}')
 
-    def _gen_name_sprites(self, vehicle_id):
+    def _gen_name_sprites(self, g, vehicle_id):
         if isinstance(self.name, grf.StringRef):
             return self.name.get_actions(self.feature, vehicle_id)
         else:
-            return [grf.DefineStrings(
-                feature=self.feature,
-                offset=vehicle_id,
-                is_generic_offset=False,
-                strings=[self.name.encode('utf-8') if isinstance(self.name, str) else self.name]
-            )]
+            return g.strings.add(self.name).get_actions(self.feature, vehicle_id)
 
     def _gen_purchase_sprites(self):
         res = []
@@ -1022,7 +1017,7 @@ class RoadVehicle(Vehicle):
 
         self.callbacks.set_flag_props(self._props)
 
-        res.extend(self._gen_name_sprites(self.id))
+        res.extend(self._gen_name_sprites(g, self.id))
 
         res.append(definition := grf.Define(
             feature=grf.RV,
@@ -1285,7 +1280,7 @@ class Train(Vehicle):
         self.callbacks.set_flag_props(self._props)
 
         tid = g.resolve_id(self.feature, self.id)
-        res.extend(self._gen_name_sprites(tid))
+        res.extend(self._gen_name_sprites(g, tid))
 
         res.append(definition := grf.Define(
             feature=grf.TRAIN,
@@ -1412,7 +1407,7 @@ class Ship(Vehicle):
 
         self.callbacks.set_flag_props(self._props)
 
-        res.extend(self._gen_name_sprites(self.id))
+        res.extend(self._gen_name_sprites(g, self.id))
 
         res.append(definition := grf.Define(
             feature=grf.SHIP,

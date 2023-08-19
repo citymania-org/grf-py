@@ -19,6 +19,7 @@
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 - lib: Add `EngineOverride` sprite generator.
 - lib: Set correct flags and track_type on auto-articulated parts.
+- lib: Fix unicode vehicle names.
 
 ---------
 0.2.2
