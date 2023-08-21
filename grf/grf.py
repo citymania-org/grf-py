@@ -415,7 +415,7 @@ class BaseNewGRF:
         ordered_sprites = []
         for s in sprites:
             if isinstance(s, RealSprite):
-                img_watched = [f for f in s.get_watched_files() if isinstance(f, ResourceFile)]
+                img_watched = [f for f in s.get_resource_files() if isinstance(f, ResourceFile)]
                 if img_watched:
                     # We'll assign them later
                     unordered_sprites.append((s, img_watched))
@@ -518,7 +518,7 @@ class BaseNewGRF:
                 if fingerprint is None:
                     return None
 
-                files = s.get_watched_files()
+                files = s.get_resource_files()
                 files_data = {}
                 for f in files:
                     fmod = file_mod_date.get(f)
@@ -583,7 +583,7 @@ class BaseNewGRF:
         watched = set()
         for s in sprites:
             if isinstance(s, RealSprite):
-                for f in s.get_watched_files():
+                for f in s.get_resource_files():
                     if isinstance(f, ImageFile):
                         watched.add(f.path)
                     else:

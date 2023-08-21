@@ -112,7 +112,7 @@ class RealSprite(BaseSprite, IntermediateSprite):
     def get_real_data(self, encoder):
         raise NotImplementedError
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         raise NotImplementedError
 
 
@@ -144,10 +144,10 @@ class AlternativeSprites(RealSprite):
                 return s
         return None
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         res = []
         for s in self.sprites:
-            res.extend(s.get_watched_files())
+            res.extend(s.get_resource_files())
         return res
 
 
@@ -211,7 +211,7 @@ class PaletteRemap(BaseSprite):
     def remap_array(self, a):
         return self.remap[a]
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         return ()
 
 
@@ -245,7 +245,7 @@ class Mask:
     def get_image(self):
         raise NotImplementedError
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         raise NotImplementedError
 
     def get_fingerprint(self):
@@ -284,7 +284,7 @@ class FileMask(Mask):
             h=self.h,
         )
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         return (self.file,)
 
 
@@ -304,7 +304,7 @@ class ImageMask(Mask):
         w, h = self.image.size()
         return f'Image({w}*{h} {self.xofs:+},{self.yofs:+})'
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         return ()
 
     def get_fingerprint(self):
@@ -506,13 +506,13 @@ class GraphicsSprite(RealSprite):
             yofs,
         ) + data
 
-    def get_image_watched_files(self):
+    def get_image_files(self):
         raise NotImplementedError
 
-    def get_watched_files(self):
-        res = self.get_image_watched_files()
+    def get_resource_files(self):
+        res = self.get_image_files()
         if self.mask is not None:
-            res = res + self.mask.get_watched_files()
+            res = res + self.mask.get_resource_files()
         return res
 
 
@@ -538,7 +538,7 @@ class EmptyGraphicsSprite(GraphicsSprite):
             0,
         )
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         return ()
 
     def get_fingerprint(self):
@@ -560,7 +560,7 @@ class ImageSprite(GraphicsSprite):
     def get_image(self):
         return self._image
 
-    def get_image_watched_files(self):
+    def get_image_files(self):
         return ()
 
 
@@ -617,7 +617,7 @@ class FileSprite(GraphicsSprite):
     def get_colourkey(self):
         return self.file.colourkey
 
-    def get_image_watched_files(self):
+    def get_image_files(self):
         return (self.file,)
 
     def get_fingerprint(self):
@@ -643,7 +643,7 @@ class RAWSound(SoundSprite):
     def get_hash(self):
         return self.file
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         return (self.file,)
 
 
@@ -665,5 +665,5 @@ class NMLFileSpriteWrapper:
     xrel = property(lambda self: type('XSize', (object, ), {'value': self.sprite.xofs}))
     yrel = property(lambda self: type('YSize', (object, ), {'value': self.sprite.yofs}))
 
-    def get_watched_files(self):
+    def get_resource_files(self):
         return (self.file.value,)
