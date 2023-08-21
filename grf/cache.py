@@ -19,7 +19,12 @@ class SpriteCache:
     def load(self, clean_build):
         self.path.mkdir(parents=True, exist_ok=True)
         if self.index_path.exists():
-            self._index = json.load(open(self.index_path))
+            try:
+                self._index = json.load(open(self.index_path))
+            except Exception as e:
+                print(f'WARNING: Error loading cache index: {e}')
+                print('WARNING: Unable to remove unused cache files automatically, delete .cache directory if that is an issue')
+                self._index = {}
             self._old_keys = set(self._index.keys())
         else:
             self._index = {}
