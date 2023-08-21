@@ -4,7 +4,6 @@ import struct
 import time
 
 import numpy as np
-from frozendict import frozendict
 from PIL import Image
 
 from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE, ALL_COLOURS, SAFE_COLOURS, \
@@ -219,7 +218,7 @@ class PaletteRemap(BaseSprite):
 WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
-def combine_sprite_hash(*args, **kw):
+def combine_fingerprint(*args, **kw):
     res = {}
     for x in args:
         if x is None:
@@ -232,7 +231,7 @@ def combine_sprite_hash(*args, **kw):
             if v is None:
                 return None
         res[k] = v
-    return frozendict(res)
+    return res
 
 
 class Mask:
@@ -249,11 +248,11 @@ class Mask:
     def get_watched_files(self):
         raise NotImplementedError
 
-    def get_hash(self):
-        return frozendict({
+    def get_fingerprint(self):
+        return {
             'class': self.__class__.__name__,
             'mode': self.mode,
-        })
+        }
 
 
 class FileMask(Mask):
@@ -276,8 +275,8 @@ class FileMask(Mask):
     def __str__(self):
         return str(self.file.path)
 
-    def get_hash(self):
-        return combine_sprite_hash(
+    def get_fingerprint(self):
+        return combine_fingerprint(
             super().get_hash(),
             x=self.x,
             y=self.y,
@@ -308,7 +307,7 @@ class ImageMask(Mask):
     def get_watched_files(self):
         return ()
 
-    def get_hash(self):
+    def get_fingerprint(self):
         return None
 
 
@@ -331,17 +330,18 @@ class GraphicsSprite(RealSprite):
     def name(self):
         return f'{self.w}x{self.h}'
 
-    def get_hash_base(self):
-        return combine_sprite_hash(
+    def get_fingerprint_base(self):
+        return combine_fingerprint(
+            **{'class': self.__class__.__name__},
             w=self.w,
             h=self.h,
             xofs=self.xofs,
             yofs=self.yofs,
             crop=self.crop,
-            mask=None if self.mask is None else self.mask.get_hash,
+            mask=None if self.mask is None else self.mask.get_fingerprint(),
         )
 
-    def get_hash(self):
+    def get_fingerprint(self):
         raise NotImplementedError
 
     def get_image(self):
@@ -541,9 +541,9 @@ class EmptyGraphicsSprite(GraphicsSprite):
     def get_watched_files(self):
         return ()
 
-    def get_hash(self):
-        # Empty sprite is always the same so just return non-none
-        return True
+    def get_fingerprint(self):
+        # Empty sprite is always the same so just return the class
+        return {'class': self.__class__.__name__}
 
 
 EMPTY_SPRITE = EmptyGraphicsSprite()
@@ -554,7 +554,7 @@ class ImageSprite(GraphicsSprite):
         self._image = convert_image(image)
         super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
 
-    def get_hash(self):
+    def get_fingerprint(self):
         return None
 
     def get_image(self):
@@ -620,9 +620,9 @@ class FileSprite(GraphicsSprite):
     def get_image_watched_files(self):
         return (self.file,)
 
-    def get_hash(self):
-        return combine_sprite_hash(
-            super().get_hash_base(),
+    def get_fingerprint(self):
+        return combine_fingerprint(
+            super().get_fingerprint_base(),
             x=self.x,
             y=self.y,
         )

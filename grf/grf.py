@@ -11,7 +11,6 @@ from collections import defaultdict
 from PIL import Image, ImageDraw
 import nml.spriteencoder
 import numpy as np
-from frozendict import frozendict
 
 from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get_ref_id, pformat, PyComment, SpriteRef, \
                      Define, DefineMultiple, Action1, SpriteSet, GenericSpriteLayout, RandomSwitch, \
@@ -515,8 +514,8 @@ class BaseNewGRF:
                 if not isinstance(s, GraphicsSprite):
                     return None
 
-                hash_data = s.get_hash()
-                if hash_data is None:
+                fingerprint = s.get_fingerprint()
+                if fingerprint is None:
                     return None
 
                 files = s.get_watched_files()
@@ -528,11 +527,10 @@ class BaseNewGRF:
                             f = f.path
                         fmod = file_mod_date[f] = os.path.getmtime(f)
                     files_data[f] = fmod
-                data = frozendict({
-                    'class': s.__class__.__name__,
-                    'data': hash_data,
-                    'files': frozendict(files_data),
-                })
+                data = {
+                    'data': fingerprint,
+                    'files': files_data,
+                }
                 return data
 
             def write_sprite(s):
