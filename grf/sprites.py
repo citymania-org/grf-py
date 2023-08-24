@@ -156,7 +156,7 @@ class SoundSprite(RealSprite):
         super().__init__()
         self.id = None
 
-    def get_hash(self):
+    def get_fingerprint(self):
         raise NotImplemented
 
 
@@ -277,7 +277,7 @@ class FileMask(Mask):
 
     def get_fingerprint(self):
         return combine_fingerprint(
-            super().get_hash(),
+            super().get_fingerprint(),
             x=self.x,
             y=self.y,
             w=self.w,
@@ -640,7 +640,7 @@ class RAWSound(SoundSprite):
             name = name[:251] + '_' + name[-4:]
         return struct.pack('<IIBBB', self.sprite_id, len(name) + len(data) + 4, 0xff, 0xff, len(name)) + name + b'\0' + data
 
-    def get_hash(self):
+    def get_fingerprint(self):
         return self.file
 
     def get_resource_files(self):

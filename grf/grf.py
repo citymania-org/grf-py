@@ -179,7 +179,7 @@ class BaseNewGRF:
         if s.id is not None:
             return
 
-        h = s.get_hash()
+        h = s.get_fingerprint()
         if h in self._sounds:
             s.id = self._sounds[h].id
         else:
