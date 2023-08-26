@@ -70,7 +70,8 @@ def convert_image(image):
     return img, BPP_24
 
 
-class BaseSprite:
+# Pseudo sprite in grf
+class Action:
     def get_data(self):
         raise NotImplemented
 
@@ -78,30 +79,19 @@ class BaseSprite:
         raise NotImplemented
 
 
-class LazyBaseSprite(BaseSprite):
-    def __init__(self):
-        super().__init__()
-        self._data = None
-
-    def _encode(self):
-        raise NotImplemented
-
+class FakeAction:
     def get_data(self):
-        if self._data is None:
-            self._data = self._encode()
-        return self._data
+        return b't'
 
     def get_data_size(self):
-        return len(self.get_data())
+        return 0
 
 
-class IntermediateSprite:
-    pass
-
-
-class RealSprite(BaseSprite, IntermediateSprite):
-    def __init__(self):
+# Pseudo sprite (reference) + real sprite in grf
+class ResourceAction(Action):
+    def __init__(self, resource):
         self.sprite_id = None
+        self.resource = resource
 
     def get_data_size(self):
         return 4
@@ -109,40 +99,35 @@ class RealSprite(BaseSprite, IntermediateSprite):
     def get_data(self):
         return struct.pack('<I', self.sprite_id)
 
-    def get_real_data(self, encoder):
-        raise NotImplementedError
+    def get_resources(self):
+        return (self.resource, )
+
+    # def get_real_data(self, encoder):
+    #     raise NotImplementedError
 
     def get_resource_files(self):
-        raise NotImplementedError
+        return self.resource.get_resource_files()
 
 
-class AlternativeSprites(RealSprite):
+class AlternativeSprites(ResourceAction):
     def __init__(self, *sprites):
-        assert all(isinstance(s, GraphicsSprite) for s in sprites), sprites
+        assert all(isinstance(s, Sprite) for s in sprites), sprites
         assert len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites), sprites
 
-        self.sprites = sprites
         super().__init__()
-        self._sprite_id = None
+        self.sprites = sprites
 
-    @property
-    def sprite_id(self):
-        return self._sprite_id
-
-    @sprite_id.setter
-    def sprite_id(self, value):
-        self._sprite_id = value
-        for s in self.sprites:
-            s.sprite_id = value
-
-    def get_real_data(self, encoder):
-        return b''.join(s.get_real_data(encoder) for s in self.sprites)
+    # def get_real_data(self, encoder):
+    #     return b''.join(s.get_real_data(encoder) for s in self.sprites)
 
     def get_zoom(self, zoom):
         for s in self.sprites:
             if s.zoom == zoom:
                 return s
         return None
+
+    def get_resources(self):
+        return self.sprites
 
     def get_resource_files(self):
         res = []
@@ -151,16 +136,26 @@ class AlternativeSprites(RealSprite):
         return res
 
 
-class SoundSprite(RealSprite):
+class ResourceFile:
+    def unload(self):
+        raise NotImplementedError
+
+
+class Resource:
+    def get_fingerprint(self):
+        raise NotImplemented
+
+    def get_resource_files(self):
+        return NotImplemented
+
+
+class Sound(Resource):
     def __init__(self):
         super().__init__()
         self.id = None
 
-    def get_fingerprint(self):
-        raise NotImplemented
 
-
-class PaletteRemap(BaseSprite):
+class PaletteRemap(Action):
     def __init__(self, ranges=None):
         self.remap = np.arange(256, dtype=np.uint8)
         if ranges:
@@ -210,9 +205,6 @@ class PaletteRemap(BaseSprite):
 
     def remap_array(self, a):
         return self.remap[a]
-
-    def get_resource_files(self):
-        return ()
 
 
 WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
@@ -311,7 +303,7 @@ class ImageMask(Mask):
         return None
 
 
-class GraphicsSprite(RealSprite):
+class Sprite(Resource):
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None, crop=True):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
@@ -495,9 +487,7 @@ class GraphicsSprite(RealSprite):
         encoder.count_composing(time.time() - t0)
         data = encoder.sprite_compress(np.ascontiguousarray(raw_data))
         return struct.pack(
-            '<IIBBHHhh',
-            self.sprite_id,
-            len(data) + 10,
+            '<BBHHhh',
             info_byte,
             self.zoom,
             h,
@@ -516,7 +506,7 @@ class GraphicsSprite(RealSprite):
         return res
 
 
-class EmptyGraphicsSprite(GraphicsSprite):
+class EmptySprite(Sprite):
     def __init__(self):
         super().__init__(1, 1)
 
@@ -525,9 +515,7 @@ class EmptyGraphicsSprite(GraphicsSprite):
 
     def get_real_data(self, encoder):
         return struct.pack(
-            '<IIBBHHhhBB',
-            self.sprite_id,
-            12,
+            '<BBHHhhBB',
             0x4,
             0,
             1,
@@ -546,10 +534,10 @@ class EmptyGraphicsSprite(GraphicsSprite):
         return {'class': self.__class__.__name__}
 
 
-EMPTY_SPRITE = EmptyGraphicsSprite()
+EMPTY_SPRITE = EmptySprite()
 
 
-class ImageSprite(GraphicsSprite):
+class ImageSprite(Sprite):
     def __init__(self, image, *, mask=None, **kw):
         self._image = convert_image(image)
         super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
@@ -562,11 +550,6 @@ class ImageSprite(GraphicsSprite):
 
     def get_image_files(self):
         return ()
-
-
-class ResourceFile:
-    def unload(self):
-        raise NotImplementedError
 
 
 class ImageFile(ResourceFile):
@@ -595,7 +578,7 @@ class ImageFile(ResourceFile):
         return self._image
 
 
-class FileSprite(GraphicsSprite):
+class FileSprite(Sprite):
     def __init__(self, file, x, y, w, h, *, bpp=None, mask=None, **kw):
         assert(isinstance(file, ImageFile))
         super().__init__(w, h, bpp=bpp, mask=mask, **kw)
@@ -628,7 +611,7 @@ class FileSprite(GraphicsSprite):
         )
 
 
-class RAWSound(SoundSprite):
+class RAWSound(Sound):
     def __init__(self, file):
         super().__init__()
         self.file = file
@@ -638,7 +621,7 @@ class RAWSound(SoundSprite):
         name = os.path.basename(self.file).encode()
         if len(name) > 256:
             name = name[:251] + '_' + name[-4:]
-        return struct.pack('<IIBBB', self.sprite_id, len(name) + len(data) + 4, 0xff, 0xff, len(name)) + name + b'\0' + data
+        return struct.pack('<BBB', 0xff, 0xff, len(name)) + name + b'\0' + data
 
     def get_fingerprint(self):
         return self.file

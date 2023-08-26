@@ -18,7 +18,7 @@ import grf
 from grf.common import hex_str, utoi8, DataReader, read_extended_byte, read_dword, read_word, PALETTE, ZOOM_NORMAL, VEHICLE_FEATURES
 from grf.va2vars import VA2_VARS_INV
 from grf.parser import OP_INIT, SPRITE_FLAGS
-from grf.actions import ACTION0_PROPS, SpriteRef, Property, PyComment, PyCode, IntermediateSprite
+from grf.actions import ACTION0_PROPS, SpriteRef, Property, PyComment, PyCode, FakeAction
 from grf.sprites import WIN_TO_DOS_REMAP
 
 
@@ -1291,7 +1291,7 @@ def read_real_sprite(f, nfo_line, context):
     return sprite, [PyComment(s + 'Unknown sprite type')]
 
 
-class GraphicsSpriteGen(IntermediateSprite):
+class GraphicsSpriteGen(FakeAction):
     def __init__(self, sprites):
         self.sprites = sprites
 

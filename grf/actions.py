@@ -11,7 +11,7 @@ from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HO
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
-from .sprites import BaseSprite, LazyBaseSprite, SoundSprite, IntermediateSprite
+from .sprites import Action, Sound, FakeAction
 
 
 class Ref:
@@ -44,7 +44,7 @@ def get_ref_id(ref_obj):
         return ref_obj.value
     if isinstance(ref_obj, int):
         return ref_obj | 0x8000
-    if isinstance(ref_obj, SoundSprite):
+    if isinstance(ref_obj, Sound):
         return ref_obj.id | 0x8000
     return ref_obj.ref_id
 
@@ -279,7 +279,7 @@ class ClimateProperty(Property):
         return ' | '.join(res)
 
 
-class PyComment(IntermediateSprite):
+class PyComment(FakeAction):
     def __init__(self, text):
         self.text = text
 
@@ -287,7 +287,7 @@ class PyComment(IntermediateSprite):
         return f'# {self.text}'
 
 
-class PyCode(IntermediateSprite):
+class PyCode(FakeAction):
     def __init__(self, code):
         self.code = code
 
@@ -1117,7 +1117,24 @@ class CargoClass:
     # ALL_CARGO_CLASSES   bitmask(CC_SPECIAL) Note: This is already a bitmask, don't use the bitmask(..) function with this.
 
 
-class DefineMultiple(LazyBaseSprite):
+class LazyAction(Action):
+    def __init__(self):
+        super().__init__()
+        self._data = None
+
+    def _encode(self):
+        raise NotImplemented
+
+    def get_data(self):
+        if self._data is None:
+            self._data = self._encode()
+        return self._data
+
+    def get_data_size(self):
+        return len(self.get_data())
+
+
+class DefineMultiple(LazyAction):
     def __init__(self, *, feature, first_id, props, count=None):
         assert isinstance(feature, Feature)
         super().__init__()
@@ -1218,7 +1235,7 @@ class Define(DefineMultiple):
 
 # Action 1
 
-class Action1(LazyBaseSprite):
+class Action1(LazyAction):
     def __init__(self, feature, set_count, sprite_count, *, first_set=None):
         assert isinstance(feature, Feature)
         super().__init__()
@@ -1265,7 +1282,7 @@ class SpriteSet(Action1):
 
 # Action 2
 
-class GenericSpriteLayout(BaseSprite, ReferenceableAction):
+class GenericSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ent1, ent2, feature=None, ref_id=None):
         assert feature not in (HOUSE, INDUSTRY_TILE, OBJECT, AIRPORT_TILE, INDUSTRY), feature
         super().__init__()
@@ -1300,7 +1317,7 @@ class GenericSpriteLayout(BaseSprite, ReferenceableAction):
         '''
 
 
-class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
+class BasicSpriteLayout(LazyAction, ReferenceableAction):
     def __init__(self, *, ground, building, feature=None, ref_id=None):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         super().__init__()
@@ -1326,7 +1343,7 @@ class BasicSpriteLayout(LazyBaseSprite, ReferenceableAction):
         '''
 
 
-class AdvancedSpriteLayout(LazyBaseSprite, ReferenceableAction):
+class AdvancedSpriteLayout(LazyAction, ReferenceableAction):
     def __init__(self, *, ground, feature=None, ref_id=None, buildings=(), has_flags=True):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         assert len(buildings) < 64, len(buildings)
@@ -1391,7 +1408,7 @@ class ExtendedSpriteLayout(AdvancedSpriteLayout):
         super().__init__(*args, has_flags=False, **kw)
 
 
-class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
+class Switch(LazyAction, ReferenceableAction, ReferencingAction):
     def __init__(self, code, ranges, default, *, feature=None, ref_id=None, related_scope=False):
         super().__init__()
         self.feature = feature
@@ -1495,7 +1512,7 @@ class Switch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         )
 
 
-class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
+class RandomSwitch(LazyAction, ReferenceableAction, ReferencingAction):
     def __init__(self, *, scope, triggers, cmp_all, lowest_bit, groups, count=None, feature=None, ref_id=None):
         if scope == 'relative' and feature in VEHICLE_FEATURES:
             assert count is not None
@@ -1546,7 +1563,7 @@ class RandomSwitch(LazyBaseSprite, ReferenceableAction, ReferencingAction):
         )'''
 
 
-class IndustryProductionCallback(LazyBaseSprite):
+class IndustryProductionCallback(LazyAction):
     def __init__(self, *, inputs, outputs, do_again, version=2):
         assert isinstance(version, int)
         assert 0 <= version <= 2, version
@@ -1596,7 +1613,7 @@ class IndustryProductionCallback(LazyBaseSprite):
 
 # Action 3
 
-class Action3(LazyBaseSprite, ReferencingAction):
+class Action3(LazyAction, ReferencingAction):
     def __init__(self, *, feature, ids, maps, default, wagon_override=False):
         assert isinstance(feature, Feature), feature
         super().__init__()
@@ -1680,7 +1697,7 @@ class Map(Action3):
 
 # Action 4
 
-class DefineStrings(BaseSprite):
+class DefineStrings(Action):
     def __init__(self, *, feature, offset, is_generic_offset, strings, lang=ANY_LANGUAGE):
         assert isinstance(feature, Feature), feature
         if feature in VEHICLE_FEATURES or is_generic_offset:
@@ -1740,7 +1757,7 @@ class DefineStrings(BaseSprite):
 
 # Action 5
 
-class ReplaceNewSprites(LazyBaseSprite):
+class ReplaceNewSprites(LazyAction):
     def __init__(self, set_type, count, *, offset=None):
         assert isinstance(set_type, int)
         assert isinstance(count, int)
@@ -1761,7 +1778,7 @@ class ReplaceNewSprites(LazyBaseSprite):
 
 # Action 6
 
-class ModifySprites(LazyBaseSprite):
+class ModifySprites(LazyAction):
     def __init__(self, params):
         super().__init__()
         self.params = params
@@ -1780,7 +1797,7 @@ class ModifySprites(LazyBaseSprite):
 
 # Action 7, Action 9
 
-class If(LazyBaseSprite):
+class If(LazyAction):
     def __init__(self, *, is_static, variable, condition, value, skip, varsize=None):
         assert varsize is not None or isinstance(value, bytes)
 
@@ -1820,7 +1837,7 @@ class If(LazyBaseSprite):
 
 # Action 8
 
-class SetDescription(BaseSprite):
+class SetDescription(Action):
     def __init__(self, *, grfid, name, description, format_version=8):
         assert isinstance(grfid, bytes)
         assert isinstance(name, (bytes, str))
@@ -1857,7 +1874,7 @@ Action8 = SetDescription
 
 # Action A
 
-class ReplaceOldSprites(BaseSprite):
+class ReplaceOldSprites(Action):
     def __init__(self, sets):
         assert isinstance(sets, (list, tuple))
         assert len(sets) <= 0xff
@@ -1881,7 +1898,7 @@ ActionA = ReplaceOldSprites
 
 # Action B
 
-class ErrorMessage(LazyBaseSprite):
+class ErrorMessage(LazyAction):
     def __init__(self, *, severity, lang, message, text_param=None, params=None):
         super().__init__()
         assert 0 <= severity < 256, severity
@@ -1920,7 +1937,7 @@ ActionB = ErrorMessage
 
 # Action C
 
-class Comment(LazyBaseSprite):
+class Comment(LazyAction):
     def __init__(self, data):
         super().__init__()
         self.data = data
@@ -1935,7 +1952,7 @@ ActionC = Comment
 
 # Action D
 
-class ComputeParameters(LazyBaseSprite):
+class ComputeParameters(LazyAction):
     def __init__(self, *, target, operation, if_undefined, source1, source2, value=None):
             super().__init__()
             self.target = target
@@ -1974,7 +1991,7 @@ class ComputeParameters(LazyBaseSprite):
 
 # Action 10
 
-class Label(LazyBaseSprite):
+class Label(LazyAction):
     def __init__(self, label, comment):
         if not(0 <= label <= 255):
             raise ValueError(f'label {label} not in range 0..255')
@@ -1991,7 +2008,7 @@ class Label(LazyBaseSprite):
 
 # Action 11
 
-class SoundEffects(LazyBaseSprite):
+class SoundEffects(LazyAction):
     def __init__(self, count):
         super().__init__()
         self.count = count
@@ -2003,7 +2020,7 @@ class SoundEffects(LazyBaseSprite):
         return f'SoundEffects({self.count})'
 
 
-class ImportSound(LazyBaseSprite):
+class ImportSound(LazyAction):
     def __init__(self, grfid, number):
         super().__init__()
         self.grfid = grfid
@@ -2018,7 +2035,7 @@ class ImportSound(LazyBaseSprite):
 
 # Action 12
 
-class UnicodeGlyphs(LazyBaseSprite):
+class UnicodeGlyphs(LazyAction):
     def __init__(self, glyphs):
         assert len(glyphs) < 256
         super().__init__()
@@ -2033,7 +2050,7 @@ class UnicodeGlyphs(LazyBaseSprite):
 
 # Action 13
 
-class Translations(LazyBaseSprite):
+class Translations(LazyAction):
     def __init__(self, *, grfid, offset, is_generic_offset, lang=ANY_LANGUAGE):
         if not 0xD000 <= offset <= 0xDC00:
             raise ValueError(f'{self.__class__.__name__} `offset` {offset} is not in range 0xD000..0xDC00')
@@ -2069,7 +2086,7 @@ class Translations(LazyBaseSprite):
 
 # Action 14
 
-class SetProperties(LazyBaseSprite):
+class SetProperties(LazyAction):
     def __init__(self, props):
         super().__init__()
         self.props = props

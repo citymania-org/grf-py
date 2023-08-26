@@ -17,41 +17,14 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, \
                      IndustryProductionCallback, Action3, Map, DefineStrings, ReplaceNewSprites, \
                      ModifySprites, If, SetDescription, ReplaceOldSprites, ErrorMessage, Comment, \
-                     ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties
+                     ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties, LazyAction
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .cache import SpriteCache
-from .sprites import BaseSprite, GraphicsSprite, SoundSprite, RealSprite, LazyBaseSprite, IntermediateSprite, \
+from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
                      PaletteRemap, AlternativeSprites, ImageFile, ResourceFile
 from .strings import StringManager
-
-
-# def map_rgb_image(self, im):
-#     assert im.mode == 'RGB', im.mode
-#     data = np.array(im)
-
-
-# class ImageSprite(BaseSprite):
-#     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X):
-#         self.sprite_id = None
-#         self.w = w
-#         self.h = h
-#         self.xofs = xofs
-#         self.yofs = yofs
-#         self.zoom = zoom
-
-#     def get_data_size(self):
-#         return 4
-
-#     def get_data(self):
-#         return struct.pack('<I', self.sprite_id)
-
-#     def get_real_data(self, encoder):
-#         raise NotImplementedError
-
-#     def draw(self, img):
-#         raise NotImplementedError
 
 
 class SpriteSheet:
@@ -84,7 +57,7 @@ class SpriteSheet:
         im.save(filename)
 
 
-class DummySprite(BaseSprite):
+class DummySprite(Action):
     def get_data(self):
         return b'\x00'
 
@@ -174,37 +147,38 @@ class BaseNewGRF:
         return self._id_map.resolve(feature, value, articulated=articulated)
 
     def _add_sound(self, s):
-        assert isinstance(s, SoundSprite)
-
-        if s.id is not None:
-            return
+        assert isinstance(s, Sound)
 
         h = s.get_fingerprint()
         if h in self._sounds:
-            s.id = self._sounds[h].id
+            s.id = self._sounds[h].resource.id
         else:
             if self._next_sound_id > 0xff:
                 raise RuntimeError('Too many sound effects (max 183)')
             s.id = self._next_sound_id
             self._next_sound_id += 1
-            self._sounds[h] = s
+            self._sounds[h] = ResourceAction(s)
 
-    def _add(self, l, *sprites):
-        if not sprites:
-            return
-
+    def _add(self, l, sprite):
         # TODO assert all(isinstance(s, (BaseSprite, SpriteGenerator, PyComment)) for s in sprites), sprites
 
-        if isinstance(sprites[0], RealSprite):
-            if isinstance(sprites[0], SoundSprite):
-                for s in sprites:
-                    self._add_sound(s)
-                return
+        if isinstance(sprite, ResourceAction):
+            if isinstance(sprite.resource, Sound):
+                self._add_sound(sprite)
+            return
 
-        l.extend(sprites)
+        if isinstance(sprite, Sound):
+            self._add_sound(sprite)
+            return
+
+        if isinstance(sprite, Resource):
+            sprite = ResourceAction(sprite)
+
+        l.append(sprite)
 
     def add(self, *sprites):
-        self._add(self.generators, *sprites)
+        for s in sprites:
+            self._add(self.generators, s)
 
     def _write_pseudo_sprite(self, f, data, grf_type=0xff):
         f.write(struct.pack('<IB', len(data), grf_type))
@@ -217,8 +191,8 @@ class BaseNewGRF:
         res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
         res += 'from grf import Ref, CB, ImageFile, FileSprite, RAWSound, PaletteRemap\n\n'
         res += 'g = grf.BaseNewGRF()\n\n'
-        used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, IntermediateSprite)))
-        # used_classes.update(('ImageFile', 'ImageSprite', 'RAWSound'))  # TODO check usage of IntermediateSprite
+        used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, FakeAction)))
+        # used_classes.update(('ImageFile', 'ImageSprite', 'RAWSound'))  # TODO check usage of FakeAction
         if used_classes:
             res += '# Bind all the used classes to current grf so they can be used declaratively\n'
             res += ', '.join(used_classes) + ' = ' +  ', '.join(f'g.bind(grf.{c})' for c in used_classes)
@@ -295,7 +269,7 @@ class BaseNewGRF:
                         continue
 
                     if not isinstance(r, ReferenceableAction):
-                        if isinstance(r, SoundSprite):
+                        if isinstance(r, Sound):
                             self._add_sound(r)
                         continue
 
@@ -413,8 +387,9 @@ class BaseNewGRF:
         next_sprite_id = 1
         unordered_sprites = []
         ordered_sprites = []
+        fingerprints = {}
         for s in sprites:
-            if isinstance(s, RealSprite):
+            if isinstance(s, ResourceAction):
                 img_watched = [f for f in s.get_resource_files() if isinstance(f, ResourceFile)]
                 if img_watched:
                     # We'll assign them later
@@ -482,14 +457,14 @@ class BaseNewGRF:
         sprites.extend(self.strings.get_actions())
 
         t.log(f'Enumerating {len(sprites)} real sprites')
+        sprite_cache = SpriteCache(self.sprite_cache_path)
+        sprite_cache.load(clean_build=clean_build)
         sprite_order = self._enumerate_sprites(sprites)
         data_offset = 14
         for s in sprites:
             data_offset += s.get_data_size() + 5
 
         t.log(f'Writing pseudo sprites')
-        sprite_cache = SpriteCache(self.sprite_cache_path)
-        sprite_cache.load(clean_build=clean_build)
         with open(filename, 'wb') as f:
             f.write(b'\x00\x00GRF\x82\x0d\x0a\x1a\x0a')  # file header
             f.write(struct.pack('<I', data_offset))
@@ -500,7 +475,7 @@ class BaseNewGRF:
             self._write_pseudo_sprite(f, b'\x02\x00\x00\x00')
 
             for s in sprites:
-                if isinstance(s, (AlternativeSprites, RealSprite)):
+                if isinstance(s, ResourceAction):
                     self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd)
                 else:
                     self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
@@ -511,7 +486,7 @@ class BaseNewGRF:
             file_mod_date = {}
 
             def get_sprite_data(s):
-                if not isinstance(s, GraphicsSprite):
+                if not isinstance(s, Sprite):
                     return None
 
                 fingerprint = s.get_fingerprint()
@@ -533,41 +508,34 @@ class BaseNewGRF:
                 }
                 return data
 
-            def write_sprite(s):
+            def write_sprite(id, s):
                 sprite_data = None
-                if isinstance(s, GraphicsSprite):
+                if isinstance(s, Sprite):
                     sprite_data = get_sprite_data(s)
                 if sprite_data is not None:
                     data = sprite_cache.get(sprite_data)
                     if data is None:
                         data = s.get_real_data(self._sprite_encoder)
-                        # skip 4 bytes of sprite_id
-                        sprite_cache.set(sprite_data, data[4:])
-                        f.write(data)
+                        sprite_cache.set(sprite_data, data)
                     else:
-                        # cached sprite doesn't have id
-                        f.write(struct.pack('<I', s.sprite_id))
                         self._sprite_encoder.num_cached += 1
-                        f.write(data)
                 else:
                     data = s.get_real_data(self._sprite_encoder)
-                    f.write(data)
                     self._sprite_encoder.num_uncacheable += 1
+
+                f.write(struct.pack('<II', id, len(data)))
+                f.write(data)
 
                 self._sprite_encoder.num_sprites += 1
 
                 written_sprites.add(s)
 
             for sl, unload_files in sprite_order:
-                if isinstance(sl, AlternativeSprites):
-                    for s in sl.sprites:
+                if isinstance(sl, ResourceAction):
+                    for s in sl.get_resources():
                         if s in written_sprites:
                             continue
-                        write_sprite(s)
-                elif isinstance(sl, RealSprite):
-                    if sl in written_sprites:
-                        continue
-                    write_sprite(sl)
+                        write_sprite(sl.sprite_id, s)
 
                 if unload_files:
                     for rf in unload_files:
@@ -582,7 +550,7 @@ class BaseNewGRF:
 
         watched = set()
         for s in sprites:
-            if isinstance(s, RealSprite):
+            if isinstance(s, ResourceAction):
                 for f in s.get_resource_files():
                     if isinstance(f, ImageFile):
                         watched.add(f.path)

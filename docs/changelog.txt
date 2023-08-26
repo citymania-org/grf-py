@@ -1,6 +1,16 @@
 ---------
-0.?.?
+0.3.0
 ---------
+- Reorganize base sprite/action hierarchy so it better reflects newgrf structure. Also rename classes to use common terms rather than grf-specific ones (real/pseudo sprite).
+	- Rename `BaseSprite` to `Action`.
+	- Rename `LazyBaseSprite` to `LazyAction`.
+	- Rename `IntermediateSprite` to `FakeAction`.
+	- Rename `RealSprite` to `ResourceAction`.
+	- Add new base class `Resource` that resources now inherit instead of `RealSprite`.
+	- Make `ResourceAction` and `AlternativeSprites` containers for the `Resource` objects.
+	- Rename `SoundSprite` to `Sound`.
+	- Rename `GraphicsSprite` to `Sprite`.
+	- Rename `EmptyGraphicsSprite` to `EmptySprite`.
 - Fix auto-assigned IDs overlapping when adding vehicles.
 - Add sprite cache.
 - Optimize memory usage when writing NewGRF.

@@ -41,6 +41,7 @@ class StringManager:
         self._globals = {}
         self._langs = grfstrings.langs
         self._default_lang = grfstrings.default_lang
+        print('INIT', self._default_lang.strings)
         self._next_string_id = 1
         self._named_strings = {}
 
@@ -58,6 +59,7 @@ class StringManager:
         grfstrings.read_lang_files(lang_dir, default_lang_file)
         self._langs = grfstrings.langs
         self._default_lang = grfstrings.default_lang
+        print('IMPORT', self._default_lang.strings)
 
     @staticmethod
     def _gen_lang_table(names, extra_names):
@@ -113,12 +115,15 @@ class StringManager:
         if name is None:
             name = self._named_strings.get(value)
             if name is None:
+                print('NAME', name, self._next_string_id)
+                print('STRINGS', self._default_lang.strings)
                 name = f'GRFPY_{self._next_string_id}'
                 self._next_string_id += 1
                 self._named_strings[value] = name
                 self._default_lang.handle_text(name, None, value, None)
         else:
             name = 'STR_' + name
+            print('STRINGS STR', self._default_lang.strings)
             self._default_lang.handle_text(name, None, value, None)
         return StringRef(self, nml.expression.Identifier(name, None), hash(name))
 
