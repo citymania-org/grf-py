@@ -1327,7 +1327,7 @@ class GraphicsSpriteGen(FakeAction):
             main_file_var = context.resources[rgba_path or m_path]
             if rgba_path and m_path:
                 mask_file_var = context.resources[m_path]
-                mask_str = f', mask=({mask_file_var}, 0, 0)'
+                mask_str = f', mask=FileMask({mask_file_var}, {x}, {y}, {sprite.width}, {sprite.height})'
             else:
                 mask_str = ''
             sprite_sl.append(f'FileSprite({main_file_var}, {x}, {y}, {sprite.width}, {sprite.height}, xofs={sprite.xofs}, yofs={sprite.yofs}{mask_str})')
