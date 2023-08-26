@@ -1173,6 +1173,11 @@ class DefineMultiple(LazyAction):
             assert isinstance(value, tuple), type(value)
             assert len(value) == 2, (len(value), value)
             return self._encode_label(value[0]) + self._encode_label(value[1])
+        if fmt == 'n*L':
+            res = bytes((len(value),))
+            for l in value:
+                res += self._encode_label(l)
+            return res
 
     def _encode(self):
         res = struct.pack('<BBBBBH',
