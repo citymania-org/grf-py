@@ -266,7 +266,8 @@ class BaseNewGRF:
                             continue
                         robj = refids.get(r.ref_id)
                         if robj is None:
-                            raise RuntimeError(f'Unresolved direct reference {r} in action {s.py(None)}')
+                            print (f'WARNING Unresolved direct reference {r} in action {s.py(None)}')
+                            continue
                         r = robj
                         ref_count[id(r)] += 1
                         continue
