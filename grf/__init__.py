@@ -15,3 +15,16 @@ from .strings import StringRef
 from .lib import *
 from . import decompile
 from .utils import main
+
+
+try:
+    from setuptools_git_versioning import get_version
+    __version__ = str(get_version())
+except:
+    from importlib.metadata import version, PackageNotFoundError
+
+    try:
+        __version__ = version("grf")
+    except PackageNotFoundError:
+        # package is not installed
+        pass
