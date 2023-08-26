@@ -23,7 +23,7 @@ from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
-                     PaletteRemap, AlternativeSprites, ImageFile, ResourceFile
+                     PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile
 from .strings import StringManager
 
 
@@ -390,10 +390,12 @@ class BaseNewGRF:
         fingerprints = {}
         for s in sprites:
             if isinstance(s, ResourceAction):
-                img_watched = [f for f in s.get_resource_files() if isinstance(f, ResourceFile)]
-                if img_watched:
+                resource_files = s.get_resource_files()
+                assert all(isinstance(f, ResourceFile) for f in resource_files)
+                loaded_resources = [f for f in resource_files if isinstance(f, LoadedResourceFile)]
+                if loaded_resources:
                     # We'll assign them later
-                    unordered_sprites.append((s, img_watched))
+                    unordered_sprites.append((s, loaded_resources))
                     continue
                 s.sprite_id = next_sprite_id
                 next_sprite_id += 1
@@ -496,17 +498,16 @@ class BaseNewGRF:
                 files = s.get_resource_files()
                 files_data = {}
                 for f in files:
-                    fmod = file_mod_date.get(f)
+                    path = f.path
+                    fmod = file_mod_date.get(path)
                     if fmod is None:
-                        if isinstance(f, ImageFile):
-                            f = f.path
-                        fmod = file_mod_date[f] = os.path.getmtime(f)
-                    files_data[f] = fmod
-                data = {
+                        fmod = file_mod_date[path] = os.path.getmtime(path)
+                    files_data[path] = fmod
+
+                return {
                     'data': fingerprint,
                     'files': files_data,
                 }
-                return data
 
             def write_sprite(id, s):
                 sprite_data = None
@@ -552,10 +553,8 @@ class BaseNewGRF:
         for s in sprites:
             if isinstance(s, ResourceAction):
                 for f in s.get_resource_files():
-                    if isinstance(f, ImageFile):
-                        watched.add(f.path)
-                    else:
-                        watched.add(f)
+                    assert isinstance(f, ResourceFile)
+                    watched.add(f.path)
 
         return watched
 

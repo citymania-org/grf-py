@@ -63,14 +63,15 @@ class SpriteCache:
 
     def get(self, hash_data):
         h = self.hexdigest(hash_data)
-        hdata = self._index.get(h)
-        if hdata == hash_data:
-            self._new_keys.add(h)
-            try:
-                return open(self.path / h, 'rb').read()
-            except Exception as e:
-                print(f'WARNING(internal): Broken sprite cache entry {h} (get fail): {e}')
-        return None
+        # NOTE only check hashes because checking data is tricky in json (stringified keys)
+        if h not in self._index:
+            return None
+
+        self._new_keys.add(h)
+        try:
+            return open(self.path / h, 'rb').read()
+        except Exception as e:
+            print(f'WARNING(internal): Broken sprite cache entry {h} (get fail): {e}')
 
     def set(self, hash_data, data):
         h = self.hexdigest(hash_data)

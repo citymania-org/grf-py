@@ -137,6 +137,22 @@ class AlternativeSprites(ResourceAction):
 
 
 class ResourceFile:
+    def __init__(self, path):
+        self.path = path
+
+
+class CodeFile(ResourceFile):
+    pass
+
+
+class PythonFile(CodeFile):
+    pass
+
+
+THIS_FILE = PythonFile(__file__)
+
+
+class LoadedResourceFile(ResourceFile):
     def unload(self):
         raise NotImplementedError
 
@@ -277,7 +293,7 @@ class FileMask(Mask):
         )
 
     def get_resource_files(self):
-        return (self.file,)
+        return (self.file, THIS_FILE)
 
 
 class ImageMask(Mask):
@@ -297,7 +313,7 @@ class ImageMask(Mask):
         return f'Image({w}*{h} {self.xofs:+},{self.yofs:+})'
 
     def get_resource_files(self):
-        return ()
+        return (THIS_FILE,)
 
     def get_fingerprint(self):
         return None
@@ -500,10 +516,11 @@ class Sprite(Resource):
         raise NotImplementedError
 
     def get_resource_files(self):
-        res = self.get_image_files()
+        res = list(self.get_image_files())
         if self.mask is not None:
-            res = res + self.mask.get_resource_files()
-        return res
+            res.extend(self.mask.get_resource_files())
+        res.append(THIS_FILE)
+        return tuple(res)
 
 
 class EmptySprite(Sprite):
@@ -527,7 +544,7 @@ class EmptySprite(Sprite):
         )
 
     def get_resource_files(self):
-        return ()
+        return (THIS_FILE,)
 
     def get_fingerprint(self):
         # Empty sprite is always the same so just return the class
@@ -552,7 +569,7 @@ class ImageSprite(Sprite):
         return ()
 
 
-class ImageFile(ResourceFile):
+class ImageFile(LoadedResourceFile):
     def __init__(self, path, colourkey=None):
         self.path = path
         self.colourkey = colourkey
