@@ -698,8 +698,8 @@ class IDMap:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_map_file=None):
-        super().__init__(id_map_file=id_map_file)
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_map_file=None, sprite_cache_path=".cache"):
+        super().__init__(id_map_file=id_map_file, sprite_cache_path=sprite_cache_path)
 
         if isinstance(grfid, str):
             grfid = grfid.encode('utf-8')
