@@ -106,6 +106,7 @@ class SpriteEncoder:
         self.num_sprites = 0
         self.num_cached = 0
         self.num_uncacheable = 0
+        self.num_duplicate = 0
 
     def count_loading(self, t):
         self.loading_time += t
@@ -127,7 +128,7 @@ class SpriteEncoder:
         print(f'   Graphics conversion time: {self.conversion_time:.02f}')
         print(f'   Graphics composing time: {self.composing_time:.02f}')
         print(f'   Graphics compression time: {self.compression_time:.02f}')
-        print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}')
+        print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
 
 
 class BaseNewGRF:
@@ -182,7 +183,9 @@ class BaseNewGRF:
 
     def _write_pseudo_sprite(self, f, data, grf_type=0xff):
         f.write(struct.pack('<IB', len(data), grf_type))
+        res = f.tell()
         f.write(data)
+        return res
 
     def generate_python(self, grf_filename):
         context = PythonGenerationContext()
@@ -466,7 +469,7 @@ class BaseNewGRF:
         for s in sprites:
             data_offset += s.get_data_size() + 5
 
-        t.log(f'Writing pseudo sprites')
+        t.log(f'Writing actions')
         with open(filename, 'wb') as f:
             f.write(b'\x00\x00GRF\x82\x0d\x0a\x1a\x0a')  # file header
             f.write(struct.pack('<I', data_offset))
@@ -476,18 +479,19 @@ class BaseNewGRF:
             # f.write(b'\xb0\x01\x00\x00')  # num + 0xff -> recoloursprites() (257 each)
             self._write_pseudo_sprite(f, b'\x02\x00\x00\x00')
 
+            # Using dict of lists as each sprite can be used multiple times
+            resource_references = defaultdict(list)
             for s in sprites:
                 if isinstance(s, ResourceAction):
-                    self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd)
+                    resource_references[s.sprite_id].append(self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd))
                 else:
                     self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
             f.write(b'\x00\x00\x00\x00')
 
-            t.log(f'Writing real sprites')
-            written_sprites = set()
+            t.log(f'Writing resources')
             file_mod_date = {}
 
-            def get_sprite_data(s):
+            def get_sprite_fingerprint(s):
                 if not isinstance(s, Sprite):
                     return None
 
@@ -509,10 +513,10 @@ class BaseNewGRF:
                     'files': files_data,
                 }
 
-            def write_sprite(id, s):
+            def get_sprite_data(s):
                 sprite_data = None
                 if isinstance(s, Sprite):
-                    sprite_data = get_sprite_data(s)
+                    sprite_data = get_sprite_fingerprint(s)
                 if sprite_data is not None:
                     data = sprite_cache.get(sprite_data)
                     if data is None:
@@ -524,25 +528,50 @@ class BaseNewGRF:
                     data = s.get_real_data(self._sprite_encoder)
                     self._sprite_encoder.num_uncacheable += 1
 
-                f.write(struct.pack('<II', id, len(data)))
-                f.write(data)
-
                 self._sprite_encoder.num_sprites += 1
+                return data
 
-                written_sprites.add(s)
-
+            renumerate_sprites = {}
+            data_hashes = {}
+            written_resources = set()
             for sl, unload_files in sprite_order:
                 if isinstance(sl, ResourceAction):
+                    if sl in written_resources:
+                        continue
+
+                    data = []
                     for s in sl.get_resources():
-                        if s in written_sprites:
-                            continue
-                        write_sprite(sl.sprite_id, s)
+                        d = get_sprite_data(s)
+                        data.append(d)
+
+                    h = hash(tuple(data))
+                    sid = data_hashes.get(h)
+                    if sid is not None:
+                        # Don't duplicate sprite, just change the reference.
+                        renumerate_sprites[sl.sprite_id] = sid
+                    else:
+                        # Unique sprite, write it and add to index.
+                        for d in data:
+                            f.write(struct.pack('<II', sl.sprite_id, len(d)))
+                            f.write(d)
+                        data_hashes[h] = sl.sprite_id
+
+                    written_resources.add(sl)
+
 
                 if unload_files:
                     for rf in unload_files:
                         rf.unload()
 
             f.write(b'\x00\x00\x00\x00')
+
+            # print('RENUMERATE', renumerate_sprites)
+            for k, v in renumerate_sprites.items():
+                for ofs in resource_references[k]:
+                    f.seek(ofs)
+                    f.write(struct.pack('<I', v))
+
+            self._sprite_encoder.num_duplicate = len(renumerate_sprites)
 
         sprite_cache.save()
         self._id_map.save()
