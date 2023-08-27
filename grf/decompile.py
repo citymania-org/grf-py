@@ -1266,7 +1266,7 @@ def read_real_sprite(f, nfo_line, context):
         ParsingContext.SOUND: 'sound',
     }.get(sprite_type, 'unknown')
     s = f'{nfo_line}: Real sprite({sprite_id}): ({num}, {t:02x}): '
-    if sprite_type == ParsingContext.GRAPHICS:
+    if sprite_type == ParsingContext.GRAPHICS or sprite_type == ParsingContext.DEFAULT:
         zoom, height, width, xofs, yofs = struct.unpack('<BHHhh', f.read(9))
         fmt = ''
         if t & 0x01: fmt = fmt + 'RGB'
@@ -1288,7 +1288,7 @@ def read_real_sprite(f, nfo_line, context):
 
     sprite = RealSprite(f.tell(), num - 1)
     f.seek(start_pos + num - 1, 0)
-    return sprite, [PyComment(s + 'Unknown sprite type')]
+    return sprite, [PyComment(s + f'Unknown sprite type {sprite_type}')]
 
 
 class GraphicsSpriteGen(FakeAction):
@@ -1330,7 +1330,11 @@ class GraphicsSpriteGen(FakeAction):
                 mask_str = f', mask=FileMask({mask_file_var}, {x}, {y}, {sprite.width}, {sprite.height})'
             else:
                 mask_str = ''
-            sprite_sl.append(f'FileSprite({main_file_var}, {x}, {y}, {sprite.width}, {sprite.height}, xofs={sprite.xofs}, yofs={sprite.yofs}{mask_str})')
+            try:
+                zoom_str = ['ZOOM_4X', 'ZOOM_NORMAL', 'ZOOM_2X', 'ZOOM_8X', 'ZOOM_16X', 'ZOOM_32X'][sprite.zoom]
+            except IndexError:
+                zoom_str = str(sprite.zoom)
+            sprite_sl.append(f'FileSprite({main_file_var}, {x}, {y}, {sprite.width}, {sprite.height}, xofs={sprite.xofs}, yofs={sprite.yofs}{mask_str}, zoom={zoom_str})')
 
         if len(sprite_sl) > 1:
             res += 'g.add((\n'

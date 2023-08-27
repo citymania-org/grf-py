@@ -192,6 +192,7 @@ class BaseNewGRF:
         res = 'import datetime\nimport grf\n'
         make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
         res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
+        res += 'from grf import ZOOM_4X, ZOOM_NORMAL, ZOOM_2X, ZOOM_8X, ZOOM_16X, ZOOM_32X\n'
         res += 'from grf import Ref, CB, ImageFile, FileSprite, FileMask, RAWSound, PaletteRemap\n\n'
         res += 'g = grf.BaseNewGRF()\n\n'
         used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, FakeAction)))
