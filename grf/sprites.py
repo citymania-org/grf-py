@@ -153,6 +153,9 @@ THIS_FILE = PythonFile(__file__)
 
 
 class LoadedResourceFile(ResourceFile):
+    def load(self):
+        raise NotImplementedError
+
     def unload(self):
         raise NotImplementedError
 
@@ -575,14 +578,9 @@ class ImageFile(LoadedResourceFile):
         self.colourkey = colourkey
         self._image = None
 
-    def unload(self):
+    def load(self):
         if self._image is not None:
-            self._image[0].close()
-            self._image = None
-
-    def get_image(self):
-        if self._image:
-            return self._image
+            return
         img = Image.open(self.path)
         if img.mode == 'P':
             self._image = (img, BPP_8)
@@ -592,6 +590,15 @@ class ImageFile(LoadedResourceFile):
             if img.mode != 'RGBA':
                 img = img.convert('RGBA')
             self._image = (img, BPP_32)
+
+    def unload(self):
+        if self._image is not None:
+            self._image[0].close()
+            self._image = None
+
+
+    def get_image(self):
+        self.load()
         return self._image
 
 

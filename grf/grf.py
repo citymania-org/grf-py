@@ -420,6 +420,7 @@ class BaseNewGRF:
             sprite_priority[id(s)] = p
             heapq.heappush(q, (p, id(s)))
 
+        load_files = defaultdict(list)
         last_use = {}
         processed_sprites = set()
         while q:
@@ -432,8 +433,11 @@ class BaseNewGRF:
             s.sprite_id = next_sprite_id
             next_sprite_id += 1
             for f in files:
-                last_use[id(f)] = (sid, f)
-                for x in img_index[id(f)]:
+                fid = id(f)
+                if fid not in last_use:
+                    load_files[sid].append(f)
+                last_use[fid] = (sid, f)
+                for x in img_index[fid]:
                     sprite_priority[x] -= 1
                     heapq.heappush(q, (sprite_priority[x], x))
 
@@ -443,7 +447,7 @@ class BaseNewGRF:
 
         res = []
         for s in ordered_sprites:
-            res.append((s, unload_files.get(id(s))))
+            res.append((s, load_files.get(id(s)), unload_files.get(id(s))))
 
         return res
 
@@ -536,7 +540,11 @@ class BaseNewGRF:
             renumerate_sprites = {}
             data_hashes = {}
             written_resources = set()
-            for sl, unload_files in sprite_order:
+            for sl, load_files, unload_files in sprite_order:
+                if load_files:
+                    for rf in load_files:
+                        rf.load()
+
                 if isinstance(sl, ResourceAction):
                     if sl in written_resources:
                         continue
