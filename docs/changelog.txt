@@ -12,6 +12,7 @@
 	- Rename `GraphicsSprite` to `Sprite`.
 	- Rename `EmptyGraphicsSprite` to `EmptySprite`.
 - Fix auto-assigned IDs overlapping when adding vehicles.
+- Fix encoding of label lists in Action0 properties.
 - Add sprite cache.
 - Optimize memory usage when writing NewGRF.
 - Optimize grf file size by removing duplicate sprites (by data).

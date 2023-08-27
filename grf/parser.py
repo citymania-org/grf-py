@@ -305,7 +305,14 @@ class GenericVar(Node):
         if self.param is not None:
             # TODO dynamic param (var 7B)
             param = get_constant(self.param, 'Parameter should be a constant')
-            return True, struct.pack('<BBBI', self.var, param, 0x20 | shift, and_mask)
+            if param > 255:
+                return True, struct.pack(
+                    '<BBIBBBBI',
+                    0x1a, 0x20, param,  # val1 = param
+                    0x0f, 0x7b, self.var, 0x20 | shift, and_mask,  # val1 = var(var=self.var, param=val1)
+                )
+            else:
+                return True, struct.pack('<BBBI', self.var, param, 0x20 | shift, and_mask)
         else:
             return True, struct.pack('<BBI', self.var, 0x20 | shift, and_mask)
 
