@@ -133,7 +133,7 @@ class SpriteEncoder:
 
 
 class BaseNewGRF:
-    def __init__(self, *, id_map_file=None, sprite_cache_path='.cache', strings=None):
+    def __init__(self, *, strings=None, id_map_file=None, sprite_cache_path='.cache'):
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
@@ -705,8 +705,8 @@ class IDMap:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_map_file=None, strings=None):
-        super().__init__(id_map_file=id_map_file, strings=strings)
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache'):
+        super().__init__(strings=strings, id_map_file=id_map_file, sprite_cache_path=sprite_cache_path)
 
         if isinstance(grfid, str):
             grfid = grfid.encode('utf-8')
