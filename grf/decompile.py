@@ -779,9 +779,9 @@ def decode_action5(data, context):
     t = data[0]
     offset = None
     num, dataofs = read_extended_byte(data, 1)
-    if t & 0xf0:
+    if t & 0x80:
         offset, _ = read_extended_byte(data, dataofs)
-        t &= ~0xf0
+        t &= ~0x80
     context.set_graphics(num, 'action5')
     return [grf.ReplaceNewSprites(t, num, offset=offset)]
 

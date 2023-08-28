@@ -1775,7 +1775,7 @@ class ReplaceNewSprites(LazyAction):
     def _encode(self):
         if self.offset is None:
             return bytes((0x5,)) + struct.pack('<BBH', self.set_type, 0xff, self.count)
-        return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0xf0, 0xff, self.count, 0xff, self.offset)
+        return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0x80, 0xff, self.count, 0xff, self.offset)
 
     def py(self, context):
         return f'ReplaceNewSprites(set_type={self.set_type}, count={self.count}, offset={self.offset})'
