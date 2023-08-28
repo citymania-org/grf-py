@@ -133,11 +133,11 @@ class SpriteEncoder:
 
 
 class BaseNewGRF:
-    def __init__(self, *, id_map_file=None, sprite_cache_path='.cache'):
+    def __init__(self, *, id_map_file=None, sprite_cache_path='.cache', strings=None):
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
-        self.strings = StringManager()
+        self.strings = StringManager() if strings is None else strings
         self._sprite_encoder = SpriteEncoder()
         self._id_map = IDMap(id_map_file)
         self.sprite_cache_path = sprite_cache_path
@@ -705,8 +705,8 @@ class IDMap:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_map_file=None):
-        super().__init__(id_map_file=id_map_file)
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, id_map_file=None, strings=None):
+        super().__init__(id_map_file=id_map_file, strings=strings)
 
         if isinstance(grfid, str):
             grfid = grfid.encode('utf-8')
@@ -714,7 +714,13 @@ class NewGRF(BaseNewGRF):
         if len(grfid) != 4:
             raise ValueError(f'Expected 4 symbols for GRFID, found {len(grfid)}: {grfid}')
 
-        props = {'INFO': {'PALS': b'D'}}
+        props = {
+            'INFO': {
+                'PALS': b'D',
+                'NAME': name,
+                'DESC': description,
+            }
+        }
 
         if version is not None:
             assert isinstance(version, int), type(version)
@@ -800,8 +806,8 @@ class NewGRF(BaseNewGRF):
             SetDescription(
                 format_version=self.format_version,
                 grfid=self.grfid,
-                name=self.name,
-                description=self.description
+                name=str(self.name),
+                description=str(self.description),
             )
         ]
 
