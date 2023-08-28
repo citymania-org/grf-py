@@ -89,9 +89,8 @@ class FakeAction:
 
 # Pseudo sprite (reference) + real sprite in grf
 class ResourceAction(Action):
-    def __init__(self, resource):
+    def __init__(self):
         self.sprite_id = None
-        self.resource = resource
 
     def get_data_size(self):
         return 4
@@ -100,10 +99,19 @@ class ResourceAction(Action):
         return struct.pack('<I', self.sprite_id)
 
     def get_resources(self):
-        return (self.resource, )
+        raise NotImplementedError
 
-    # def get_real_data(self, encoder):
-    #     raise NotImplementedError
+    def get_resource_files(self):
+        raise NotImplementedError
+
+
+class SingleResourceAction(ResourceAction):
+    def __init__(self, resource):
+        super().__init__()
+        self.resource = resource
+
+    def get_resources(self):
+        return (self.resource, )
 
     def get_resource_files(self):
         return self.resource.get_resource_files()
@@ -116,9 +124,6 @@ class AlternativeSprites(ResourceAction):
 
         super().__init__()
         self.sprites = sprites
-
-    # def get_real_data(self, encoder):
-    #     return b''.join(s.get_real_data(encoder) for s in self.sprites)
 
     def get_zoom(self, zoom):
         for s in self.sprites:
@@ -349,7 +354,7 @@ class Sprite(Resource):
             xofs=self.xofs,
             yofs=self.yofs,
             crop=self.crop,
-            mask=None if self.mask is None else self.mask.get_fingerprint(),
+            mask=None if self.mask is None else self.mask.get_fingerprint,
         )
 
     def get_fingerprint(self):

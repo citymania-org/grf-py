@@ -23,7 +23,8 @@ from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
-                     PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile
+                     PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile, \
+                     SingleResourceAction
 from .strings import StringManager
 
 
@@ -158,12 +159,12 @@ class BaseNewGRF:
                 raise RuntimeError('Too many sound effects (max 183)')
             s.id = self._next_sound_id
             self._next_sound_id += 1
-            self._sounds[h] = ResourceAction(s)
+            self._sounds[h] = SingleResourceAction(s)
 
     def _add(self, l, sprite):
         # TODO assert all(isinstance(s, (BaseSprite, SpriteGenerator, PyComment)) for s in sprites), sprites
 
-        if isinstance(sprite, ResourceAction):
+        if isinstance(sprite, SingleResourceAction):
             if isinstance(sprite.resource, Sound):
                 self._add_sound(sprite)
             return
@@ -173,7 +174,7 @@ class BaseNewGRF:
             return
 
         if isinstance(sprite, Resource):
-            sprite = ResourceAction(sprite)
+            sprite = SingleResourceAction(sprite)
 
         l.append(sprite)
 
@@ -508,7 +509,7 @@ class BaseNewGRF:
                 files = s.get_resource_files()
                 files_data = {}
                 for f in files:
-                    path = f.path
+                    path = str(f.path)
                     fmod = file_mod_date.get(path)
                     if fmod is None:
                         fmod = file_mod_date[path] = os.path.getmtime(path)

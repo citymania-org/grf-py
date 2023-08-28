@@ -5,7 +5,7 @@ from . import parser
 from .grf import *
 from .constants import *
 from .vox import VoxReader, VoxFile, VoxTrainFile
-from .sprites import ResourceAction, Sprite, ImageSprite, ImageFile, FileSprite, Mask, FileMask, ImageMask, Sound, RAWSound, PaletteRemap, EMPTY_SPRITE, open_image, find_best_color, fix_palette, combine_fingerprint, ResourceFile
+from .sprites import ResourceAction, Sprite, ImageSprite, ImageFile, FileSprite, Mask, FileMask, ImageMask, Sound, RAWSound, PaletteRemap, EMPTY_SPRITE, open_image, find_best_color, fix_palette, combine_fingerprint, ResourceFile, PythonFile
 from .common import *
 from .actions import RVFlags, TrainFlags, CargoClass, train_hpi, train_ton, \
     nml_te, nml_drag, py_property, SpriteRef, SpriteLayout, SpriteLayoutList, \
