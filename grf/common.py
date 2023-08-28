@@ -131,6 +131,10 @@ def hex_str(s, n=None):
     return ':'.join('{:02x}'.format(ord(c)) for c in s) + add
 
 
+def str_hex(s):
+    return bytes(int(x, 16) for x in s.split(':'))
+
+
 def to_bytes(value):
     if isinstance(value, bytes):
         return value

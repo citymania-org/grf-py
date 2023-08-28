@@ -13,6 +13,7 @@
 	- Rename `EmptyGraphicsSprite` to `EmptySprite`.
 - Fix auto-assigned IDs overlapping when adding vehicles.
 - Fix encoding of label lists in Action0 properties.
+- Fix encoding and decoding of Action 5.
 - Add sprite cache.
 - Optimize memory usage when writing NewGRF.
 - Optimize grf file size by removing duplicate sprites (by data).
@@ -21,6 +22,7 @@
 - Add `ShipFlags` enum.
 - Add support for the extended format in Action1.
 - Add `main` function to handle command line arguments.
+- Add support for using StringRef in Action 0x14 (`SetProperties`).
 - Remove `Mask` offset, add `FileMask` absolute positioning.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.

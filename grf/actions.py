@@ -1860,6 +1860,15 @@ class SetDescription(Action):
         self._data = bytes((0x08, self.format_version))
         self._data += self.grfid + self.name + b'\x00' + self.description + b'\x00'
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, SetDescription) and
+            self.grfid == action.grfid and
+            self.name == action.name and
+            self.description == action.description and
+            self.format_version == action.format_version
+        )
+
     def get_data(self):
         return self._data
 
@@ -2096,6 +2105,12 @@ class SetProperties(LazyAction):
         super().__init__()
         self.props = props
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, SetProperties) and
+            self.props == action.props
+        )
+
     def _encode(self):
         data = b'\x14'
 
@@ -2122,7 +2137,7 @@ class SetProperties(LazyAction):
                 assert isinstance(lang_id, int) and isinstance(text, (bytes, str))
                 if isinstance(text, str):
                     text = text.encode('utf-8')
-                data += b'T' + k + bytes((lang_id)) + text + b'\0'
+                data += b'T' + k + bytes((lang_id,)) + text + b'\0'
             elif isinstance(v, str):
                 data += b'T' + k + b'\0' + v.encode('utf-8') + b'\0'
             elif isinstance(v, int):
@@ -2130,13 +2145,20 @@ class SetProperties(LazyAction):
             elif isinstance(v, bytes):
                 data += b'B' + k + struct.pack('<H', len(v)) + v
             else:
-                raise ValueError(f'Unexpected property value type {type(v)}: {v}')
+                # TODO reorganize code so it checks isinstance(v, StringRef):
+                for lang_id, text in v.get_pairs():
+                    data += b'T' + k + bytes((lang_id,)) + text + b'\0'
+            # else:
+            #     raise ValueError(f'Unexpected property value type {type(v)}: {v}')
 
         rec(None, self.props)
         return data
 
     def py(self, context):
-        return f'SetProperties(\n' + pformat(self.props) + '\n)'
+        return f'''
+        {self.__class__.__name__}(
+            props={pformat(self.props, indent_first=0, indent=10 + 8)}
+        )'''
 
 
 class PrettyPrinter(pprint.PrettyPrinter):

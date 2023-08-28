@@ -988,13 +988,17 @@ def decode_action14(data, context):
                 pass
         elif chunk_type == b'B'[0]:
             l = data[ofs] | (data[ofs + 1] << 8)
-            res[chunk_id] = data[ofs + 2: ofs + 2 + l]
+            if chunk_id not in res:
+                res[chunk_id] = []
+            res[chunk_id].append(data[ofs + 2: ofs + 2 + l])
             ofs += 2 + l
         elif chunk_type == b'T'[0]:
             lang = data[ofs]
             text_end = data.find(b'\0', ofs + 1)
             text = data[ofs + 1 : text_end]
-            res[chunk_id] = (lang, text)
+            if chunk_id not in res:
+                res[chunk_id] = []
+            res[chunk_id].append((lang, text))
             ofs = text_end + 1
         else:
             assert False, chunk_type

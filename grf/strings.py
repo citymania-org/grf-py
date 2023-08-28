@@ -37,9 +37,10 @@ def grf_compile_string(value):
 
 
 class StringManager:
-    def __init__(self):
+    def __init__(self, prefix=''):
+        self.prefix = ''
         self._globals = {}
-        self._langs = {}
+        self._langs = []
         self._default_lang = grfstrings.Language(True)
         self._default_lang.langid = grfstrings.DEFAULT_LANGUAGE
         self._next_string_id = 1
@@ -55,7 +56,7 @@ class StringManager:
         return string_id
 
     def import_lang_dir(self, lang_dir, default_lang_file='english.lng'):
-        grfstrings.langs = {}
+        grfstrings.langs = []
         grfstrings.default_lang = grfstrings.Language(True)
         grfstrings.default_lang.langid = grfstrings.DEFAULT_LANGUAGE
         grfstrings.read_lang_files(lang_dir, default_lang_file)
@@ -104,7 +105,7 @@ class StringManager:
         grfstrings.default_lang = self._default_lang
 
     def __getitem__(self, name):
-        full_name = 'STR_' + name
+        full_name = self.prefix + name
         if full_name not in self._default_lang.strings:
             raise KeyError(name)
         return StringRef(self, nml.expression.Identifier(full_name, None), hash(full_name))
@@ -121,7 +122,7 @@ class StringManager:
                 self._named_strings[value] = name
                 self._default_lang.handle_text(name, None, value, None)
         else:
-            name = 'STR_' + name
+            name = self.prefix + name
             self._default_lang.handle_text(name, None, value, None)
         return StringRef(self, nml.expression.Identifier(name, None), hash(name))
 
@@ -162,19 +163,24 @@ class StringRef:
         ref_hash = hash(tuple(hashes))
         return StringRef(self.manager, nml.expression.String(params, None), ref_hash)
 
-    def get_actions(self, feature, offset, is_generic_offset=False):
+    def get_pairs(self):
         self.manager.set_nml_globals()
+        ns = self.string_nmlexpr
         strings = [
-            (lang_id, grfstrings.get_translation(self.nmlexpr, lang_id)) for lang_id in grfstrings.get_translations(self.string_nmlexpr)
+            (lang_id, grf_compile_string(grfstrings.get_translation(ns, lang_id))) for lang_id in grfstrings.get_translations(ns)
         ]
-        strings = [(0x7F, grfstrings.get_translation(self.string_nmlexpr))] + strings
+        strings = [(0x7F, grf_compile_string(grfstrings.get_translation(ns)))] + strings
+        return strings
+
+    def get_actions(self, feature, offset, is_generic_offset=False):
+        strings = self.get_pairs()
         return [
             DefineStrings(
                 feature=feature,
                 offset=offset,
                 is_generic_offset=is_generic_offset,
                 lang=lang_id,
-                strings=[grf_compile_string(text)],
+                strings=[text],
             )
             for lang_id, text in strings
         ]
@@ -185,3 +191,4 @@ class StringRef:
     def __str__(self):
         self.manager.set_nml_globals()
         return grfstrings.get_translation(self.string_nmlexpr)
+

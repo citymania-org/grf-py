@@ -6,8 +6,7 @@ from nose.tools import eq_
 from grf import BaseNewGRF, hex_str
 
 
-def _do_check_lib(newgrf, obj, expected):
-	newgrf.add(obj)
+def _do_check_grf(newgrf, expected):
 	result = newgrf.generate_sprites()
 	result = newgrf.resolve_refs(result)
 	result.extend(newgrf.strings.get_actions())
@@ -41,15 +40,23 @@ def _do_check_lib(newgrf, obj, expected):
 		assert False
 
 
-def check_lib(prepare, obj, result):
+def check_grf(grf_factory, result):
 	with tempfile.TemporaryDirectory() as tmp:
 		map_file = os.path.join(tmp, 'id_index.json')
 		with open(map_file, 'w') as f:
 			f.write('{"version": 1, "index": {}}')
-		newgrf = BaseNewGRF(id_map_file=map_file)
+		newgrf = grf_factory(id_map_file=map_file)
+		_do_check_grf(newgrf, result)
+
+
+def check_lib(prepare, obj, result):
+	def func(id_map_file):
+		g = BaseNewGRF(id_map_file=id_map_file)
 		if prepare is not None:
-			prepare(newgrf)
-		_do_check_lib(newgrf, obj, result)
+			prepare(g)
+		g.add(obj)
+		return g
+	check_grf(func, result)
 
 
 def check_action(action, result):
