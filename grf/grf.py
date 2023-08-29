@@ -397,7 +397,8 @@ class BaseNewGRF:
         for s in sprites:
             if isinstance(s, ResourceAction):
                 resource_files = s.get_resource_files()
-                assert all(isinstance(f, ResourceFile) for f in resource_files)
+                for f in resource_files:
+                    assert isinstance(f, ResourceFile), type(f)
                 loaded_resources = [f for f in resource_files if isinstance(f, LoadedResourceFile)]
                 if loaded_resources:
                     # We'll assign them later

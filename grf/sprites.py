@@ -154,6 +154,10 @@ class PythonFile(CodeFile):
     pass
 
 
+class SoundFile(ResourceFile):
+    pass
+
+
 THIS_FILE = PythonFile(__file__)
 
 
@@ -643,11 +647,13 @@ class FileSprite(Sprite):
 class RAWSound(Sound):
     def __init__(self, file):
         super().__init__()
+        if not isinstance(file, SoundFile):
+            file = SoundFile(file)
         self.file = file
 
     def get_real_data(self, encoder):
-        data = open(self.file, 'rb').read()
-        name = os.path.basename(self.file).encode()
+        data = open(self.file.path, 'rb').read()
+        name = os.path.basename(self.file.path).encode()
         if len(name) > 256:
             name = name[:251] + '_' + name[-4:]
         return struct.pack('<BBB', 0xff, 0xff, len(name)) + name + b'\0' + data
