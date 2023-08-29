@@ -467,7 +467,7 @@ class BaseNewGRF:
             sprites.extend(self._sounds.values())
 
         t.log(f'Adding strings')
-        sprites.extend(self.strings.get_actions())
+        sprites = self.strings.get_persistent_actions() + sprites + self.strings.get_actions()
 
         t.log(f'Enumerating {len(sprites)} real sprites')
         sprite_cache = SpriteCache(self.sprite_cache_path)
