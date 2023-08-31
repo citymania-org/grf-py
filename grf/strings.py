@@ -193,5 +193,4 @@ class StringRef:
         return grfstrings.get_translation(self.string_nmlexpr)
 
     def __eq__(self, ref):
-        print('EQ', self, ref, self.manager is ref.manager, self.nmlexpr == ref.nmlexpr, self.manager is ref.manager and self.nmlexpr == ref.nmlexpr)
         return self.manager is ref.manager and self.nmlexpr == ref.nmlexpr
