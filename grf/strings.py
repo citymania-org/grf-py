@@ -40,7 +40,7 @@ class StringManager:
     def __init__(self, prefix=''):
         self.prefix = ''
         self._globals = {}
-        self._presistents = {}
+        self._persistents = {}
         self._langs = []
         self._default_lang = grfstrings.Language(True)
         self._default_lang.langid = grfstrings.DEFAULT_LANGUAGE
@@ -56,17 +56,13 @@ class StringManager:
         self._globals[ref.hash] = (string_id, ref)
         return string_id
 
-    def add_presistent(self, ref, feature):
+    def add_persistent(self, ref):
         assert isinstance(ref, StringRef), ref
-        if feature not in self._presistents:
-            self._presistents[feature] = {}
+        if ref.hash in self._persistents:
+            return self._persistents[ref.hash][0]
 
-        hash_table = self._presistents[feature]
-        if ref.hash in hash_table:
-            return hash_table[ref.hash][0]
-
-        string_id = len(hash_table) + 0xdc00
-        hash_table[ref.hash] = (string_id, ref)
+        string_id = len(self._persistents) + 0xdc00
+        self._persistents[ref.hash] = (string_id, ref)
         return string_id
 
     def import_lang_dir(self, lang_dir, default_lang_file='english.lng'):
@@ -91,9 +87,8 @@ class StringManager:
 
     def get_persistent_actions(self):
         res = []
-        for feature, hash_table in self._presistents.items():
-            for index, ref in hash_table.values():
-                res.extend(ref.get_actions(feature, offset=index, is_generic_offset=True))
+        for index, ref in self._persistents.values():
+            res.extend(ref.get_actions(TRAIN, offset=index, is_generic_offset=True))
         return res
 
     def get_actions(self):
@@ -209,8 +204,8 @@ class StringRef:
     def get_global_id(self):
         return self.manager.add_global(self)
 
-    def get_persistent_id(self, feature):
-        return self.manager.add_presistent(self, feature)
+    def get_persistent_id(self):
+        return self.manager.add_persistent(self)
 
     def __str__(self):
         self.manager.set_nml_globals()
