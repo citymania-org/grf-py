@@ -25,7 +25,7 @@ from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
                      PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile, \
                      SingleResourceAction
-from .strings import StringManager
+from .strings import StringManager, StringRef
 
 
 class SpriteSheet:
@@ -913,8 +913,8 @@ class NewGRF(BaseNewGRF):
             data['LIMI'] = struct.pack('<II', *limits)
 
         if enum is not None:
-            if not all(isinstance(k, int) and isinstance(v, str) for k, v in enum.items()):
-                raise ValueError('Enum should be a dict of {int: str}')
+            if not all(isinstance(k, int) and isinstance(v, (str, StringRef)) for k, v in enum.items()):
+                raise ValueError('Enum should be a dict of {int: Union[str, StringRef]}')
 
             data['VALU'] = enum
 
