@@ -706,7 +706,7 @@ class IDMap:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache'):
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache', bpp=8):
         super().__init__(strings=strings, id_map_file=id_map_file, sprite_cache_path=sprite_cache_path)
 
         if isinstance(grfid, str):
@@ -734,6 +734,10 @@ class NewGRF(BaseNewGRF):
         if url is not None:
             assert isinstance(url, str), type(url)
             props['INFO']['URL_'] = url
+
+        assert bpp in [8, 32]
+        if bpp == 32:
+            props["INFO"]["BLTR"] = b"3"
 
         self._props = props
         self._params = []
