@@ -24,6 +24,8 @@
 - Add `main` function to handle command line arguments.
 - Add support for using StringRef in Action 0x14 (`SetProperties`).
 - Add support for using StringRef as `NewGRF` `name` and `description`.
+- Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
+- Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Remove `Mask` offset, add `FileMask` absolute positioning.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.

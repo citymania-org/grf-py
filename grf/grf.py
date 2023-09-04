@@ -706,7 +706,10 @@ class IDMap:
 
 
 class NewGRF(BaseNewGRF):
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache'):
+    BLITTER_BPP_8 = b'8'
+    BLITTER_BPP_32 = b'3'
+
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache', preferred_blitter=None):
         super().__init__(strings=strings, id_map_file=id_map_file, sprite_cache_path=sprite_cache_path)
 
         if isinstance(grfid, str):
@@ -722,6 +725,11 @@ class NewGRF(BaseNewGRF):
                 'DESC': description,
             }
         }
+
+        if preferred_blitter is not None:
+            if preferred_blitter not in (BLITTER_BPP_8, BLITTER_BPP_32):
+                raise ValueError(f'Invalid value for preferred_blitter: {preferred_blitter}')
+            props['INFO']['BLTR'] = preferred_blitter
 
         if version is not None:
             assert isinstance(version, int), type(version)
