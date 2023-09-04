@@ -727,7 +727,7 @@ class NewGRF(BaseNewGRF):
         }
 
         if preferred_blitter is not None:
-            if preferred_blitter not in (BLITTER_BPP_8, BLITTER_BPP_32):
+            if preferred_blitter not in (NewGRF.BLITTER_BPP_8, NewGRF.BLITTER_BPP_32):
                 raise ValueError(f'Invalid value for preferred_blitter: {preferred_blitter}')
             props['INFO']['BLTR'] = preferred_blitter
 
