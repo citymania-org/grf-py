@@ -215,6 +215,7 @@ def read_property(name, data, ofs, fmt):
         size = d.get_dword()
         res = []
         for _ in range(num):
+            layout = []
             for k in range(size):  # effectively infinite loop
                 xofs = d.get_byte()
                 yofs = d.get_byte()
@@ -234,11 +235,12 @@ def read_property(name, data, ofs, fmt):
                     yofs = utoi8(yofs & 0xff)
                     gfx = None
 
-                res.append({
+                layout.append({
                     'xofs': xofs,
                     'yofs': yofs,
                     'gfx': gfx,
                 })
+            res.append(layout)
 
         return res, d.offset
 
