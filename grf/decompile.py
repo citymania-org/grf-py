@@ -229,7 +229,7 @@ def read_property(name, data, ofs, fmt):
                 gfx = d.get_byte()
                 if gfx == 0xfe:
                     local_tile_id = d.get_word()
-                    gfx = f'todo_ref({local_tile_id})'
+                    gfx = grf.NewIndustryTileID(local_tile_id)
                 elif gfx == 0xff:
                     xofs = utoi8(xofs & 0xff)
                     yofs = utoi8(yofs & 0xff)

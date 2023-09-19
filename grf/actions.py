@@ -1134,6 +1134,16 @@ class LazyAction(Action):
         return len(self.get_data())
 
 
+class OldIndustryTileID:
+    def __init__(self, tile_id):
+        self.tile_id = tile_id
+
+
+class NewIndustryTileID:
+    def __init__(self, tile_id):
+        self.tile_id = tile_id
+
+
 class DefineMultiple(LazyAction):
     def __init__(self, *, feature, first_id, props, count=None):
         assert isinstance(feature, Feature)
@@ -1177,6 +1187,19 @@ class DefineMultiple(LazyAction):
             res = bytes((len(value),))
             for l in value:
                 res += self._encode_label(l)
+            return res
+        if fmt == 'Layouts':
+            res = bytes()
+            for layout in value:
+                for tile_info in layout:
+                    if isinstance(tile_info['gfx'], NewIndustryTileID):
+                        res = res + struct.pack('<BBBH', tile_info['xofs'], tile_info['yofs'], 0xfe, tile_info['gfx'].tile_id)
+                    elif tile_info['gfx'] is None:
+                        res = res + struct.pack('<BBB', tile_info['xofs'], tile_info['yofs'], 0xff)
+                    else:
+                        raise ValueError(f"Unsupported value {tile_info['gfx']} for tile_info['gfx']")
+                res = res + struct.pack('<BB', 0, 0x80)
+            res = struct.pack('<BI', len(value), len(res)) + res
             return res
 
     def _encode(self):
