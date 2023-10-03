@@ -131,6 +131,12 @@ class AlternativeSprites(ResourceAction):
                 return s
         return None
 
+    def get_zoom_bpp(self, zoom, bpp):
+        for s in self.sprites:
+            if s.zoom == zoom and s.bpp == bpp:
+                return s
+        return None
+
     def get_resources(self):
         return self.sprites
 
