@@ -234,6 +234,8 @@ def read_property(name, data, ofs, fmt):
                     xofs = utoi8(xofs & 0xff)
                     yofs = utoi8(yofs & 0xff)
                     gfx = None
+                else:
+                    gfx = grf.OldIndustryTileID(gfx)
 
                 layout.append({
                     'xofs': xofs,
