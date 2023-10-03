@@ -1194,6 +1194,8 @@ class DefineMultiple(LazyAction):
                 for tile_info in layout:
                     if isinstance(tile_info['gfx'], NewIndustryTileID):
                         res = res + struct.pack('<BBBH', tile_info['xofs'], tile_info['yofs'], 0xfe, tile_info['gfx'].tile_id)
+                    elif isinstance(tile_info['gfx'], OldIndustryTileID):
+                        res = res + struct.pack('<BBB', tile_info['xofs'], tile_info['yofs'], tile_info['gfx'].tile_id)
                     elif tile_info['gfx'] is None:
                         res = res + struct.pack('<BBB', tile_info['xofs'], tile_info['yofs'], 0xff)
                     else:
