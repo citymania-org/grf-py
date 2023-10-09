@@ -27,6 +27,7 @@
 - Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Remove `Mask` offset, add `FileMask` absolute positioning.
+- Rename `AlternativeSprites.get_zoom` to `get_sprite` and add bpp argument.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
 - lib: `CallbackManager` rewrite:
