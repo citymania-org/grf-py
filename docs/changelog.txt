@@ -15,6 +15,7 @@
 - Fix encoding of label lists in Action0 properties.
 - Fix encoding and decoding of Action 5.
 - Add sprite cache.
+- Fix decompilation of action 7/9 with value > 4 bytes.
 - Optimize memory usage when writing NewGRF.
 - Optimize grf file size by removing duplicate sprites (by data).
 - Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.

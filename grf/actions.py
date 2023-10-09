@@ -1826,7 +1826,7 @@ class If(LazyAction):
         return res
 
     def py(self, context):
-        valuestr = f'  # {repr(struct.pack("<I", self.value))[2:-1]}' if self.value is not None else ''
+        valuestr = f'  # {repr(struct.pack("<I", self.value))[2:-1]}' if self.value is not None and self.value <= 0xFFFFFFFF else ''
         return f'''
             If(
                 is_static={self.is_static},
