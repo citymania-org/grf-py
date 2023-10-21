@@ -125,9 +125,9 @@ class AlternativeSprites(ResourceAction):
         super().__init__()
         self.sprites = sprites
 
-    def get_zoom(self, zoom):
+    def get_sprite(self, *, zoom=None, bpp=None):
         for s in self.sprites:
-            if s.zoom == zoom:
+            if (zoom is None or s.zoom == zoom) and (bpp is None or s.bpp == bpp):
                 return s
         return None
 
