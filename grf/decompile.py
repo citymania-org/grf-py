@@ -209,39 +209,6 @@ def read_property(name, data, ofs, fmt):
         res = ((data[ofs + 2 * i + 1], data[ofs + 2 * i + 2]) for i in range(num))
         return res, ofs + 2 * num + 1
 
-    if fmt == 'Layouts':
-        d = DataReader(data, ofs)
-        num = d.get_byte()
-        size = d.get_dword()
-        res = []
-        for _ in range(num):
-            for k in range(size):  # effectively infinite loop
-                xofs = d.get_byte()
-                yofs = d.get_byte()
-                if xofs == 0xfe and k == 0:
-                    # borrow base layout
-                    raise NotImplementedError
-
-                if xofs == 0 and yofs == 0x80:
-                    break
-
-                gfx = d.get_byte()
-                if gfx == 0xfe:
-                    local_tile_id = d.get_word()
-                    gfx = f'todo_ref({local_tile_id})'
-                elif gfx == 0xff:
-                    xofs = utoi8(xofs & 0xff)
-                    yofs = utoi8(yofs & 0xff)
-                    gfx = None
-
-                res.append({
-                    'xofs': xofs,
-                    'yofs': yofs,
-                    'gfx': gfx,
-                })
-
-        return res, d.offset
-
     raise ValueError(f'Unknown format {fmt} for property {name}')
 
 

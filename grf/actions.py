@@ -841,10 +841,72 @@ ACTION0_INDUSTRY_TILE_PROPS = {
     0x13: ('tile_acceptance_list', 'n*(BB)'),  # Tile acceptance list
 }
 
+
+class IndustryTileRef:
+    def __init__(self, tile_id):
+        self.tile_id = tile_id
+
+    def __repr__(self):
+        return f'IndustryTileRef({self.tile_id})'
+
+
+class OldIndustryTileRef:
+    def __init__(self, tile_id):
+        self.tile_id = tile_id
+
+    def __repr__(self):
+        return f'OldIndustryTileRef({self.tile_id})'
+
+
+class IndustryLayoutsProperty(Property):
+    def read(self, data, ofs):
+        d = DataReader(data, ofs)
+        num = d.get_byte()
+        size = d.get_dword()
+        res = []
+        for _ in range(num):
+            layout = []
+            for _ in range(size):  # effectively infinite loop as size is byte size not amount
+                xofs = d.get_byte()
+                yofs = d.get_byte()
+                if xofs == 0xfe and k == 0:
+                    # borrow base layout
+                    raise NotImplementedError
+
+                if xofs == 0 and yofs == 0x80:
+                    break
+
+                gfx = d.get_byte()
+                if gfx == 0xfe:
+                    local_tile_id = d.get_word()
+                    gfx = IndustryTileRef(local_tile_id)
+                elif gfx == 0xff:
+                    xofs = utoi8(xofs & 0xff)
+                    yofs = utoi8(yofs & 0xff)
+                    gfx = None
+                else:
+                    gfx = OldIndustryTileRef(gfx)
+
+                layout.append({
+                    'xofs': xofs,
+                    'yofs': yofs,
+                    'gfx': gfx,
+                })
+            res.append(layout)
+
+        return res, d.offset
+
+    def encode(self, value):
+        pass
+
+    def format(self, value, indent):
+        return pformat(value, indent=indent, indent_first=0)
+
+
 ACTION0_INDUSTRY_PROPS = {
     0x08: ('substitute_type', 'B'),  # Substitute industry type
     0x09: ('override_type', 'B'),  # Industry type override
-    0x0A: ('layouts', 'Layouts'),  # Set industry layout(s)
+    0x0A: ('layouts', IndustryLayoutsProperty()),  # Set industry layout(s)
     0x0B: ('production_flags', 'B'),  # Industry production flags
     0x0C: ('closure_message', 'W'),  # Industry closure message
     0x0D: ('production_increase_message', 'W'),  # Production increase message
@@ -2240,6 +2302,8 @@ class PrettyPrinter(pprint.PrettyPrinter):
             indent -= self._indent_per_level
             stream.write(' ' * indent)
             stream.write(')')
+        elif hasattr(obj, 'format'):
+            obj.format(self, stream, indent, allowance, context, level)
         else:
             super()._format(obj, stream, indent, allowance, context, level)
 
