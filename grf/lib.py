@@ -1102,19 +1102,25 @@ class Train(Vehicle):
         if art_shorten is not None:
             self._head_liveries = art_liveries
             self._props['shorten_by'] = art_shorten
-            art_props = {}
-            flags = self._props.get('misc_flags')
-            if flags is not None:
-                copy_flags = self.Flags.TILT | self.Flags.MULTIPLE_UNIT | self.Flags.USE_2CC
-                art_props['misc_flags'] = flags & copy_flags
-            if 'track_type' in self._props:
-                art_props['track_type'] = self._props['track_type']
-            self._do_add_articulated_part(f'__{self.id}_aa_mid', mid_shorten, self.liveries, self.liveries, art_props)
-            self._do_add_articulated_part(f'__{self.id}_aa_tail', art_shorten, art_liveries, self.liveries, art_props)
+            self._add_auto_articulated_parts(self.id, mid_shorten, self.liveries, art_shorten, art_liveries, self._props)
         else:
             self._head_liveries = self.liveries
             if mid_shorten is not None:
                 self._props['shorten_by'] = mid_shorten
+
+    def _add_auto_articulated_parts(self, id, mid_shorten, mid_liveries, art_shorten, art_liveries, props):
+        # TODO move auto-articulated stuff to the generation phase so props can be changed after creation.
+        art_props = {}
+        flags = self._props.get('misc_flags')
+        if flags is not None:
+            copy_flags = self.Flags.TILT | self.Flags.MULTIPLE_UNIT | self.Flags.USE_2CC
+            art_props['misc_flags'] = flags & copy_flags
+        # Copy power for the right 2cc colour, effective power will be zero anyway.
+        for k in ('track_type', 'power'):
+            if k in props:
+                art_props[k] = props[k]
+        self._do_add_articulated_part(f'__{id}_aa_mid', mid_shorten, mid_liveries, mid_liveries, art_props)
+        self._do_add_articulated_part(f'__{id}_aa_tail', art_shorten, art_liveries, mid_liveries, art_props)
 
     def _calc_length_articulation(self, length, shorten_by, liveries):
         if length is None:
@@ -1178,6 +1184,7 @@ class Train(Vehicle):
                 'cargo_allow_refit',
                 'cargo_disallow_refit',
                 'curve_speed_mod',
+                'power',  # Game will zero power but it's needed for the 2cc colour scheme
             )
             invalid_props = [p for p in props if p not in ALLOWED_PROPS]
             if invalid_props:
@@ -1189,9 +1196,8 @@ class Train(Vehicle):
         if art_shorten is None:
             self._do_add_articulated_part(id, mid_shorten, liveries, liveries, props, callbacks)
         else:
-            self._do_add_articulated_part(id, art_shorten, art_liveries, liveries, {})
-            self._do_add_articulated_part(f'__{id}_aa_mid', mid_shorten, liveries, liveries, props, callbacks)
-            self._do_add_articulated_part(f'__{id}_aa_tail', art_shorten, art_liveries, liveries, {})
+            self._do_add_articulated_part(id, art_shorten, art_liveries, liveries, props, callbacks)
+            self._add_auto_articulated_parts(id, mid_shorten, liveries, art_shorten, art_liveries, props)
 
         return self
 
