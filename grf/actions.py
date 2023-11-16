@@ -685,7 +685,7 @@ class NewStationLayoutProperty(Property):
 
 
 ACTION0_STATION_PROPS = {
-    0x08: ('class', 'L'),  # Class ID, see below
+    0x08: ('class_label', 'L'),  # Class ID, see below
     0x09: ('layout', OldStationLayoutProperty()),  # Sprite layout, see below
     0x0A: ('copy_layout', 'B'),  # Copy sprite layout
     0x0B: ('cb_flags', 'B'),  # Callback flags
@@ -929,7 +929,7 @@ class SizeTupleProperty(Property):
 
 
 ACTION0_OBJECT_PROPS = {
-    0x08: ('class', 'L'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Class label, see below
+    0x08: ('class_label', 'L'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Class label, see below
     0x09: ('class_name_id', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Text ID for class
     0x0A: ('name_id', 'W'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Text ID for this object
     0x0B: ('climates_available', ClimateProperty()),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Climate availability
