@@ -2,6 +2,8 @@ import datetime
 import textwrap
 import struct
 import pprint
+from abc import abstractmethod
+from typing import NamedTuple, Union
 from collections.abc import Iterable
 
 from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, \
@@ -827,8 +829,8 @@ ACTION0_GLOBAL_PROPS = {
 }
 
 ACTION0_INDUSTRY_TILE_PROPS = {
-    0x08: ('building_type', 'B'),  # Substitute building type
-    0x09: ('tile_override', 'B'),  # Industry tile override
+    0x08: ('substitute_type', 'B'),  # Substitute building type
+    0x09: ('overrite_type', 'B'),  # Industry tile override
     0x0A: ('tile_acceptance_1', 'W'),  # Tile acceptance
     0x0B: ('tile_acceptance_2', 'W'),  # Tile acceptance
     0x0C: ('tile_acceptance_3', 'W'),  # Tile acceptance
@@ -842,23 +844,92 @@ ACTION0_INDUSTRY_TILE_PROPS = {
 }
 
 
-class IndustryTileRef:
-    def __init__(self, tile_id):
-        self.tile_id = tile_id
-
+class IndustryTileRef(int):
     def __repr__(self):
-        return f'IndustryTileRef({self.tile_id})'
+        return f'IndustryTileRef({super().__repr__()})'
 
 
-class OldIndustryTileRef:
-    def __init__(self, tile_id):
-        self.tile_id = tile_id
-
+class OldIndustryTileRef(int):
     def __repr__(self):
-        return f'OldIndustryTileRef({self.tile_id})'
+        return f'OldIndustryTileRef({super().__repr__()})'
+
+
+class IndustryLayout(list):
+    class BaseTile:
+
+        def __init__(self, *, xofs: int, yofs: int):
+            if not 0 <= xofs < 256:
+                raise ValueError('Argument `xofs` must be in range 0..255')
+            if not 0 <= yofs < 256:
+                raise ValueError('Argument `yofs` must be in range 0..255')
+            if xofs == 0 and yofs == 0x80:
+                raise ValueError('Pair `xofs` == 0 and `yofs` == 0x80 have a special meaning and can''t be used in a layout')
+            self.xofs = xofs
+            self.yofs = yofs
+
+        @abstractmethod
+        def encode(self):
+            pass
+
+    class NewTile(BaseTile):
+        def __init__(self, *, xofs: int, yofs: int, id: int):
+            if not 0 <= id <= 0xFFFF:
+                raise ValueError('`id` should in range 0..0xFFFF')
+            super().__init__(xofs=xofs, yofs=yofs)
+            self.id = id
+
+        def __repr__(self):
+            return f'IndustryLayout.NewTile(xofs={self.xofs}, yofs={self.yofs}, id={self.id})'
+
+        def encode(self):
+            return struct.pack('<BBBH', self.xofs, self.yofs, 0xFE, self.id)
+
+
+    class OldTile(BaseTile):
+        def __init__(self, *, xofs: int, yofs: int, id: int):
+            if not 0 <= id < 0xFE:
+                raise ValueError('`id` should in range 0..0xFD')
+            # TODO spec limit is <= 0xAE but format allows 0xFE
+            super().__init__(xofs=xofs, yofs=yofs)
+            self.id = id
+
+        def __repr__(self):
+            return f'IndustryLayout.OldTile(xofs={self.xofs}, yofs={self.yofs}, id={self.id})'
+
+        def encode(self):
+            return struct.pack('<BBB', self.xofs, self.yofs, self.id)
+
+
+    class SpecialCheck:
+        def __init__(self, *, xofs: int, yofs: int):
+            if not -128 <= xofs < 128:
+                raise ValueError('Argument `xofs` must be in range -128..127')
+            if not -128 <= yofs < 128:
+                raise ValueError('Argument `yofs` must be in range -128..127')
+            if xofs == 0 and yofs == -128:
+                raise ValueError('Pair `xofs` == 0 and `yofs` == -128 have a special meaning and can''t be used in a layout')
+            self.xofs = xofs
+            self.yofs = yofs
+
+        def __repr__(self):
+            return f'IndustryLayout.SpecialCheck(xofs={self.xofs}, yofs={self.yofs})'
+
+        def encode(self):
+            return struct.pack('<bbB', self.xofs, self.yofs, 0xFF)
+
+    Item = Union[NewTile, OldTile, SpecialCheck]
+
+    def __init__(self, values: list[Item]):
+        if values and values[0].xofs == 0xFE:
+            raise ValueError('First item in `IndustryLayout` can''t have xofs == 0xFE')
+        super().__init__(values)
 
 
 class IndustryLayoutsProperty(Property):
+    def validate(cls, value):
+        if len(value) > 255:
+            raise ValueError(f'Layout limit per industry exceeded (255 max, {len(value)} found)')
+
     def read(self, data, ofs):
         d = DataReader(data, ofs)
         num = d.get_byte()
@@ -866,12 +937,14 @@ class IndustryLayoutsProperty(Property):
         res = []
         for _ in range(num):
             layout = []
-            for _ in range(size):  # effectively infinite loop as size is byte size not amount
+            for k in range(size):  # effectively infinite loop as size is byte size not amount
+                # TODO add warning comment if size is exceeded (like openttd does)
                 xofs = d.get_byte()
-                yofs = d.get_byte()
                 if xofs == 0xfe and k == 0:
                     # borrow base layout
                     raise NotImplementedError
+
+                yofs = d.get_byte()
 
                 if xofs == 0 and yofs == 0x80:
                     break
@@ -879,25 +952,24 @@ class IndustryLayoutsProperty(Property):
                 gfx = d.get_byte()
                 if gfx == 0xfe:
                     local_tile_id = d.get_word()
-                    gfx = IndustryTileRef(local_tile_id)
+                    tile = IndustryLayout.Tile(xofs=xofs, yofs=yofs, id=local_tile_id)
                 elif gfx == 0xff:
-                    xofs = utoi8(xofs & 0xff)
-                    yofs = utoi8(yofs & 0xff)
-                    gfx = None
+                    tile = IndustryLayout.SpecialCheck(xofs=utoi8(xofs & 0xff), yofs=utoi8(yofs & 0xff))
                 else:
-                    gfx = OldIndustryTileRef(gfx)
+                    tile = IndustryLayout.OldTile(xofs=xofs, yofs=yofs, id=gfx)
 
-                layout.append({
-                    'xofs': xofs,
-                    'yofs': yofs,
-                    'gfx': gfx,
-                })
-            res.append(layout)
+                layout.append(tile)
+            res.append(IndustryLayout(layout))
 
         return res, d.offset
 
-    def encode(self, value):
-        pass
+    def encode(self, value: list[IndustryLayout]):
+        res = b''
+        for l in value:
+            for t in l:
+                res += t.encode()
+        res += bytes((0, 0x80))
+        return struct.pack('<BI', len(value), len(res)) + res
 
     def format(self, value, indent):
         return pformat(value, indent=indent, indent_first=0)

@@ -2,7 +2,7 @@ import grf
 from PIL import Image
 
 g = grf.NewGRF(
-    grfid=b'GPE\x02',
+    grfid=b'GPE\x04',
     name='grf-py VOX house example',
     description='grf-py VOX house example',
 )
