@@ -46,7 +46,7 @@ def fix_palette(img, sprite_name):
     remap = _remap_cache.get(pal_hash)
     if remap is None:
         remap = PaletteRemap()
-        for i in ALL_COLOURS:
+        for i in range(len(pal) // 3):
             color = (pal[3 * i], pal[3 * i + 1], pal[3 * i + 2])
             res = _FIX_PALETTE_LOOKUP.get(color)
             if res is None:
@@ -373,9 +373,9 @@ class Sprite(Resource):
     def get_colourkey(self):
         return None
 
-    # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
-    def get_real_data(self, encoder):
+    def get_data_layers(self, encoder=None):
         t0 = time.time()
+        # TODO move into get_image
         img, bpp = self.get_image()
         w, h, xofs, yofs = self.w, self.h, self.xofs, self.yofs
         if w is None:
@@ -383,7 +383,8 @@ class Sprite(Resource):
         if h is None:
             h = img.size[1]
 
-        encoder.count_loading(time.time() - t0)
+        if encoder:
+            encoder.count_loading(time.time() - t0)
         t0 = time.time()
 
         if self.bpp is None:
@@ -404,7 +405,8 @@ class Sprite(Resource):
             if bpp == BPP_8:
                 img = fix_palette(img, self.name)
 
-        encoder.count_conversion(time.time() - t0)
+        if encoder is not None:
+            encoder.count_conversion(time.time() - t0)
         t0 = time.time()
 
         npimg = np.asarray(img)
@@ -447,31 +449,15 @@ class Sprite(Resource):
             else:
                 npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w, :]
 
-        info_byte = 0x40
-        if self.bpp == BPP_24 or self.bpp == BPP_32:
-            if self.bpp == BPP_32:
-                npimg = npimg.reshape(w * h, 4)
-                rbpp = 4
-                info_byte |= 0x1 | 0x2  # rgb, alph
+        if self.bpp == BPP_8:
+            npmask = npimg
+            npalpha = npimg = None
+        else:
+            assert self.bpp == BPP_24 or self.bpp == BPP_32
 
-                if npalpha is not None:
-                    npimg = npimg[:, :3]
-                    npalpha = npalpha.reshape(w * h, 1)
-                    stack = [npimg, npalpha]
-                else:
-                    stack = [npimg]
-            else:
-                npimg = npimg.reshape(w * h, 3)
-                rbpp = 3
-                info_byte = 0x1  # rgb
-
-                if npalpha is not None:
-                    npalpha = npalpha.reshape(w * h, 1)
-                    stack = [npimg, npalpha]
-                    rbpp += 1
-                    info_byte |= 0x2  # alpha
-                else:
-                    stack = [npimg]
+            if self.bpp == BPP_32 and npalpha is not None:
+                # Remove alpha from npimg
+                npimg = npimg[:, :, :3]
 
             mask = self.mask
             if mask is not None:
@@ -486,31 +472,58 @@ class Sprite(Resource):
                 npmask = npmask[crop_y: crop_y + h, crop_x: crop_x + w]
                 if mask.mode == Mask.Mode.OVERDRAW:
                     npimg = npimg.copy()
-                    stack[0] = npimg
-                    npmask = npmask.reshape(w * h)
                     has_mask = (npmask != 0)
-                    if npimg.shape[1] == 3:
+                    if npimg.shape[2] == 3:
                         npimg[has_mask] = (127, 127, 127)
                         if npalpha is not None:
-                            npalpha = npalpha.reshape(w * h)
                             npalpha[has_mask] = 255
-                            npalpha = npalpha.reshape(w * h, 1)
                     else:
                         npimg[has_mask] = (127, 127, 127, 255)
-                npmask = npmask.reshape(w * h, 1)
-                stack.append(npmask)
-                rbpp += 1
-                info_byte |= 0x4  # mask
 
-            if len(stack) > 1:
-                raw_data = np.concatenate(stack, axis=1)
-            else:
-                raw_data = stack[0]
-            raw_data = raw_data.reshape(w * h * rbpp)
+        if encoder is not None:
+            encoder.count_composing(time.time() - t0)
 
+        return npimg, npalpha, npmask
+
+    # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
+    def get_real_data(self, encoder):
+        npimg, npalpha, npmask = self.get_data_layers(encoder)
+
+        t0 = time.time()
+        info_byte = 0x40
+        stack = []
+        rbpp = 0
+        if npimg is not None:
+            if npimg.ndim != 3:
+                raise RuntimeError('Image layer is not a 3 dimensional array')
+            bpp = npimg.shape[2]
+            if bpp in (3, 4):
+                raise RuntimeError('Image layer should use 3 or 4 bpp')
+            if bpp == 4:
+                if npalpha is not None:
+                    raise RuntimeError('4bpp image layer doesn''t allow separate alpha layer')
+                info_byte |= 0x2
+            info_byte |= 0x1
+            rbpp += bpp
+            stack.append(npimg.reshape(npimg.shape[0] * npimg.shape[1], bpp))
+        if npalpha is not None:
+            if npalpha.ndim != 2:
+                raise RuntimeError('Alpha layer is not a 2-dimensional array')
+            info_byte |= 0x2
+            rbpp += 1
+            stack.append(npalpha.reshape((npalpha.shape[0] * npalpha.shape[1], 1)))
+        if npmask is not None:
+            if npalpha.ndim != 2:
+                raise RuntimeError('Mask layer is not a 2-dimensional array')
+            info_byte |= 0x4
+            rbpp += 1
+            stack.append(npmask.reshape((npmask.shape[0] * npmask.shape[1], 1)))
+
+        if len(stack) > 1:
+            raw_data = np.concatenate(stack, axis=1)
         else:
-            info_byte |= 0x4  # pal/mask
-            raw_data = npimg.reshape(w * h)
+            raw_data = stack[0]
+        raw_data = raw_data.reshape(w * h * rbpp)
 
         encoder.count_composing(time.time() - t0)
         data = encoder.sprite_compress(np.ascontiguousarray(raw_data))
@@ -533,6 +546,94 @@ class Sprite(Resource):
             res.extend(self.mask.get_resource_files())
         res.append(THIS_FILE)
         return tuple(res)
+
+    def save_gif(self, filename: str):
+        DARK_BLUE_WATER = ((32,  68, 112), (36,  72, 116), (40,  76, 120), (44,  80, 124), (48,  84, 128))
+        DARK_BLUE_WATER_TOYLAND = ((28, 108, 124), (32, 112, 128), (36, 116, 132), (40, 120, 136), (44, 124, 140))
+        LIGHTHOUSE_AND_STADIUM = ((240, 208, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0))
+        OIL_REFINERY_AND_FIRE = ((252, 60, 0), (252, 84, 0), (252, 108, 0), (252, 124, 0), (252, 148, 0), (252, 172, 0), (252, 196, 0))
+
+        FIZZY_DRINKS = ((76, 24, 8), (108, 44, 24), (144, 72, 52), (176, 108,  84), (212, 148, 128))
+
+        GLITTERY_WATER = (
+            (216, 244, 252), (172, 208, 224), (132, 172, 196), (100, 132, 168),
+            ( 72, 100, 144), ( 72, 100, 144), ( 72, 100, 144), ( 72, 100, 144),
+            ( 72, 100, 144), ( 72, 100, 144), ( 72, 100, 144), ( 72, 100, 144),
+            (100, 132, 168), (132, 172, 196), (172, 208, 224))
+
+        GLITTERY_WATER_TOYLAND = (
+            (216, 244, 252), (180, 220, 232), (148, 200, 216), (116, 180, 196),
+            ( 92, 164, 184), ( 92, 164, 184), ( 92, 164, 184), ( 92, 164, 184),
+            ( 92, 164, 184), ( 92, 164, 184), ( 92, 164, 184), ( 92, 164, 184),
+            (116, 180, 196), (148, 200, 216), (180, 220, 232))
+
+        RADIO_TOWER = ((255, 0, 0), (20, 0, 0))
+
+        PAL_IDX = {tuple(PALETTE[i: i + 3]): i // 3 for i in range(0, 256 * 3, 3)}
+
+        def extr(p, q):
+            return lambda counter: (((counter * p) & 0xFFFF) * q) >> 16
+
+        def extr2(p, q):
+            return lambda counter: (((~counter * p) & 0xFFFF) * q) >> 16
+
+        def init_cycle(pal, start, size, colours, func, cycle, *, step=1):
+            cset = list(set(colours))
+            assert len(cset) <= size, (len(cset), size)
+            cdict = {x: i for i, x in enumerate(cset)}
+            pal[start: start + len(cset)] = cset
+            indexed = [cdict[x] + start for x in colours]
+            res = []
+            for c in range(0, cycle * 8, 8):
+                j = func(c)
+                res.append(indexed[j::step] + indexed[j % step:j:step])
+            return start, size, res
+
+        def init_radio_tower(pal, start, size, colours):
+            pal[start: start + size] = colours  # TODO probably make fixed palette global
+
+            def pick_color(i):
+                if i < 0x3F: return 0xEF
+                elif i < 0x4A or i >= 0x75: return 0xB4  # (128, 0, 0) in the regular palette
+                else: return 0xF0
+
+            res = []
+            for c in range(0, 8 * 32, 8):
+                i = (c >> 1) & 0x7F
+                res.append((pick_color(i), pick_color(i ^ 0x40)))
+
+            return start, res
+
+        img, alpha, mask = self.get_data_layers()
+        if img is not None or alpha is not None:
+            raise NotImplementedError('Only 8bpp sprites are supported')
+
+        pal = [tuple(PALETTE[i: i + 3]) for i in range(0, 256 * 3, 3)]
+        cycles = []
+        has_colors = np.isin(np.arange(0xE8, 0xFF, dtype=np.uint8), mask)
+        if any(has_colors[0xEF - 0xE8: 0xEF - 0xE8 + 2]):
+            cycles.append(init_radio_tower(pal, 0xEF, 2, RADIO_TOWER))
+
+        for start, size, colours, func, cycle, step in (
+                (0xE3, 5, FIZZY_DRINKS, extr2(512, 5), 16, 1),
+                (0xE8, 7, OIL_REFINERY_AND_FIRE, extr2(512, 7), 16, 1),
+                (0xF1, 4, LIGHTHOUSE_AND_STADIUM, extr(256, 4), 32, 1),
+                (0xF5, 5, DARK_BLUE_WATER, extr(320, 5), 128, 1),
+                (0xFA, 5, GLITTERY_WATER, extr(128, 15), 64, 3)):
+            if any(has_colors[start - 0xE8: start + size - 0xE8]):
+                cycles.append(init_cycle(pal, start, size, colours, func, cycle, step=step))
+
+        max_cycle = max(len(l) for _, _, l in cycles)
+        frames = []
+        flat_pal = sum(pal, ())
+        for i in range(max_cycle):
+            remap = np.arange(256, dtype=np.uint8)
+            for start, size, colours in cycles:
+                remap[start:start + size] = colours[i % len(colours)]
+            im = Image.fromarray(remap[mask])
+            im.putpalette(flat_pal)
+            frames.append(im)
+        frames[0].save(filename, save_all=True, append_images=frames[1:], duration=27, loop=0)
 
 
 class EmptySprite(Sprite):

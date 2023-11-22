@@ -23,14 +23,19 @@
 - Add `ShipFlags` enum.
 - Add support for the extended format in Action1.
 - Add `main` function to handle command line arguments.
-- Add support for using StringRef in Action 0x14 (`SetProperties`).
-- Add support for using StringRef as `NewGRF` `name` and `description`.
+- Support using StringRef in Action 0x14 (`SetProperties`).
+- Support using StringRef as `NewGRF` `name` and `description`.
+- Support encoding of industry layouts.
 - Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
+- Add `Sprite.save_gif` method to generate palette animated images.
 - Remove `Mask` offset, add `FileMask` absolute positioning.
 - Rename `AlternativeSprites.get_zoom` to `get_sprite` and add bpp argument.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
+- lib: Fix incorrect 2cc colors for auto-articulated parts.
+- lib: Fix unicode vehicle names.
+- lib: Set correct flags and track_type on auto-articulated parts.
 - lib: `CallbackManager` rewrite:
 	- Support all features (non-vehicles may still be incomplete).
 	- Make `CallbackManager` abstract class, use `make_callback_manager` function instead.
@@ -38,10 +43,9 @@
 	- Use `graphics.purchase` instead of `purchase_graphics` attribute.
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 - lib: Add `EngineOverride` sprite generator.
-- lib: Set correct flags and track_type on auto-articulated parts.
-- lib: Fix unicode vehicle names.
 
 - grftopy: Fix missing sprite zoom
+- grftopy: Improve decoding of industry layouts.
 
 ---------
 0.2.2
