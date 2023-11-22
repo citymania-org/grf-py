@@ -625,15 +625,26 @@ class Sprite(Resource):
 
         max_cycle = max(len(l) for _, _, l in cycles)
         frames = []
-        flat_pal = sum(pal, ())
         for i in range(max_cycle):
-            remap = np.arange(256, dtype=np.uint8)
-            for start, size, colours in cycles:
-                remap[start:start + size] = colours[i % len(colours)]
-            im = Image.fromarray(remap[mask])
-            im.putpalette(flat_pal)
+            if i == 0:
+                remap = np.arange(256, dtype=np.uint8)
+                for start, size, colours in cycles:
+                    remap[start:start + size] = colours[i % len(colours)]
+                frame_pal = sum(pal, ())
+            else:
+                # Optimize palette for consequtive frames by only saving colors we need
+                remap = np.zeros(256, dtype=np.uint8)
+                cur = 1
+                frame_pal = [0,0,0]
+                for start, size, colours in cycles:
+                    remap[start:start + size] = range(cur, cur + size)
+                    cur += size
+                    for c in colours[i % len(colours)]:
+                        frame_pal.extend(pal[c])
+            im = Image.fromarray(remap[mask], mode='P')
+            im.putpalette(frame_pal)
             frames.append(im)
-        frames[0].save(filename, save_all=True, append_images=frames[1:], duration=27, loop=0)
+        frames[0].save(filename, save_all=True, append_images=frames[1:], duration=27, loop=0, optimize=False, transparency=0, dispose=1)
 
 
 class EmptySprite(Sprite):
