@@ -514,7 +514,7 @@ class Sprite(Resource):
             rbpp += 1
             stack.append(npalpha.reshape((w * h, 1)))
         if npmask is not None:
-            if npalpha.ndim != 2:
+            if npmask.ndim != 2:
                 raise RuntimeError('Mask layer is not a 2-dimensional array')
             info_byte |= 0x4
             rbpp += 1
