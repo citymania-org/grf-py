@@ -20,7 +20,7 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties, LazyAction
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
-from .common import PALETTE
+from .common import PALETTE, INDUSTRY_TILE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
                      PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile, \
@@ -67,7 +67,7 @@ class DummySprite(Action):
 
 
 class SpriteGenerator:
-    def get_sprites(self, grf):
+    def get_ (self, grf):
         return NotImplementedError
 
 
@@ -683,6 +683,11 @@ class IDMap:
     def reserve_ids(self, ids):
         self._manual_ids.update(ids)
 
+    def _get_min_id(self, feature):
+        if feature == INDUSTRY_TILE:
+            return 0
+        return self.MIN_ID
+
     def resolve(self, feature, value, *, articulated=False):
         self._load()
         key = (feature, value)
@@ -696,7 +701,7 @@ class IDMap:
         i = self._index.get(key)
         # TODO use separate articulated range
         if i is None:
-            i = self._next_id.get(feature, self.MIN_ID)
+            i = self._next_id.get(feature, self._get_min_id(feature))
             while (feature, i) in self._manual_ids:
                 i += 1
             self._next_id[feature] = i + 1
