@@ -460,6 +460,7 @@ class Sprite(Resource):
                 npimg = npimg[:, :, :3]
 
             mask = self.mask
+            npmask = None
             if mask is not None:
                 mask_img, mask_bpp = mask.get_image()
                 if mask_bpp != BPP_8:
@@ -483,11 +484,11 @@ class Sprite(Resource):
         if encoder is not None:
             encoder.count_composing(time.time() - t0)
 
-        return npimg, npalpha, npmask
+        return w, h, xofs, yofs, npimg, npalpha, npmask
 
     # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
     def get_real_data(self, encoder):
-        npimg, npalpha, npmask = self.get_data_layers(encoder)
+        w, h, xofs, yofs, npimg, npalpha, npmask = self.get_data_layers(encoder)
 
         t0 = time.time()
         info_byte = 0x40
@@ -497,7 +498,7 @@ class Sprite(Resource):
             if npimg.ndim != 3:
                 raise RuntimeError('Image layer is not a 3 dimensional array')
             bpp = npimg.shape[2]
-            if bpp in (3, 4):
+            if bpp not in (3, 4):
                 raise RuntimeError('Image layer should use 3 or 4 bpp')
             if bpp == 4:
                 if npalpha is not None:
@@ -505,19 +506,19 @@ class Sprite(Resource):
                 info_byte |= 0x2
             info_byte |= 0x1
             rbpp += bpp
-            stack.append(npimg.reshape(npimg.shape[0] * npimg.shape[1], bpp))
+            stack.append(npimg.reshape(w * h, bpp))
         if npalpha is not None:
             if npalpha.ndim != 2:
                 raise RuntimeError('Alpha layer is not a 2-dimensional array')
             info_byte |= 0x2
             rbpp += 1
-            stack.append(npalpha.reshape((npalpha.shape[0] * npalpha.shape[1], 1)))
+            stack.append(npalpha.reshape((w * h, 1)))
         if npmask is not None:
             if npalpha.ndim != 2:
                 raise RuntimeError('Mask layer is not a 2-dimensional array')
             info_byte |= 0x4
             rbpp += 1
-            stack.append(npmask.reshape((npmask.shape[0] * npmask.shape[1], 1)))
+            stack.append(npmask.reshape((w * h, 1)))
 
         if len(stack) > 1:
             raw_data = np.concatenate(stack, axis=1)
@@ -604,7 +605,7 @@ class Sprite(Resource):
 
             return start, res
 
-        img, alpha, mask = self.get_data_layers()
+        _, _, _, _, img, alpha, mask = self.get_data_layers()
         if img is not None or alpha is not None:
             raise NotImplementedError('Only 8bpp sprites are supported')
 
