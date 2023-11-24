@@ -830,7 +830,7 @@ ACTION0_GLOBAL_PROPS = {
 
 ACTION0_INDUSTRY_TILE_PROPS = {
     0x08: ('substitute_type', 'B'),  # Substitute building type
-    0x09: ('overrite_type', 'B'),  # Industry tile override
+    0x09: ('override_type', 'B'),  # Industry tile override
     0x0A: ('tile_acceptance_1', 'W'),  # Tile acceptance
     0x0B: ('tile_acceptance_2', 'W'),  # Tile acceptance
     0x0C: ('tile_acceptance_3', 'W'),  # Tile acceptance
