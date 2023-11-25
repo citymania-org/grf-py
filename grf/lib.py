@@ -849,15 +849,33 @@ class VehicleSpriteTable(SpriteTable):
 
 
 class DisableDefault(grf.SpriteGenerator):
-    def __init__(self, feature, ids):
+    def __init__(self, feature, ids=None):
         assert feature in grf.VEHICLE_FEATURES, feature
-        assert isinstance(ids, (int, Iterable)), type(ids)
-        if isinstance(ids, int): ids = [ids,]
-        assert all(isinstance(x, int) for x in ids)
+
+        if ids is not None:
+            assert isinstance(ids, (int, Iterable)), type(ids)
+            if isinstance(ids, int): ids = [ids,]
+            assert all(isinstance(x, int) for x in ids)
         self.feature = feature
         self.ids = ids
 
     def get_sprites(self, g):
+        # TODO
+        # Houses / industries / airports: Set substitute_type to FF
+        # 0x07: {"num": 110, "props": [{"num": 0x08, "size": 1, "value": 0xFF}]},
+        # 0x0A: {"num": 37, "props": [{"num": 0x08, "size": 1, "value": 0xFF}]},
+        # 0x0D: {"num": 10, "props": [{"num": 0x08, "size": 1, "value": 0xFF}]},
+        # Cargos: Set bitnum to FF and label to 0
+        # 0x0B: {"num": 27, "props": [{"num": 0x08, "size": 1, "value": 0xFF}, {"num": 0x17, "size": 4, "value": 0}]},
+
+        ids = self.ids
+        if ids is None:
+            ids = range({
+                grf.TRAIN: 116,
+                grf.RV: 88,
+                grf.SHIP: 11,
+                grf.AIRCRAFT: 41,
+            }[self.feature])
 
         return (
             grf.DefineMultiple(
@@ -866,7 +884,7 @@ class DisableDefault(grf.SpriteGenerator):
                 count=len(values),
                 props={'climates_available': values}
             )
-            for first, values in combine_ranges((x, grf.NO_CLIMATE) for x in self.ids)
+            for first, values in combine_ranges((x, grf.NO_CLIMATE) for x in ids)
         )
 
 

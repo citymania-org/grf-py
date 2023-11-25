@@ -47,6 +47,7 @@
 	- Use `graphics.purchase` instead of `purchase_graphics` attribute.
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 - lib: Add `EngineOverride` sprite generator.
+- lib: Allow omitting `ids` in `DisableDefault` to disable all items.
 
 - grftopy: Fix missing sprite zoom
 - grftopy: Improve decoding of industry layouts.
