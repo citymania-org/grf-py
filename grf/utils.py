@@ -118,6 +118,12 @@ def watch_func(g, grf_file, args):
     observer.join()
 
 
+def init_id_map_func(g, grf_file, args):
+    with open('id_map.json', 'w') as f:
+        f.write('{"version": 1, "index": {}}')
+    print(f'Created id_map.json')
+
+
 def main(g, grf_file):
     assert isinstance(g, BaseNewGRF)
     assert isinstance(grf_file, str)
@@ -135,6 +141,9 @@ def main(g, grf_file):
     # Create a parser for the 'build' command
     watch_parser = subparsers.add_parser('watch', help='Build newgrf and rebuild if any files changed')
     watch_parser.set_defaults(func=watch_func)
+
+    watch_parser = subparsers.add_parser('init_id_map', help='Initialize the automatic id index (id_map.json)')
+    watch_parser.set_defaults(func=init_id_map_func)
 
     args = parser.parse_args()
 

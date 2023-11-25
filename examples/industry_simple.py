@@ -46,7 +46,7 @@ class Industry(grf.SpriteGenerator):
         tile_id = g.resolve_id(grf.INDUSTRY_TILE, f'__industry_{industry_id}_main_tile')
         res.append(tile_definition := grf.Define(
             feature=grf.INDUSTRY_TILE,
-            id=0,
+            id=tile_id,
             props={
                 'substitute_type': 0,
                 'land_shape_flags': 0,
@@ -149,7 +149,7 @@ class Industry(grf.SpriteGenerator):
                         grf.IndustryLayout.NewTile(
                             xofs=x,
                             yofs=y,
-                            id=0,
+                            id=tile_id,
                         )
                         for x in range(w)
                         for y in range(h)
@@ -187,4 +187,4 @@ Industry(
     sprite=sprite,
 )
 
-g.write('grfpy_example_industry_simple.grf')
+grf.main(g, 'grfpy_example_industry_simple.grf')
