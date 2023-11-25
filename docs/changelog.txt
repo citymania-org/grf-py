@@ -51,6 +51,7 @@
 
 - grftopy: Fix missing sprite zoom
 - grftopy: Improve decoding of industry layouts.
+- grftopy: Fix decompilation of ActionB.
 
 ---------
 0.2.2

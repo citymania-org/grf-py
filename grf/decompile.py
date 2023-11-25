@@ -821,9 +821,10 @@ def decode_actionB(data, context):
     lang = data[1]
     message = data[2]
     text_param = None
+    params = []
     res = []
     ofs = 3
-    if message == 0xFF:
+    if message != 0xFF:
         message_end = data.find(b'\0', 3)
         if message_end == -1:
             res.append(PyComment('Error: Action 0x0B message has no terminal 00 byte.'))
