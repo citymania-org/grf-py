@@ -847,7 +847,7 @@ class NewGRF(BaseNewGRF):
 
         mods = []
         for i, rtlist in self._railtype_table.values():
-            if rtlist is None:
+            if rtlist is None or len(rtlist) == 1:
                 continue
 
             param = 0x7f - len(mods)
