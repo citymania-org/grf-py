@@ -7,7 +7,7 @@ from typing import NamedTuple, Union
 from collections.abc import Iterable
 
 from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, \
-                    DataReader, to_bytes, read_dword, read_word, days_to_date, read_extended_byte, encode_extended_byte
+                    DataReader, to_bytes, read_dword, read_word, days_to_date, read_extended_byte, encode_extended_byte, Date
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND
@@ -205,8 +205,8 @@ class Property:
 
 class DateProperty(Property):
     def validate(cls, value):
-        if not isinstance(value, (datetime.date, int)):
-            raise ValueError(f'datetime.date or int object expected')
+        if not isinstance(value, (datetime.date, int, Date)):
+            raise ValueError(f'grf.date, datetime.date or int object expected')
 
     def read(cls, data, ofs):
         value, ofs = read_dword(data, ofs)
@@ -215,6 +215,8 @@ class DateProperty(Property):
     def encode(cls, value):
         if isinstance(value, datetime.date):
             value = date_to_days(value)
+        elif isinstance(value, Date):
+            value = value.to_days()
         return struct.pack('<I', value)
 
 

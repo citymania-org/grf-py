@@ -30,9 +30,11 @@
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Add `Sprite.save_gif` method to generate palette animated images.
 - Add init_id_map command line command to initialize id_map.json.
+- Add `Date` type to represent dates that don't fit into `datetime.date`.
 - Start auto-assiged IDs from 0 for INDUSTRY_TILE feature.
 - Remove `Mask` offset, add `FileMask` absolute positioning.
 - Rename `AlternativeSprites.get_zoom` to `get_sprite` and add bpp argument.
+- Don't write redundant actions for railtypes without fallbacks in railtype table.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
 - lib: Fix incorrect 2cc colors for auto-articulated parts.

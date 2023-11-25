@@ -158,6 +158,7 @@ def date_to_days(d):
 
 def days_to_date(days):
     if days < 366 or days > 3652424: return days
+    # TODO make grf.date
     return datetime.date(1, 1, 1) + datetime.timedelta(days=days-366)
 
 
@@ -274,3 +275,34 @@ class DataReader:
 
     def hex_str(self, n):
         return hex_str(self.data[self.offset: self.offset + n])
+
+
+DAYS_FOR_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+ACCUM_DAYS_FOR_MONTH = [sum(DAYS_FOR_MONTH[:i]) for i in range(len(DAYS_FOR_MONTH))]
+
+
+def is_leap_year(year):
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+
+def days_till(year):
+    res = 365 * year
+    if year > 0:
+        y = year - 1
+        # add number of leap years till
+        res +=  y // 4 - y // 100 + y // 400 + 1
+    return res
+
+
+class Date:
+    def __init__(self, year, month, day):
+        self.year = year
+        self.month = month
+        self.day = day
+
+    def to_days(self):
+        days = ACCUM_DAYS_FOR_MONTH[self.month - 1] + self.day - 1
+        if not is_leap_year(self.year) and days >= ACCUM_DAYS_FOR_MONTH[2]:
+            days -= 1
+
+        return days_till(self.year) + days
