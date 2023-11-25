@@ -204,11 +204,6 @@ def read_property(name, data, ofs, fmt):
             res.append([d.get_word() for _ in range(m)])
         return res, d.offset
 
-    if fmt == 'n*(BB)':
-        num = data[ofs]
-        res = ((data[ofs + 2 * i + 1], data[ofs + 2 * i + 2]) for i in range(num))
-        return res, ofs + 2 * num + 1
-
     raise ValueError(f'Unknown format {fmt} for property {name}')
 
 

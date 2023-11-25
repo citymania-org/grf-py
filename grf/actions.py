@@ -743,6 +743,31 @@ ACTION0_BRIDGE_PROPS = {
     0x13:  ('cost_factor', 'W'),  # Cost factor word access
 }
 
+
+class TileAcceptanceProperty(Property):
+    def validate(cls, value):
+        # TODO use typing
+        if not isinstance(value, (tuple, list)):
+            raise ValueError(f'Expected tuple or list')
+        if not all(isinstance(x, (tuple, list)) and len(x) == 2 for x in value):
+            raise ValueError(f'Elements should be tuple or list of length 2')
+        if not all(0<= a <=8 for _, a in value):
+            raise ValueError(f'Acceptance should be in range 0..255')
+        if not all(0<= a <=8 for c, _ in value):
+            raise ValueError(f'Cargo ID should be in range 0..255')
+
+    def read(cls, data, ofs):
+        num = data[ofs]
+        res = [(data[ofs + 2 * i + 1], data[ofs + 2 * i + 2]) for i in range(num)]
+        return res, ofs + 2 * num + 1
+
+    def encode(cls, value):
+        res = bytes((len(value),))
+        for cargo, acceptance in value:
+            res += bytes((cargo, acceptance))
+        return res
+
+
 ACTION0_HOUSE_PROPS = {
     0x08: ('substitute', 'B'),  # Substitute building type
     0x09: ('flags', 'B'),  # Building flags
@@ -771,7 +796,7 @@ ACTION0_HOUSE_PROPS = {
     0x20: ('watched_cargo_types', 'W'),  # Cargo acceptance watch list
     0x21: ('min_year', 'W'),  # Long year (zero based) of minimum appearance
     0x22: ('max_year', 'W'),  # Long year (zero based) of maximum appearance
-    0x23: ('tile_acceptance', 'V'), # Tile acceptance list
+    0x23: ('tile_acceptance', TileAcceptanceProperty()), # Tile acceptance list
 }
 
 
@@ -842,7 +867,7 @@ ACTION0_INDUSTRY_TILE_PROPS = {
     0x10: ('anim_speed', 'B'),  # Animation speed.
     0x11: ('cb25_triggers', 'B'),  # Triggers for callback 25
     0x12: ('flags', 'B'),  # Special flags
-    0x13: ('tile_acceptance_list', 'n*(BB)'),  # Tile acceptance list
+    0x13: ('tile_acceptance_list', TileAcceptanceProperty()),  # Tile acceptance list
 }
 
 
@@ -1314,6 +1339,7 @@ class DefineMultiple(LazyAction):
             for l in value:
                 res += self._encode_label(l)
             return res
+        raise RuntimeError(f'Unsupported property format `{fmt}`')
 
     def _encode(self):
         res = struct.pack('<BBBBBH',

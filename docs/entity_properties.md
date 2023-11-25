@@ -249,7 +249,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Houses
 | 0x20 | watched_cargo_types | int(0-65535) | Cargo acceptance watch list |
 | 0x21 | min_year | int(0-65535) | Long year (zero based) of minimum appearance |
 | 0x22 | max_year | int(0-65535) | Long year (zero based) of maximum appearance |
-| 0x23 | tile_acceptance | Not supported | Tile acceptance list |
+| 0x23 | tile_acceptance | TileAcceptanceProperty | Tile acceptance list |
 
 
 # Global settings (GLOBAL_VAR, 0x08)
@@ -290,7 +290,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Industry_Tiles
 | 0x10 | anim_speed | int(0-255) | Animation speed. |
 | 0x11 | cb25_triggers | int(0-255) | Triggers for callback 25 |
 | 0x12 | flags | int(0-255) | Special flags |
-| 0x13 | tile_acceptance_list | n*(BB) | Tile acceptance list |
+| 0x13 | tile_acceptance_list | TileAcceptanceProperty | Tile acceptance list |
 
 
 
