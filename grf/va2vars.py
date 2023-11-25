@@ -221,6 +221,29 @@ NML_VA2_OBJECTS = {
     'object_distance'              : {'var': 0x64, 'start':  0, 'size': 16, 'param_function': industry_count},
 }
 
+NML_VA2_HOUSES = {
+    'construction_state'    : {'var': 0x40, 'start':  0, 'size':  2},
+    'pseudo_random_bits'    : {'var': 0x40, 'start':  2, 'size':  2},
+    'age'                   : {'var': 0x41, 'start':  0, 'size':  8},
+    'town_zone'             : {'var': 0x42, 'start':  0, 'size':  8},
+    'terrain_type'          : {'var': 0x43, 'start':  0, 'size':  8},
+    'same_house_count_town' : {'var': 0x44, 'start':  0, 'size':  8},
+    'same_house_count_map'  : {'var': 0x44, 'start':  8, 'size':  8},
+    # TODO there is some issue that needs work around
+    # 'same_class_count_town' : {'var': 0xFF, 'start': 16, 'size':  8, 'value_function': house_same_class}, # 'var' is unused
+    # 'same_class_count_map'  : {'var': 0xFF, 'start': 24, 'size':  8, 'value_function': house_same_class}, # 'var' is unused
+    'generating_town'       : {'var': 0x45, 'start':  0, 'size':  1},
+    'animation_frame'       : {'var': 0x46, 'start':  0, 'size':  8},
+    'x_coordinate'          : {'var': 0x47, 'start':  0, 'size': 16},
+    'y_coordinate'          : {'var': 0x47, 'start': 16, 'size': 16},
+    'random_bits'           : {'var': 0x5F, 'start':  8, 'size':  8},
+    # 'relative_x'            : {'var': 0x7D, 'start':  0, 'size':  8, 'param': 0xFF},
+    # 'relative_y'            : {'var': 0x7D, 'start':  8, 'size':  8, 'param': 0xFF},
+    # 'relative_pos'          : {'var': 0x7D, 'start':  0, 'size': 16, 'param': 0xFF},
+    # 'house_tile'            : {'var': 0x7D, 'start': 16, 'size':  8, 'param': 0xFF},
+    # 'house_type_id'         : {'var': 0x7D, 'start': 24, 'size':  8, 'param': 0xFF},
+}
+
 NML_VA2_INDUSTRY_TILES = {
     'construction_state' : {'var': 0x40, 'start': 0, 'size':  2},
     'terrain_type'       : {'var': 0x41, 'start': 0, 'size':  8},
@@ -296,6 +319,7 @@ VA2_VARS = {
         (SHIP, NML_VA2_SHIP),
         (AIRCRAFT, NML_VA2_AIRCRAFT),
         (STATION, NML_VA2_STATIONS),
+        (HOUSE, NML_VA2_HOUSES),
         (INDUSTRY, NML_VA2_INDUSTRIES),
         (OBJECT, NML_VA2_OBJECTS),
         (RAILTYPE, NML_VA2_RAILTYPES),

@@ -14,6 +14,7 @@
 - Fix auto-assigned IDs overlapping when adding vehicles.
 - Fix encoding of label lists in Action0 properties.
 - Fix encoding and decoding of Action 5.
+- Fix `min_life` Action0 property size for houses (spec error).
 - Add sprite cache.
 - Fix decompilation of action 7/9 with value > 4 bytes.
 - Optimize memory usage when writing NewGRF.
