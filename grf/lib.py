@@ -849,8 +849,49 @@ class VehicleSpriteTable(SpriteTable):
 
 
 class DisableDefault(grf.SpriteGenerator):
+    # Pairs of (count, props)
+    DISABLE_INFO = {
+        grf.TRAIN: (
+            116,
+            {'climates_available': grf.NO_CLIMATE}
+        ),
+        grf.RV: (
+            88,
+            {'climates_available': grf.NO_CLIMATE}
+        ),
+        grf.SHIP: (
+            11,
+            {'climates_available': grf.NO_CLIMATE}
+        ),
+        grf.AIRCRAFT: (
+            41,
+            {'climates_available': grf.NO_CLIMATE}
+        ),
+        grf.HOUSE: (
+            110,
+           {'substitute': 0xFF},
+        ),
+        grf.INDUSTRY: (
+            37,
+           {'substitute_type': 0xFF},
+        ),
+        # TODO add airport action 0 props
+        # grf.AIRPORT: (
+        #     10,
+        #    {'substitute_type': 0xFF},
+        # ),
+        grf.CARGO: (
+            27,
+            {
+                'bit_number': 0xff,
+                'label': 0,
+            }
+        ),
+    }
+
     def __init__(self, feature, ids=None):
-        assert feature in grf.VEHICLE_FEATURES, feature
+        if feature not in self.DISABLE_INFO:
+            raise ValueError(f'Unsuppported feature `{feature}`')
 
         if ids is not None:
             assert isinstance(ids, (int, Iterable)), type(ids)
@@ -860,31 +901,20 @@ class DisableDefault(grf.SpriteGenerator):
         self.ids = ids
 
     def get_sprites(self, g):
-        # TODO
-        # Houses / industries / airports: Set substitute_type to FF
-        # 0x07: {"num": 110, "props": [{"num": 0x08, "size": 1, "value": 0xFF}]},
-        # 0x0A: {"num": 37, "props": [{"num": 0x08, "size": 1, "value": 0xFF}]},
-        # 0x0D: {"num": 10, "props": [{"num": 0x08, "size": 1, "value": 0xFF}]},
-        # Cargos: Set bitnum to FF and label to 0
-        # 0x0B: {"num": 27, "props": [{"num": 0x08, "size": 1, "value": 0xFF}, {"num": 0x17, "size": 4, "value": 0}]},
+        count, props = self.DISABLE_INFO[self.feature]
+        ids = range(count) if self.ids is None else self.ids
 
-        ids = self.ids
-        if ids is None:
-            ids = range({
-                grf.TRAIN: 116,
-                grf.RV: 88,
-                grf.SHIP: 11,
-                grf.AIRCRAFT: 41,
-            }[self.feature])
-
+        print('IDS', ids)
         return (
             grf.DefineMultiple(
                 feature=self.feature,
                 first_id=first,
                 count=len(values),
-                props={'climates_available': values}
+                props={
+                    k: [v] * len(values) for k, v in props.items()
+                }
             )
-            for first, values in combine_ranges((x, grf.NO_CLIMATE) for x in ids)
+            for first, values in combine_ranges((x, None) for x in ids)
         )
 
 

@@ -28,6 +28,7 @@
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of industry layouts.
+- Support encoding of tile acceptance lists for houses and industry tiles.
 - Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Add `Sprite.save_gif` method to generate palette animated images.
@@ -50,6 +51,7 @@
 - lib: Add `Ship.Flags` and `RoadVehicle.Flags` for unified access to flags.
 - lib: Add `EngineOverride` sprite generator.
 - lib: Allow omitting `ids` in `DisableDefault` to disable all items.
+- lib: Support `HOUSE`, `INDUSTRY` and `CARGO` features in `DisableDefault`.
 
 - grftopy: Fix missing sprite zoom
 - grftopy: Improve decoding of industry layouts.
