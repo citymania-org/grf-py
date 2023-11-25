@@ -1038,6 +1038,17 @@ ACTION0_INDUSTRY_PROPS = {
     0x28: ('input_multipliers', 'n*m*W'),  # Input cargo multiplier list
 }
 
+class TownGrowthEffect:
+    PASSENGERS = 0x00
+    MAIL = 0x02
+    GOODS = 0x05
+    CANDYFLOSS = 0x05
+    WATER = 0x09
+    FOOD = 0x0B
+    FIZZY_DRINKS = 0x0B
+    NONE = 0xFF
+
+
 ACTION0_CARGO_PROPS = {
     0x08: ('bit_number', 'B'),  # Bit number for bitmasks
     0x09: ('type_name', 'W'),  # TextID for the cargo type name

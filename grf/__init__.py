@@ -9,8 +9,9 @@ from .sprites import ResourceAction, Sprite, ImageSprite, ImageFile, FileSprite,
 from .common import *
 from .actions import RVFlags, TrainFlags, CargoClass, train_hpi, train_ton, \
     nml_te, nml_drag, py_property, SpriteRef, SpriteLayout, SpriteLayoutList, \
-    GroundSprite, ParentSprite, ChildSprite, \
-    TrainFlags, ShipFlags, AIFlags, TrainRunningCost, TrainVisualEffect, IndustryLayout, IndustryTileRef, OldIndustryTileRef
+    GroundSprite, ParentSprite, ChildSprite, TrainFlags, ShipFlags, AIFlags, \
+    TrainRunningCost, TrainVisualEffect, IndustryLayout, IndustryTileRef, \
+    OldIndustryTileRef, TownGrowthEffect
 from .strings import StringRef, TTDString
 from .lib import *
 from . import decompile
