@@ -25,6 +25,7 @@
 - Add support for the extended format in Action1.
 - Add `main` function to handle command line arguments.
 - Add some VarAction2 variables for houses.
+- Add `TTDString` constants.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of industry layouts.
@@ -37,6 +38,7 @@
 - Start auto-assiged IDs from 0 for INDUSTRY_TILE feature.
 - Remove `Mask` offset, add `FileMask` absolute positioning.
 - Rename `AlternativeSprites.get_zoom` to `get_sprite` and add bpp argument.
+- Rename some of the Action0 properties for `CARGO` to match nml.
 - Don't write redundant actions for railtypes without fallbacks in railtype table.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.

@@ -1040,27 +1040,27 @@ ACTION0_INDUSTRY_PROPS = {
 
 ACTION0_CARGO_PROPS = {
     0x08: ('bit_number', 'B'),  # Bit number for bitmasks
-    0x09: ('type_text', 'W'),  # TextID for the cargo type name
-    0x0A: ('unit_text', 'W'),  # TextID for the name of one unit from the cargo type
+    0x09: ('type_name', 'W'),  # TextID for the cargo type name
+    0x0A: ('unit_name', 'W'),  # TextID for the name of one unit from the cargo type
     0x0B: ('one_text', 'W'),  # TextID to be displayed for 1 unit of cargo
     0x0C: ('many_text', 'W'),  # TextID to be displayed for multiple units of cargo
-    0x0D: ('abbr_text', 'W'),  # TextID for cargo type abbreviation
+    0x0D: ('type_abbreviation', 'W'),  # TextID for cargo type abbreviation
     0x0E: ('icon_sprite', 'W'),  # Sprite number for the icon of the cargo
     0x0F: ('weight', 'B'),  # Weight of one unit of the cargo
-    0x10: ('penalty1', 'B'),  # Penalty times
-    0x11: ('penalty2', 'B'),  # Penalty times
+    0x10: ('penalty_lowerbound', 'B'),  # Penalty times
+    0x11: ('single_penalty_length', 'B'),  # Penalty times
     0x12: ('base_price', 'D'),  # Base price
-    0x13: ('station_colour', 'B'),  # Color for the station list window
-    0x14: ('colour', 'B'),  # Color for the cargo payment list window
+    0x13: ('station_list_colour', 'B'),  # Color for the station list window
+    0x14: ('cargo_payment_list_colour', 'B'),  # Color for the cargo payment list window
     0x15: ('is_freight', 'B'),  # Freight status (for freight-weight-multiplier setting); 0=not freight, 1=is freight
-    0x16: ('classes', 'W'),  # Cargo classes
-    0x17: ('label', 'D'),  # Cargo label
-    0x18: ('town_growth_sub', 'B'),  # Substitute type for town growth
-    0x19: ('town_growth_mult', 'W'),  # Multiplier for town growth
+    0x16: ('cargo_classes', 'W'),  # Cargo classes
+    0x17: ('label', 'L'),  # Cargo label
+    0x18: ('town_growth_effect', 'B'),  # Substitute type for town growth
+    0x19: ('town_growth_multiplier', 'W'),  # Multiplier for town growth
     0x1A: ('cb_flags', 'B'),  # Callback flags
-    0x1B: ('units_text', 'W'),  # TextID for displaying the units of a cargo
-    0x1C: ('amount_text', 'W'),  # TextID for displaying the amount of cargo
-    0x1D: ('capacity_mult', 'W'),  # Capacity mulitplier
+    0x1B: ('units_of_cargo', 'W'),  # TextID for displaying the units of a cargo
+    0x1C: ('items_of_cargo', 'W'),  # TextID for displaying the amount of cargo
+    0x1D: ('capacity_multiplier', 'W'),  # Capacity mulitplier
 }
 
 ACTION0_SOUND_EFFECT_PROPS = {
