@@ -245,7 +245,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Houses
 | 0x1C | building_class | int(0-255) | Class of the building type |
 | 0x1D | cb_flags2 | int(0-255) | Callback flags 2 |
 | 0x1E | accepted_cargo | int(0-4294967295) | Accepted cargo types |
-| 0x1F | min_life | int(0-65535) | Minimum life span in years |
+| 0x1F | min_life | int(0-255) | Minimum life span in years |
 | 0x20 | watched_cargo_types | int(0-65535) | Cargo acceptance watch list |
 | 0x21 | min_year | int(0-65535) | Long year (zero based) of minimum appearance |
 | 0x22 | max_year | int(0-65535) | Long year (zero based) of maximum appearance |

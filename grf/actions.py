@@ -767,7 +767,7 @@ ACTION0_HOUSE_PROPS = {
     0x1C: ('building_class', 'B'),  # Class of the building type
     0x1D: ('cb_flags2', 'B'),  # Callback flags 2
     0x1E: ('accepted_cargo', 'D'),  # Accepted cargo types
-    0x1F: ('min_life', 'W'),  # Minimum life span in years
+    0x1F: ('min_life', 'B'),  # Minimum life span in years
     0x20: ('watched_cargo_types', 'W'),  # Cargo acceptance watch list
     0x21: ('min_year', 'W'),  # Long year (zero based) of minimum appearance
     0x22: ('max_year', 'W'),  # Long year (zero based) of maximum appearance
