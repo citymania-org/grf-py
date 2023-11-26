@@ -1338,9 +1338,13 @@ class DefineMultiple(LazyAction):
         if fmt == 'L': return self._encode_label(value)
         if fmt == 'B*': return struct.pack('<BH', 255, value)
         if fmt == 'n*B':
-            assert isinstance(value, bytes)
-            assert len(value) < 256, len(value)
-            return struct.pack('<B', len(value)) + value
+            if isinstance(value, bytes):
+                assert len(value) < 256, len(value)
+                return struct.pack('<B', len(value)) + value
+            elif isinstance(value, list):
+                assert len(value) < 256, len(value)
+                assert all(isinstance(x, int) for x in value)
+                return struct.pack('<B', len(value)) + bytes(value)
         if fmt == '2*L':
             assert isinstance(value, tuple), type(value)
             assert len(value) == 2, (len(value), value)
@@ -1363,7 +1367,7 @@ class DefineMultiple(LazyAction):
                 try:
                     res += self._encode_value(value[i], fmt)
                 except Exception as e:
-                    raise RuntimeError(f'Error encoding value {value} for property {prop} with format `{fmt}`: {e}')
+                    raise RuntimeError(f'Error encoding value {value[i]} for property {prop} with format `{fmt}`: {e}')
         return res
 
     def py(self, context):

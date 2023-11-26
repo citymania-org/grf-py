@@ -25,7 +25,7 @@
 - Add support for the extended format in Action1.
 - Add `main` function to handle command line arguments.
 - Add some VarAction2 variables for houses.
-- Add `TTDString` constants.
+- Add `TTDString` and `TTDIndustry` constants.
 - Add `TownGrowthEffect` constants.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.

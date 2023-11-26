@@ -904,7 +904,6 @@ class DisableDefault(grf.SpriteGenerator):
         count, props = self.DISABLE_INFO[self.feature]
         ids = range(count) if self.ids is None else self.ids
 
-        print('IDS', ids)
         return (
             grf.DefineMultiple(
                 feature=self.feature,
