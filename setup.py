@@ -11,6 +11,7 @@ install_requires = [
     'Pillow==9.4.0',
     'ply==3.11',
     'spectra==0.0.11',
+    'typeguard==4.1.5',
 ]
 
 setup(

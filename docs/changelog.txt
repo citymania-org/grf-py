@@ -15,6 +15,7 @@
 - Fix encoding of label lists in Action0 properties.
 - Fix encoding and decoding of Action 5.
 - Fix `min_life` Action0 property size for houses (spec error).
+- Fix `Switch` code using wrong feature for related scope.
 - Add sprite cache.
 - Fix decompilation of action 7/9 with value > 4 bytes.
 - Optimize memory usage when writing NewGRF.
@@ -46,6 +47,7 @@
 - lib: Fix incorrect 2cc colors for auto-articulated parts.
 - lib: Fix unicode vehicle names.
 - lib: Set correct flags and track_type on auto-articulated parts.
+- lib: Add high-level `Industry` class.
 - lib: `CallbackManager` rewrite:
 	- Support all features (non-vehicles may still be incomplete).
 	- Make `CallbackManager` abstract class, use `make_callback_manager` function instead.
