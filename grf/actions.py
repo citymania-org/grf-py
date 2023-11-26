@@ -10,7 +10,7 @@ from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, AN
                     DataReader, to_bytes, read_dword, read_word, days_to_date, read_extended_byte, encode_extended_byte, Date
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
-                    AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND
+                    AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND, TOWN
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
 from .sprites import Action, Sound, FakeAction
@@ -979,7 +979,7 @@ class IndustryLayoutsProperty(Property):
                 gfx = d.get_byte()
                 if gfx == 0xfe:
                     local_tile_id = d.get_word()
-                    tile = IndustryLayout.Tile(xofs=xofs, yofs=yofs, id=local_tile_id)
+                    tile = IndustryLayout.NewTile(xofs=xofs, yofs=yofs, id=local_tile_id)
                 elif gfx == 0xff:
                     tile = IndustryLayout.SpecialCheck(xofs=utoi8(xofs & 0xff), yofs=utoi8(yofs & 0xff))
                 else:
@@ -1629,9 +1629,24 @@ class Switch(LazyAction, ReferenceableAction, ReferencingAction):
     @property
     def parsed_code(self):
         if self._parsed_code is None:
-            # TODO related scope
+            if self.related_scope:
+                feature = {
+                    TRAIN: TRAIN,
+                    RV: RV,
+                    SHIP: SHIP,
+                    AIRCRAFT: AIRCRAFT,
+                    BRIDGE: TOWN,
+                    HOUSE: TOWN,
+                    INDUSTRY_TILE: INDUSTRY,
+                    INDUSTRY: TOWN,
+                    AIRPORT: TOWN,
+                    OBJECT: TOWN,
+                    AIRPORT_TILE: AIRPORT,
+                }[self.feature]
+            else:
+                feature = self.feature
             try:
-                self._parsed_code = parse_code(self.feature, self.code)
+                self._parsed_code = parse_code(feature, self.code)
             except Exception as e:
                 print('Failed code: \n', self.code)
                 raise
