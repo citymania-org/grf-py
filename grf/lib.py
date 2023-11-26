@@ -597,7 +597,7 @@ class CallbackDescriptor:
     def __set__(self, obj, value):
         if isinstance(value, Callback):
             if value.__class__ is not self._class:
-                raise ValueError('Expected {self._class.__name__} found {value.__name__}')
+                raise ValueError(f'Expected {self._class.__name__} found {value.__class__.__name__}')
         else:
             value = self._class(value)
         obj._callbacks[self._cbid] = value
