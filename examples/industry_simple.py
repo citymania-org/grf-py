@@ -19,7 +19,8 @@ Industry(
     name='A Simple Industry',
     layouts=[
         [(0, 0, Industry.Building(size=(4, 4), sprite=sprite))],
-    ]
+    ],
+    z_extent=154,
 )
 
 grf.main(g, 'grfpy_example_industry_simple.grf')

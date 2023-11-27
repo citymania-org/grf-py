@@ -77,6 +77,7 @@ class Industry(grf.SpriteGenerator):
         name: String,
         substitute_type: int,
         layouts: list[list[tuple[int, int, 'Industry.Building']]],
+        z_extent: int,
         **props,
     ):
         super().__init__()
@@ -84,6 +85,7 @@ class Industry(grf.SpriteGenerator):
         self.name = name
         self.substitute_type = substitute_type
         self.layouts = layouts
+        self.z_extent = z_extent
         self._props = props
 
     @typechecked
@@ -163,7 +165,7 @@ class Industry(grf.SpriteGenerator):
             buildings=[{
                 'sprite': grf.SpriteRef(0, is_global=False),
                 'add': grf.Temp(0),
-                'extent': (16, 16, 154),
+                'extent': (16, 16, self.z_extent),
             }],
         )
 
