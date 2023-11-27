@@ -1010,7 +1010,7 @@ ACTION0_INDUSTRY_PROPS = {
     0x0C: ('closure_message', 'W'),  # Industry closure message
     0x0D: ('production_increase_message', 'W'),  # Production increase message
     0x0E: ('production_decrease_message', 'W'),  # Production decrease message
-    0x0F: ('func_cost', 'B'),  # Fund cost multiplier
+    0x0F: ('fund_cost', 'B'),  # Fund cost multiplier
     0x10: ('production_cargo', 'W'),  # Production cargo types
     0x11: ('acceptance_cargo', 'D'),  # Acceptance cargo types
     0x12: ('produciton_multipliers', 'B'),  # Production multipliers
