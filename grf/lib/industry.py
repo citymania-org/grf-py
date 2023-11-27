@@ -78,6 +78,7 @@ class Industry(grf.SpriteGenerator):
         substitute_type: int,
         layouts: list[list[tuple[int, int, 'Industry.Building']]],
         z_extent: int,
+        ground_sprite_id: int,
         **props,
     ):
         super().__init__()
@@ -86,6 +87,7 @@ class Industry(grf.SpriteGenerator):
         self.substitute_type = substitute_type
         self.layouts = layouts
         self.z_extent = z_extent
+        self.ground_sprite_id = ground_sprite_id
         self._props = props
 
     @typechecked
@@ -157,10 +159,11 @@ class Industry(grf.SpriteGenerator):
             related_scope=True,
         ))
 
+        # TODO needs different layout for each tile for extent/offset (but cache per building)
         layout = grf.AdvancedSpriteLayout(
             feature=grf.INDUSTRY_TILE,
             ground={
-                'sprite': grf.SpriteRef(4550, is_global=True),
+                'sprite': grf.SpriteRef(self.ground_sprite_id, is_global=True),
             },
             buildings=[{
                 'sprite': grf.SpriteRef(0, is_global=False),

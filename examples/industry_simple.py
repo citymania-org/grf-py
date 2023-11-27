@@ -21,6 +21,7 @@ Industry(
         [(0, 0, Industry.Building(size=(4, 4), sprite=sprite))],
     ],
     z_extent=154,
+    ground_sprite_id=1420,
 )
 
 grf.main(g, 'grfpy_example_industry_simple.grf')
