@@ -1028,8 +1028,8 @@ ACTION0_INDUSTRY_PROPS = {
     0x1E: ('input_mult3', 'D'),  # Input cargo multipliers for the three input cargo types
     0x1F: ('name', 'W'),  # Industry name
     0x20: ('prospecting_chance', 'D'),  # Prospecting success chance
-    0x21: ('cb_flags1', 'B'),  # Callback flags
-    0x22: ('cb_flags2', 'B'),  # Callback flags
+    0x21: ('cb_flags', 'B'),  # Callback flags
+    0x22: ('extra_cb_flags', 'B'),  # Callback flags
     0x23: ('destruction_cost', 'D'),  # Destruction cost multiplier
     0x24: ('station_text', 'W'),  # Default text for nearby station
     0x25: ('production_types', 'n*B'),  # Production cargo type list
