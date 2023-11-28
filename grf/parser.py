@@ -309,7 +309,7 @@ class GenericVar(Node):
                 return True, struct.pack(
                     '<BBIBBBBI',
                     0x1a, 0x20, param,  # val1 = param
-                    0x0f, 0x7b, self.var, 0x20 | shift, and_mask,  # val1 = var(var=self.var, param=val1)
+                    OP_INIT, 0x7b, self.var, 0x20 | shift, and_mask,  # val1 = var(var=self.var, param=val1)
                 )
             else:
                 return True, struct.pack('<BBBI', self.var, param, 0x20 | shift, and_mask)
@@ -335,12 +335,13 @@ class Temp(Node):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
         if isinstance(self.register, int):
-            register = self.register
+            return True, struct.pack('<BBBI', 0x7d, self.register, 0x20 | shift, and_mask)
         elif isinstance(self.register, Value):
-            register = self.register.value
+            return True, struct.pack('<BBBI', 0x7d, self.register.value, 0x20 | shift, and_mask)
         else:
-            assert True, "TODO node needs 7b"
-        return True, struct.pack('<BBBI', 0x7d, register, 0x20 | shift, and_mask)
+            code = self.register.compile(register)[1]
+            # 7b takes parameter 7d as var to access and uses stack value as it's parameter
+            return False, code + struct.pack('<BBBBI', OP_INIT, 0x7b, 0x7d, 0x20 | shift, and_mask)
 
     def __repr__(self):
         return f'Temp({self.register!r})'
@@ -362,9 +363,16 @@ class Perm(Node):
     def compile(self, register, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
-        # TODO Node register
-        assert isinstance(self.register, Value)
-        return True, struct.pack('<BBBI', 0x7c, self.register.value, 0x20 | shift, and_mask)
+        if isinstance(self.register, int):
+            register = self.register
+        elif isinstance(self.register, Value):
+            register = self.register.value
+        else:
+            code = self.register.compile(register)[1]
+            # 7b takes parameter 7c as var to access and uses stack value as it's parameter
+            return False, code + struct.pack('<BBBBI', OP_INIT, 0x7b, 0x7c, 0x20 | shift, and_mask)
+
+        return True, struct.pack('<BBBI', 0x7c, register, 0x20 | shift, and_mask)
 
     def __repr__(self):
         return f'Perm({self.register!r})'
@@ -653,10 +661,10 @@ def p_expression_group(t):
 
 
 def p_expression_storage(t):
-    'expression : NAME LBRACKET NUMBER RBRACKET'
+    'expression : NAME LBRACKET expression RBRACKET'
     assert t[1] in ('TEMP', 'PERM'), t[1]
     cls = Temp if t[1] == 'TEMP' else Perm
-    register = int(t[3])
+    register = t[3]
     t[0] = cls(register)
 
 
