@@ -798,6 +798,7 @@ class NewGRF(BaseNewGRF):
         self._cargo_table = {}
         for i, c in enumerate(cargo_list):
             self._cargo_table[to_bytes(c)] = i
+        return tuple(range(len(cargo_list)))
 
     def get_cargo_id(self, cargo):
         cbytes = to_bytes(cargo)
