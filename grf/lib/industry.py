@@ -80,6 +80,8 @@ class Industry(grf.SpriteGenerator):
         layouts: list[list[tuple[int, int, 'Industry.Building']]],
         z_extent: int,
         ground_sprite_id: int,
+        production_types=[],
+        acceptance_types=[],
         callbacks=None,
         **props,
     ):
@@ -92,6 +94,8 @@ class Industry(grf.SpriteGenerator):
         self.ground_sprite_id = ground_sprite_id
         self._props = props
         self.callbacks = make_callback_manager(grf.INDUSTRY, callbacks)
+        self.acceptance_types = acceptance_types
+        self.production_types = production_types
 
     @typechecked
     def get_sprites(self, g: grf.NewGRF):
@@ -189,6 +193,9 @@ class Industry(grf.SpriteGenerator):
             default=layout_switch,
         ))
 
+        props = self._props.copy()
+        self.callbacks.set_flag_props(props)
+
         res.append(definition := grf.Define(
             feature=grf.INDUSTRY,
             id=industry_id,
@@ -206,7 +213,9 @@ class Industry(grf.SpriteGenerator):
                     ])
                     for lt in layout_tiles
                 ],
-                **self._props,
+                'acceptance_types': [g.get_cargo_id(x) for x in self.acceptance_types],
+                'production_types': [g.get_cargo_id(x) for x in self.production_types],
+                **props,
             },
         ))
 
