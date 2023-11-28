@@ -22,7 +22,7 @@ setup(
     },
     description='Framework for making OpenTTD NewGRF files',
     author='dP',
-    packages=find_packages(include=['grf']),
+    packages=find_packages(exclude=['tests']),
     entry_points={
         'console_scripts': [
             'grftopy = grf.decompile:main',
