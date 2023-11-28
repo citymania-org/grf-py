@@ -1709,6 +1709,12 @@ class Switch(LazyAction, ReferenceableAction, ReferencingAction):
         )
 
 
+# TODO separate eval-switch and ranges-switch better
+class Eval(Switch):
+    def __init__(self, code, default, **kw):
+        super().__init__(code=code, ranges=(), default=default, **kw)
+
+
 class RandomSwitch(LazyAction, ReferenceableAction, ReferencingAction):
     def __init__(self, *, scope, triggers, cmp_all, lowest_bit, groups, count=None, feature=None, ref_id=None):
         if scope == 'relative' and feature in VEHICLE_FEATURES:
