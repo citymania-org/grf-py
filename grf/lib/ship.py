@@ -107,5 +107,5 @@ class Ship(Vehicle):
             for l in self.liveries:
                 res.extend(l['sprites'])
 
-        res.append(self.callbacks.make_map_action(definition))
+        res.extend(self.callbacks.make_map_action(definition))
         return res

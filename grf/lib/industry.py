@@ -4,6 +4,7 @@ from typeguard import typechecked
 
 
 import grf
+from .callback import make_callback_manager
 
 
 ID = Union[str, int]
@@ -209,6 +210,6 @@ class Industry(grf.SpriteGenerator):
             },
         ))
 
-        res.append(self.callbacks.make_map_action(definition))
+        res.extend(self.callbacks.make_map_action(definition))
 
         return res

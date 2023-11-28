@@ -17,7 +17,7 @@ class CBGenerator(SpriteGenerator):
 
 	def get_sprites(self, g):
 		definition = DummyDefinition(self.manager.feature, 0)
-		return [self.manager.make_map_action(definition)]
+		return self.manager.make_map_action(definition)
 
 
 @raises(AttributeError)
@@ -27,7 +27,7 @@ def test_non_vehicle_properties_raises_attribute_error():
 
 
 def test_non_vehicle_can_make_switch():
-    cbm = make_callback_manager(feature=HOUSE, callbacks={'graphics': 0})
+    cbm = make_callback_manager(feature=HOUSE, callbacks={})
     cbm.make_switch()
 
 

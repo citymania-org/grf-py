@@ -260,7 +260,7 @@ class Train(Vehicle):
             }
         ))
 
-        res.append(self.callbacks.make_map_action(definition))
+        res.extend(self.callbacks.make_map_action(definition))
 
         position = 0
         for apid, liveries, _, initial_callbacks, props in self._articulated_parts:
@@ -284,7 +284,7 @@ class Train(Vehicle):
                     **props
                 }
             ))
-            res.append(callbacks.make_map_action(definition))
+            res.extend(callbacks.make_map_action(definition))
 
         return res
 

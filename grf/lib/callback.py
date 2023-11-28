@@ -358,9 +358,9 @@ CALLBACKS = {
         0x3B: {'name': 'control_special', 'flag': 0x200, 'class': DefaultCallback},
         0x3D: {'name': 'stop_accept_cargo', 'flag': 0x400, 'class': DefaultCallback},
         0x14A: {'name': 'colour', 'flag': 0x800, 'class': DefaultCallback},
-        0x14B: {'name': 'cargo_input', 'flag': 0x1000, 'class': DefaultCallback},
-        0x14C: {'name': 'cargo_output', 'flag': 0x2000, 'class': DefaultCallback},
-        0x15F: {'name': 'build_prod_change', 'flag': 0x4000, 'class': DefaultCallback},
+        0x14B: {'name': 'input_cargo', 'flag': 0x1000, 'class': DefaultCallback},
+        0x14C: {'name': 'output_cargo', 'flag': 0x2000, 'class': DefaultCallback},
+        0x15F: {'name': 'init_production', 'flag': 0x4000, 'class': DefaultCallback},
     },
     grf.CARGO: {
         0x39: {'name': 'profit', 'flag': 0x1, 'class': DefaultCallback},
@@ -575,7 +575,8 @@ class CallbackManager(object):
             props['extra_cb_flags'] = props.get('extra_cb_flags', 0) | (res >> 8)
 
     def make_switch(self):
-        if self.graphics.default is None:
+        is_vehicle = self.feature in grf.VEHICLE_FEATURES
+        if self.graphics.default is None and is_vehicle:
             raise ValueError('No graphics')
 
         default_callbacks = {}
@@ -598,23 +599,28 @@ class CallbackManager(object):
             purchase_cb = getattr(c, 'purchase', None)
             if purchase_cb is not None:
                 purchase_callbacks[k] = purchase_cb
-        maps = {}
-        if purchase_callbacks:
-            # TODO purchase_switch can be the same as default
-            purchase_switch = grf.Switch(
-                ranges=purchase_callbacks,
-                default=self.graphics.default if self.graphics.purchase is None else self.graphics.purchase,
-                code='current_callback',
-            )
-            maps = {255: purchase_switch}
-        elif self.graphics.purchase is not None:
-            maps = {255: self.graphics.purchase}
 
-        default = self.graphics.default
+
+        maps = {}
+        default = None
+        if is_vehicle:
+            if purchase_callbacks:
+                # TODO purchase_switch can be the same as default
+                purchase_switch = grf.Switch(
+                    ranges=purchase_callbacks,
+                    default=self.graphics.default if self.graphics.purchase is None else self.graphics.purchase,
+                    code='current_callback',
+                )
+                maps = {255: purchase_switch}
+            elif self.graphics.purchase is not None:
+                maps = {255: self.graphics.purchase}
+
+            default = self.graphics.default
+
         if default_callbacks:
             default = grf.Switch(
                 ranges={**default_callbacks},
-                default=self.graphics.default,
+                default=self.graphics.default if is_vehicle else 0,  # TODO should it return 0?
                 code='current_callback',
             )
         return default, maps
@@ -622,11 +628,13 @@ class CallbackManager(object):
     def make_map_action(self, definition):
         assert isinstance(definition, grf.DefineMultiple)
         default, maps = self.make_switch()
-        return grf.Map(
+        if default is None:
+            return []
+        return [grf.Map(
             definition,
             maps=maps,
             default=default,
-        )
+        )]
 
 
 def _make_property_class(feature):
