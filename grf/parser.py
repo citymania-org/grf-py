@@ -488,36 +488,25 @@ precedence = (
 )
 
 
-def p_lines(t):
-    '''lines : line
-             | expression
-             | lines line
-    '''
-    # print('LINES', t[1])
-    if len(t) == 2:
-        lines, line = [], t[1]
-    else:
-        lines, line = t[1], t[2]
-
-    if line is not None:
-        lines.append(line)
-    t[0] = lines
+def p_lines_next(t):
+    '''lines : lines NEWLINE expression'''
+    t[1].append(t[3])
+    t[0] = t[1]
 
 
-def p_line(t):
-    '''line : expression NEWLINE
-            | NEWLINE
-    '''
-    # print('LINE', t[1], len(t))
-    if len(t) == 2:
-        t[0] = None
-    else:
-        t[0] = t[1]
+def p_lines_expression(t):
+    '''lines : expression'''
+    t[0] = [t[1]]
 
 
-# def p_statement_expr(t):
-#     'statement : expression'
-#     t[0] = t[1]
+def p_lines_empty(t):
+    '''lines :'''
+    t[0] = []
+
+
+def p_lines_trailing_newline(t):
+    '''lines : lines NEWLINE'''
+    t[0] = t[1]
 
 
 # def p_storagge(t):
@@ -593,6 +582,14 @@ def p_expression_binop(t):
 #     t[0] = storage(grf.Value(register))
 
 
+def p_expression_storage(t):
+    'expression : NAME LBRACKET expression RBRACKET'
+    assert t[1] in ('TEMP', 'PERM'), t[1]
+    cls = Temp if t[1] == 'TEMP' else Perm
+    register = t[3]
+    t[0] = cls(register)
+
+
 def p_expression_assign(t):
     'expression : NAME LBRACKET NUMBER RBRACKET ASSIGN expression'
     assert t[1] in ('TEMP', 'PERM'), t[1]
@@ -660,14 +657,6 @@ def p_expression_group(t):
     t[0] = t[2]
 
 
-def p_expression_storage(t):
-    'expression : NAME LBRACKET expression RBRACKET'
-    assert t[1] in ('TEMP', 'PERM'), t[1]
-    cls = Temp if t[1] == 'TEMP' else Perm
-    register = t[3]
-    t[0] = cls(register)
-
-
 def p_expression_number(t):
     '''expression : NUMBER
                   | SUB NUMBER %prec UMINUS
@@ -684,26 +673,26 @@ def p_expression_name(t):
 
 
 def p_error(t):
-    # stack_state_str = ' '.join([symbol.type for symbol in parser.symstack][1:])
-
-    # print('Syntax error in input! Parser State:{} {} . {}'
-    #       .format(parser.state,
-    #               stack_state_str,
-    #               t))
-
     if t is None:
         print("Unexpected syntax error")
         return
 
     print(f'Syntax error at `{t.value}` line {t.lineno}')
+    print(f'T={t}')
 
 
 def parse_code(feature, code):
     lexer = ply.lex.lex()
     parser = ply.yacc.yacc()
     parser.grf_feature = feature
-    # TODO fix \n
-    return parser.parse(code + '\n')
+    res = parser.parse(code)
+    if res is None:
+        stack_state_str = ' '.join([symbol.type for symbol in parser.symstack][1:])
+
+        print('Syntax error in input! Parser State:{} {}'
+              .format(parser.state,
+                      stack_state_str))
+    return res
 
 
 SPRITE_FLAGS = {
