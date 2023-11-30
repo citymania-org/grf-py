@@ -449,16 +449,6 @@ def t_NUMBER(t):
     return t
 
 
-# def t_HEX_NUMBER(t):
-#     r'0x[0-9a-fA-F]+'
-#     try:
-#         t.value = int(t.value, 16)
-#     except ValueError:
-#         print("Integer value too large %d", t.value)
-#         t.value = 0
-#     return t
-
-
 # Ignored characters
 t_ignore = ' \t'
 
@@ -477,6 +467,7 @@ def t_error(t):
 # Parsing rules
 
 precedence = (
+    ('right', 'ASSIGN'),
     ('left', 'LT', 'GT', 'LE', 'GE', 'EQ', 'NEQ'),
     ('left', 'SHRU', 'SHR', 'SHL'),
     ('left', 'BINOR'),
@@ -519,6 +510,15 @@ def p_lines_trailing_newline(t):
 #     register = int(t[3])
 
 #     t[0] = storage(grf.Value(register))
+
+def p_expression_number(t):
+    '''expression : NUMBER'''
+    t[0] = Value(int(t[1]))
+
+
+def p_expression_negative_number(t):
+    '''expression : SUB NUMBER %prec UMINUS'''
+    t[0] = Value(-int(t[2]))
 
 
 def p_expression_binop(t):
@@ -598,11 +598,6 @@ def p_expression_assign(t):
     t[0] = Expr(op, t[6], Value(register))
 
 
-# def p_expression_uminus(t):
-#     'expression : SUB expression %prec UMINUS'
-#     t[0] = -t[2]
-
-
 def p_expression_call1(t):
     'expression : NAME LPAREN NUMBER RPAREN'
     assert t[1] == 'call', t[1]
@@ -655,16 +650,6 @@ def p_expression_call3(t):
 def p_expression_group(t):
     'expression : LPAREN expression RPAREN'
     t[0] = t[2]
-
-
-def p_expression_number(t):
-    '''expression : NUMBER
-                  | SUB NUMBER %prec UMINUS
-    '''
-    if len(t) == 2:
-        t[0] = Value(int(t[1]))
-    else:
-        t[0] = Value(-int(t[2]))
 
 
 def p_expression_name(t):
