@@ -758,7 +758,7 @@ ACTION0_BRIDGE_PROPS = {
     0x0A:  ('max_length', 'B'),  # Maximum length, not counting ramps
     0x0B:  ('cost_factor_byte', 'B'),  # Cost factor
     0x0C:  ('max_speed', 'W'),  # Max. speed
-    0x0D:  ('layout', BridgeLayoutProperty),  # Sprite layout, see below
+    0x0D:  ('layout', BridgeLayoutProperty()),  # Sprite layout, see below
     0x0E:  ('flags', 'B'),  # Various flags, bitcoded
     0x0F:  ('intro_year', 'D'),  # Long format year of availability, counted from year 0
     0x10:  ('purchase_text', 'W'),  # Purchase text
