@@ -713,18 +713,42 @@ ACTION0_STATION_PROPS = {
 
 # TODO river
 
-def read_bridge_layout(data, ofs):
-    d = DataReader(data, ofs)
-    table_id = d.get_byte()
-    num_tables = d.get_byte()
-    tables = []
-    for _ in range(num_tables):
-        # if tableid >= 7 invalid data
-        tables.append([SpriteRef.from_grf(d.get_dword()) for _ in range(32)])
-    return {
-        'table_id': table_id,
-        'tables': tables,
-    }, d.offset
+class BridgeLayoutProperty(Property):
+    def validate(cls, value):
+        if not isinstance(value, dict):
+            raise ValueError(f'Expected dict')
+        if "table_id" not in value:
+            raise ValueError(f'Missing key table_id')
+        if "tables" not in value:
+            raise ValueError(f'Missing key tables')
+        if value["table_id"] + len(value["tables"]) > 7:
+            raise ValueError(f'Table ID exceeds 7')
+        if any(len(table) != 32 for table in value["tables"]):
+            raise ValueError(f'Each table should have exactly 32 SpriteRefs')
+        if not all(isinstance(element, SpriteRef) for table in value["tables"] for element in table):
+            raise ValueError(f'Each table should consists of SpriteRefs')
+
+    def read(cls, data, ofs):
+        d = DataReader(data, ofs)
+        table_id = d.get_byte()
+        num_tables = d.get_byte()
+        tables = []
+        for _ in range(num_tables):
+            # if tableid >= 7 invalid data
+            tables.append([SpriteRef.from_grf(d.get_dword(), global_if_flagged=False) for _ in range(32)])
+        return {
+            'table_id': table_id,
+            'tables': tables,
+        }, d.offset
+
+    def encode(cls, value):
+        res = bytes((value["table_id"],))
+        for table in value["tables"]:
+            res += bytes([sprite_ref.to_grf(global_if_flagged=False) for sprite_ref in table])
+        return res
+
+    def format(self, value, indent):
+        return pformat(value, indent=indent, indent_first=0)
 
 
 ACTION0_BRIDGE_PROPS = {
@@ -734,7 +758,7 @@ ACTION0_BRIDGE_PROPS = {
     0x0A:  ('max_length', 'B'),  # Maximum length, not counting ramps
     0x0B:  ('cost_factor_byte', 'B'),  # Cost factor
     0x0C:  ('max_speed', 'W'),  # Max. speed
-    0x0D:  ('layout', read_bridge_layout),  # Sprite layout, see below
+    0x0D:  ('layout', BridgeLayoutProperty),  # Sprite layout, see below
     0x0E:  ('flags', 'B'),  # Various flags, bitcoded
     0x0F:  ('intro_year', 'D'),  # Long format year of availability, counted from year 0
     0x10:  ('purchase_text', 'W'),  # Purchase text
