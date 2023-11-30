@@ -1671,6 +1671,8 @@ class Switch(LazyAction, ReferenceableAction, ReferencingAction):
                 feature = self.feature
             try:
                 self._parsed_code = parse_code(feature, self.code)
+                if self._parsed_code is None:
+                    raise RuntimeError('parser error')
             except Exception as e:
                 print('Failed code: \n', self.code)
                 raise
