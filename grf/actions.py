@@ -744,7 +744,7 @@ class BridgeLayoutProperty(Property):
     def encode(cls, value):
         res = bytes((value["table_id"],))
         for table in value["tables"]:
-            res += bytes([sprite_ref.to_grf(global_if_flagged=False) for sprite_ref in table])
+            res += struct.pack('<' + 'I' * 32, *[sprite_ref.to_grf(global_if_flagged=False) for sprite_ref in table])
         return res
 
     def format(self, value, indent):
