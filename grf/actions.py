@@ -716,17 +716,17 @@ ACTION0_STATION_PROPS = {
 class BridgeLayoutProperty(Property):
     def validate(cls, value):
         if not isinstance(value, dict):
-            raise ValueError(f'Expected dict')
+            raise ValueError('Expected dict')
         if "table_id" not in value:
-            raise ValueError(f'Missing key table_id')
+            raise ValueError('Missing key table_id')
         if "tables" not in value:
-            raise ValueError(f'Missing key tables')
+            raise ValueError('Missing key tables')
         if value["table_id"] + len(value["tables"]) > 7:
-            raise ValueError(f'Table ID exceeds 7')
+            raise ValueError('Table ID exceeds 7')
         if any(len(table) != 32 for table in value["tables"]):
-            raise ValueError(f'Each table should have exactly 32 SpriteRefs')
+            raise ValueError('Each table should have exactly 32 SpriteRefs')
         if not all(isinstance(element, SpriteRef) for table in value["tables"] for element in table):
-            raise ValueError(f'Each table should consists of SpriteRefs')
+            raise ValueError('Each table should consists of SpriteRefs')
 
     def read(cls, data, ofs):
         d = DataReader(data, ofs)
