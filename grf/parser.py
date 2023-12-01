@@ -142,6 +142,9 @@ class Node:
     def simplify(self):
         pass
 
+    def const_eval(self):
+        return None
+
 
 class Expr(Node):
     def __init__(self, op, a, b):
@@ -217,6 +220,10 @@ class Expr(Node):
         if self.c is not None:
             self.c.simplify()
 
+    def const_eval(self):
+        # TODO support eval on const arguments (possibly on init)
+        return None
+
 
 class Value(Node):
     def __init__(self, value):
@@ -232,6 +239,9 @@ class Value(Node):
         assert and_mask <= 0xffffffff, and_mask
         valueadj = (self.value >> shift) & and_mask
         return True, struct.pack('<BBI', 0x1a, 0x20, valueadj)
+
+    def const_eval(self):
+        return self.value
 
 
 class Var(Node):
@@ -594,19 +604,19 @@ def p_expression_assign(t):
     'expression : NAME LBRACKET expression RBRACKET ASSIGN expression'
     assert t[1] in ('TEMP', 'PERM'), t[1]
     op = OP_TSTO if t[1] == 'TEMP' else OP_PSTO
-    register = t[3]
-    if not isinstance(register, Value):
+    register = t[3].const_eval()
+    if register is None:
         raise NotImplementedError('Only constant register numbers are currently supported')
-    t[0] = Expr(op, t[6], register)
+    t[0] = Expr(op, t[6], Value(register))
 
 
-def p_expression_call1(t):
+def p_expression_call_1(t):
     'expression : NAME LPAREN NUMBER RPAREN'
     assert t[1] == 'call', t[1]
     t[0] = Call(int(t[3]))
 
 
-def p_expression_call2(t):
+def p_expression_call_2(t):
     'expression : NAME LPAREN expression COMMA expression RPAREN'
     op = {
         'min': OP_MIN,
@@ -621,32 +631,58 @@ def p_expression_call2(t):
     t[0] = Expr(op, t[3], t[5])
 
 
-def p_expression_call3(t):
-    #                1     2      3     4      5     6         7     8     9     10   11      12   13    14      15     16  17   18      19     20
-    '''expression : NAME LPAREN NUMBER COMMA NAME ASSIGN     NUMBER COMMA NAME ASSIGN NUMBER RPAREN
-                  | NAME LPAREN NUMBER COMMA NAME ASSIGN     NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
-                  | NAME LPAREN NUMBER COMMA NAME ASSIGN expression COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
-                  | NAME LPAREN NUMBER COMMA NAME ASSIGN     NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN
-    '''
+def p_expression_call_3_param_shift_and(t):
+    #               1     2        3       4     5     6        7       8     9    10       11       12    13   14       15       16
+    'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
     assert t[1] == 'var'
-    if len(t) > 17:
-        assert t[5] == 'shift' and t[9] == 'and'
+    var = t[3].const_eval()
+    if var is None:
+        raise ValueError('Variable number must be a constant expression')
+    assert t[5] == 'param' and t[9] == 'shift' and t[13] == 'and'
+    shift = t[11].const_eval()
+    if shift is None:
+        raise ValueError('`shift` value must be a constant expression')
+    and_mask = t[15].const_eval()
+    if and_mask is None:
+        raise ValueError('`and` value must be a constant expression')
+    t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask, param=t[7])
+
+
+def p_expression_call_3_shift_and_add_divmod(t):
+    #               1     2        3       4     5     6        7       8     9    10       11       12   13    14     15     16   17    18     19     20
+    'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
+    '           | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN'
+    assert t[1] == 'var'
+    var = t[3].const_eval()
+    if var is None:
+        raise ValueError('Variable number must be a constant expression')
+    assert t[5] == 'shift' and t[9] == 'and'
+    shift = t[7].const_eval()
+    if shift is None:
+        raise ValueError('`shift` value must be a constant expression')
+    and_mask = t[11].const_eval()
+    if and_mask is None:
+        raise ValueError('`and` value must be a constant expression')
+    if len(t) > 13:
         assert t[13] == 'add'
+        add_val = t[15].const_eval()
+        if add_val is None:
+            raise ValueError('`add` value must be a constant expression')
+        divmod_val = t[19].const_eval()
         if t[17] == 'div':
-            type = 1
+            op_type = 1
+            if divmod_val is None:
+                raise ValueError('`div` value must be a constant expression')
         elif t[17] == 'mod':
-            type = 2
+            op_type = 2
+            if divmod_val is None:
+                raise ValueError('`mode` value must be a constant expression')
         else:
             raise ValueError(t[17])
-        t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]),
-                          type=type, add_val=int(t[15]), divmod_val=int(t[19]))
     else:
-        if len(t) > 13:
-            assert t[5] == 'param' and t[9] == 'shift' and t[13] == 'and'
-            t[0] = GenericVar(var=int(t[3]), shift=int(t[11]), and_mask=int(t[15]), param=t[7])
-        else:
-            assert t[5] == 'shift' and t[9] == 'and'
-            t[0] = GenericVar(var=int(t[3]), shift=int(t[7]), and_mask=int(t[11]))
+        add_val = divmod_val = None
+    t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask,
+                      type=op_type, add_val=add_val, divmod_val=divmod_val)
 
 
 def p_expression_group(t):
