@@ -591,11 +591,13 @@ def p_expression_storage(t):
 
 
 def p_expression_assign(t):
-    'expression : NAME LBRACKET NUMBER RBRACKET ASSIGN expression'
+    'expression : NAME LBRACKET expression RBRACKET ASSIGN expression'
     assert t[1] in ('TEMP', 'PERM'), t[1]
     op = OP_TSTO if t[1] == 'TEMP' else OP_PSTO
-    register = int(t[3])
-    t[0] = Expr(op, t[6], Value(register))
+    register = t[3]
+    if not isinstance(register, Value):
+        raise NotImplementedError('Only constant register numbers are currently supported')
+    t[0] = Expr(op, t[6], register)
 
 
 def p_expression_call1(t):
