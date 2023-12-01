@@ -742,7 +742,7 @@ class BridgeLayoutProperty(Property):
         }, d.offset
 
     def encode(cls, value):
-        res = bytes((value["table_id"],))
+        res = bytes((value["table_id"], len(value["tables"])))
         for table in value["tables"]:
             res += struct.pack('<' + 'I' * 32, *[sprite_ref.to_grf(global_if_flagged=False) for sprite_ref in table])
         return res
