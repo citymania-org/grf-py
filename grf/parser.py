@@ -510,17 +510,6 @@ def p_lines_trailing_newline(t):
     t[0] = t[1]
 
 
-# def p_storagge(t):
-#     'storage : NAME LBRACKET NUMBER RBRACKET'
-#     storage = {
-#         'TEMP': grf.Temp,
-#         'PERM': grf.Perm,
-#     }.get(t[1])
-#     assert storage is not None, t[1]
-#     register = int(t[3])
-
-#     t[0] = storage(grf.Value(register))
-
 def p_expression_number(t):
     '''expression : NUMBER'''
     t[0] = Value(int(t[1]))
@@ -578,18 +567,6 @@ def p_expression_binop(t):
     else:
         # print(op, t[1], t[3])
         t[0] = Expr(op, t[1], t[3])
-
-
-# def p_storagge(t):
-#     'storage : NAME LBRACKET NUMBER RBRACKET'
-#     storage = {
-#         'TEMP': grf.Temp,
-#         'PERM': grf.Perm,
-#     }.get(t[1])
-#     assert storage is not None, t[1]
-#     register = int(t[3])
-
-#     t[0] = storage(grf.Value(register))
 
 
 def p_expression_storage(t):
