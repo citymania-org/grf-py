@@ -157,14 +157,14 @@ class Industry(grf.SpriteGenerator):
         ))
         res.extend(sprites)
 
-        res.append(get_sprite_num := grf.Switch(
+        get_sprite_num = grf.Switch(
             feature=grf.INDUSTRY_TILE,
             ref_id=0,  # TODO fix collisions
             ranges=dict(enumerate(layout_switches)),
             default=layout_switches[0],
             code='layout_num',
             related_scope=True,
-        ))
+        )
 
         # TODO needs different layout for each tile for extent/offset (but cache per building)
         layout = grf.AdvancedSpriteLayout(
@@ -181,10 +181,13 @@ class Industry(grf.SpriteGenerator):
 
         layout_switch = grf.Switch(
             code=f'''
-                TEMP[0] = call({get_sprite_num})
+                TEMP[0] = get_sprite_num()
             ''',
             ranges={0: layout},
             default=layout,
+            subroutines={
+                'get_sprite_num': get_sprite_num,
+            }
         )
 
         res.append(grf.Map(

@@ -1614,8 +1614,14 @@ class ExtendedSpriteLayout(AdvancedSpriteLayout):
         super().__init__(*args, has_flags=False, **kw)
 
 
+class CodeContext:
+    def __init__(self, register, subroutines):
+        self.register = register
+        self.subroutines = subroutines
+
+
 class Switch(LazyAction, ReferenceableAction, ReferencingAction):
-    def __init__(self, code, ranges, default, *, feature=None, ref_id=None, related_scope=False):
+    def __init__(self, code, ranges, default, *, feature=None, ref_id=None, related_scope=False, subroutines=None):
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1640,15 +1646,22 @@ class Switch(LazyAction, ReferenceableAction, ReferencingAction):
             code = '\n'.join(code)
         self.code = code
         self._parsed_code = None
+        self.subroutines = subroutines
 
     def get_refs(self):
+        if self.subroutines is not None:
+            yield from self.subroutines.values()
         yield from (r.ref for r in self._ranges)
         yield self.default
 
     def set_refs(self, refs):
-        self.default = refs[-1]
-        for i, r in enumerate(self._ranges):
-            r.ref = refs[i]
+        it = iter(refs)
+        if self.subroutines is not None:
+            for k in self.subroutines.keys():
+                self.subroutines[k] = next(it)
+        for r in self._ranges:
+            r.ref = next(it)
+        self.default = next(it)
 
     @property
     def parsed_code(self):
@@ -1682,12 +1695,13 @@ class Switch(LazyAction, ReferenceableAction, ReferencingAction):
         return str(self.ref_id)
 
     def _encode(self):
+        context = CodeContext(subroutines=self.subroutines, register=0x80)
         res = bytes((0x02, self.feature.id, self.ref_id, 0x8a if self.related_scope else 0x89))
         ast = self.parsed_code
-        code = ast[0].compile(register=0x80)[1]
+        code = ast[0].compile(context)[1]
         for c in ast[1:]:
             code += bytes((OP_INIT,))
-            code += c.compile(register=0x80)[1]
+            code += c.compile(context)[1]
         res += code[:-5]
         res += bytes((code[-5] & ~0x20,))  # mark the end of a chain
         res += code[-4:]

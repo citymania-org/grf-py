@@ -30,6 +30,7 @@
 - Add `TTDString` and `TTDIndustry` constants.
 - Add `TownGrowthEffect` constants.
 - Add `Eval` as a version of `Switch` without ranges.
+- Add `subroutines` argument to `Switch` and `subroutine()` call syntax.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of bridge layouts.

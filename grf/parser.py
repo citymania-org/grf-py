@@ -136,7 +136,7 @@ class Node:
     def __repr__(self):
         return self.format()
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         raise NotImplementedError
 
     def simplify(self):
@@ -174,20 +174,22 @@ class Expr(Node):
             res = f'({res})'
         return res
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
-        is_value, b_code = self.b.compile(register, shift, and_mask)
+    def compile(self, context, shift=0, and_mask=0xffffffff):
+        is_value, b_code = self.b.compile(context, shift, and_mask)
         if is_value:
             # Second arg is a simple value, do operation directly
-            res = self.a.compile(register, shift, and_mask)[1]
+            res = self.a.compile(context, shift, and_mask)[1]
             res += bytes((self.op,))
             res += b_code
             return False, res
 
         # Calculate secord arg first and store in in a temp var
         res = b_code
-        res += struct.pack('<BBBIB', OP_TSTO, 0x1a, 0x20, register, OP_INIT)
-        res += self.a.compile(register + 1, shift, and_mask)[1]
-        res += struct.pack('<BBBBI', self.op, 0x7d, register, 0x20, 0xffffffff)
+        res += struct.pack('<BBBIB', OP_TSTO, 0x1a, 0x20, context.register, OP_INIT)
+        context.register += 1
+        res += self.a.compile(context.register, shift, and_mask)[1]
+        context.register -= 1
+        res += struct.pack('<BBBBI', self.op, 0x7d, context.register, 0x20, 0xffffffff)
         return False, res
 
     def simplify(self):
@@ -234,7 +236,7 @@ class Value(Node):
     def format(self, parent_priority=0):
         return str(utoi32(self.value))
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
         valueadj = (self.value >> shift) & and_mask
@@ -307,7 +309,7 @@ class GenericVar(Node):
         if self.param is not None:
             self.param.simplify()
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         and_mask &= self.and_mask >> shift
         shift += self.shift
         assert shift < 0x20, shift
@@ -341,15 +343,15 @@ class Temp(Node):
             return  f'TEMP[0x{self.register:02x}]'
         return  f'TEMP[{self.register.format()}]'
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
         if isinstance(self.register, int):
             return True, struct.pack('<BBBI', 0x7d, self.register, 0x20 | shift, and_mask)
-        elif isinstance(self.register, Value):
+        elif isinstance(self.register, Vatlue):
             return True, struct.pack('<BBBI', 0x7d, self.register.value, 0x20 | shift, and_mask)
         else:
-            code = self.register.compile(register)[1]
+            code = self.register.compile(context)[1]
             # 7b takes parameter 7d as var to access and uses stack value as it's parameter
             return False, code + struct.pack('<BBBBI', OP_INIT, 0x7b, 0x7d, 0x20 | shift, and_mask)
 
@@ -370,7 +372,7 @@ class Perm(Node):
     def format(self, parent_priority=0):
         return  f'PERM[{self.register.format()}]'
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
         if isinstance(self.register, int):
@@ -378,7 +380,7 @@ class Perm(Node):
         elif isinstance(self.register, Value):
             register = self.register.value
         else:
-            code = self.register.compile(register)[1]
+            code = self.register.compile(context)[1]
             # 7b takes parameter 7c as var to access and uses stack value as it's parameter
             return False, code + struct.pack('<BBBBI', OP_INIT, 0x7b, 0x7c, 0x20 | shift, and_mask)
 
@@ -400,10 +402,38 @@ class Call(Node):
     def format(self, parent_priority=0):
         return f'call({self.subroutine})'
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
         return True, struct.pack('<BBBI', 0x7e, self.subroutine, 0x20 | shift, and_mask)
+
+
+class CallByName(Node):
+    def __init__(self, subroutine: str):
+        self.subroutine = subroutine
+
+    def format(self, parent_priority=0):
+        return f'{self.subroutine}()'
+
+    def compile(self, context, shift=0, and_mask=0xffffffff):
+
+        # TODO duplicate from actions.py
+        def get_ref_id(ref_obj):
+            # if isinstance(ref_obj, Ref):
+            #     return ref_obj.value
+            if isinstance(ref_obj, int):
+                return ref_obj | 0x8000
+            return ref_obj.ref_id
+
+        assert shift < 0x20, shift
+        assert and_mask <= 0xffffffff, and_mas
+
+        # TODO move to parsing stage
+        if context.subroutines is None or self.subroutine not in context.subroutines:
+            raise RuntimeError(f'Calling unknown subroutine `{self.subroutine}`')
+
+        subroutine_id = get_ref_id(context.subroutines[self.subroutine])
+        return True, struct.pack('<BBBI', 0x7e, subroutine_id, 0x20 | shift, and_mask)
 
 
 tokens = (
@@ -585,6 +615,12 @@ def p_expression_assign(t):
     if register is None:
         raise NotImplementedError('Only constant register numbers are currently supported')
     t[0] = Expr(op, t[6], Value(register))
+
+
+def p_expression_call_0(t):
+    'expression : NAME LPAREN RPAREN'
+    # TODO error if function not found
+    t[0] = CallByName(t[1])
 
 
 def p_expression_call_1(t):
