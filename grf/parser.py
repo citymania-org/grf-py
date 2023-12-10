@@ -185,11 +185,11 @@ class Expr(Node):
 
         # Calculate secord arg first and store in in a temp var
         res = b_code
-        res += struct.pack('<BBBIB', OP_TSTO, 0x1a, 0x20, context.register, OP_INIT)
-        context.register += 1
+        register = context.reserve_register()
+        res += struct.pack('<BBBIB', OP_TSTO, 0x1a, 0x20, register, OP_INIT)
         res += self.a.compile(context, shift, and_mask)[1]
-        context.register -= 1
-        res += struct.pack('<BBBBI', self.op, 0x7d, context.register, 0x20, 0xffffffff)
+        res += struct.pack('<BBBBI', self.op, 0x7d, register, 0x20, 0xffffffff)
+        context.release_register(register)
         return False, res
 
     def simplify(self):
@@ -227,6 +227,23 @@ class Expr(Node):
         return None
 
 
+class AssignVariable(Node):
+    def __init__(self, variable, expression):
+        assert isinstance(variable, str)
+        super().__init__()
+        self.variable = variable
+        self.expression = expression
+
+    def format(self, parent_priority=0):
+        return f'{self.variable} = {self.expresion.format()}'
+
+    def compile(self, context, shift=0, and_mask=0xffffffff):
+        is_value, code = self.expression.compile(context, shift, and_mask)
+        register = context.reserve_variable(self.variable)
+        # TODO return something better than false to avoid double temporary usage
+        return False, code + struct.pack('<BBBI', OP_TSTO, 0x1a, 0x20, register)
+
+
 class Value(Node):
     def __init__(self, value):
         assert isinstance(value, int)
@@ -262,11 +279,17 @@ class Var(Node):
                 return f'{self.name}({self.param.format()})'
         return self.name
 
-    def compile(self, register, shift=0, and_mask=0xffffffff):
+    def compile(self, context, shift=0, and_mask=0xffffffff):
         var_data = VA2_VARS[self.feature].get(self.name)
 
         if var_data is None:
-            raise ValueError(f'Unknown variable `{self.name}`')
+            # TODO prevent name conflicts between temporary and feature vars
+            register = context.get_variable_register(self.name)
+            if register is None:
+                raise ValueError(f'Unknown variable `{self.name}`')
+
+            return True, struct.pack('<BBBI', 0x7d, register, 0x20 | shift, and_mask)
+
         var_mask = (1 << var_data['size']) - 1
         and_mask &= var_mask >> shift
         shift += var_data['start']
@@ -616,8 +639,7 @@ def p_expression_storage(t):
     register = t[3]
     t[0] = cls(register)
 
-
-def p_expression_assign(t):
+def p_expression_assign_storage(t):
     'expression : NAME LBRACKET expression RBRACKET ASSIGN expression'
     assert t[1] in ('TEMP', 'PERM'), t[1]
     op = OP_TSTO if t[1] == 'TEMP' else OP_PSTO
@@ -626,6 +648,10 @@ def p_expression_assign(t):
         raise NotImplementedError('Only constant register numbers are currently supported')
     t[0] = Expr(op, t[6], Value(register))
 
+
+def p_expression_assign_variable(t):
+    'expression : NAME ASSIGN expression'
+    t[0] = AssignVariable(t[1], t[3])
 
 def p_expression_call_0(t):
     'expression : NAME LPAREN RPAREN'

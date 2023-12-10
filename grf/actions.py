@@ -1616,8 +1616,37 @@ class ExtendedSpriteLayout(AdvancedSpriteLayout):
 
 class CodeContext:
     def __init__(self, register, subroutines):
-        self.register = register
         self.subroutines = subroutines
+        self._min_register = register
+        self._used_registers = set()
+        self._variables = {}
+
+    def reserve_register(self):
+        register = None
+        for i in range(self._min_register, 256):
+            if i not in self._used_registers:
+                register = i
+                break
+        if register is None:
+            raise RuntimeError('Out of temporary registers')
+        self._min_register = register + 1
+        self._used_registers.add(register)
+        return register
+
+    def release_register(self, register):
+        self.used_registers.remove(register)
+        self._min_register = min(self._min_register, register)
+
+    def reserve_variable(self, name):
+        register = self._variables.get(name)
+        if register is not None:
+            return register
+        register = self.reserve_register()
+        self._variables[name] = register
+        return register
+
+    def get_variable_register(self, name):
+        return self._variables.get(name)
 
 
 class Switch(LazyAction, ReferenceableAction, ReferencingAction):
