@@ -19,7 +19,7 @@ Use `MAJOR.MINOR.PATCH` versioning with `MAJOR` currently at 0 to signify it's c
 
 ### Significant features to implement
 - ActionD code generation (ifs and parameters).
-- Better Switch code generation (self/parent, modify placeholders, etc.)
+- Better Switch code generation (self/parent, modify placeholders, var60+ params, etc.)
 - Better GRF string handling (grf-py decides range)
 - Low level (properties and callbacks) API stabilization.
 - High-level(lib) GRF feature completion.

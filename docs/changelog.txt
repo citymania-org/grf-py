@@ -30,13 +30,14 @@
 - Add `TTDString` and `TTDIndustry` constants.
 - Add `TownGrowthEffect` constants.
 - Add `Eval` as a version of `Switch` without ranges.
-- Add `subroutines` argument to `Switch` and `subroutine()` call syntax.
+- Add `subroutines` argument to `Switch` and allow `name()` call syntax.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of bridge layouts.
 - Support encoding of industry layouts.
 - Support encoding of tile acceptance lists for houses and industry tiles.
 - Support expressions for register value in PERM and TEMP access.
+- SUpport parameter expressions for vars60+ in `Switch` code (via var7b).
 - Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Add `Sprite.save_gif` method to generate palette animated images.

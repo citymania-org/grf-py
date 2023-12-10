@@ -187,7 +187,7 @@ class Expr(Node):
         res = b_code
         res += struct.pack('<BBBIB', OP_TSTO, 0x1a, 0x20, context.register, OP_INIT)
         context.register += 1
-        res += self.a.compile(context.register, shift, and_mask)[1]
+        res += self.a.compile(context, shift, and_mask)[1]
         context.register -= 1
         res += struct.pack('<BBBBI', self.op, 0x7d, context.register, 0x20, 0xffffffff)
         return False, res
@@ -315,9 +315,15 @@ class GenericVar(Node):
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
         if self.param is not None:
-            # TODO dynamic param (var 7B)
-            param = get_constant(self.param, 'Parameter should be a constant')
-            if param > 255:
+            param = self.param.const_eval()
+            if param is None:
+                code = self.param.compile(context)[1]
+                return True, code + struct.pack(
+                    '<BBBBI',
+                    OP_INIT, 0x7b, self.var,
+                    0x20 | shift, and_mask
+                )
+            elif param > 255:
                 return True, struct.pack(
                     '<BBIBBBBI',
                     0x1a, 0x20, param,  # val1 = param
@@ -348,7 +354,7 @@ class Temp(Node):
         assert and_mask <= 0xffffffff, and_mask
         if isinstance(self.register, int):
             return True, struct.pack('<BBBI', 0x7d, self.register, 0x20 | shift, and_mask)
-        elif isinstance(self.register, Vatlue):
+        elif isinstance(self.register, Value):
             return True, struct.pack('<BBBI', 0x7d, self.register.value, 0x20 | shift, and_mask)
         else:
             code = self.register.compile(context)[1]
@@ -438,7 +444,7 @@ class CallByName(Node):
 
 tokens = (
     'NAME', 'NUMBER', 'NEWLINE',
-    'ADD', 'SUB', 'MUL',
+    'ADD', 'SUB', 'MUL', 'DIV', 'MOD',
     'BINAND', 'BINOR', 'BINXOR', 'SHR', 'SHL', 'SHRU',
     'ASSIGN', 'COMMA',
     'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
@@ -450,8 +456,8 @@ tokens = (
 t_ADD = r'\+'
 t_SUB = r'-'
 t_MUL = r'\*'
-# t_DIV = r'/'
-# t_MOD = r'%'
+t_DIV = r'/'
+t_MOD = r'%'
 t_BINAND = r'\&'
 t_BINOR = r'\|'
 t_BINXOR = r'\^'
@@ -514,7 +520,7 @@ precedence = (
     ('left', 'BINXOR'),
     ('left', 'BINAND'),
     ('left', 'ADD', 'SUB'),
-    ('left', 'MUL'),
+    ('left', 'MUL', 'DIV', 'MOD'),
     ('right', 'UMINUS'),
 )
 
@@ -554,6 +560,8 @@ def p_expression_binop(t):
     '''expression : expression ADD expression
                   | expression SUB expression
                   | expression MUL expression
+                  | expression DIV expression
+                  | expression MOD expression
                   | expression BINAND expression
                   | expression BINOR expression
                   | expression BINXOR expression
@@ -571,6 +579,8 @@ def p_expression_binop(t):
         '+': OP_ADD,
         '-': OP_SUB,
         '*': OP_MUL,
+        '/': OP_DIV,
+        '%': OP_MOD,
         '&': OP_AND,
         '|': OP_OR,
         '^': OP_XOR,
@@ -644,7 +654,7 @@ def p_expression_call_2(t):
     t[0] = Expr(op, t[3], t[5])
 
 
-def p_expression_call_3_param_shift_and(t):
+def p_expression_var_call_param_shift_and(t):
     #               1     2        3       4     5     6        7       8     9    10       11       12    13   14       15       16
     'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
     assert t[1] == 'var'
@@ -661,7 +671,7 @@ def p_expression_call_3_param_shift_and(t):
     t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask, param=t[7])
 
 
-def p_expression_call_3_shift_and_add_divmod(t):
+def p_expression_var_call_shift_and_add_divmod(t):
     #               1     2        3       4     5     6        7       8     9    10       11       12   13    14     15     16   17    18     19     20
     'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
     '           | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN'
