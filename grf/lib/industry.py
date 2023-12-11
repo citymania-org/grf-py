@@ -99,6 +99,7 @@ class Industry(grf.SpriteGenerator):
 
     @typechecked
     def get_sprites(self, g: grf.NewGRF):
+        acceptance_type_ids = [g.get_cargo_id(x) for x in self.acceptance_types]
         res = []
         if isinstance(self.name, grf.StringRef):
             name_id = self.name
@@ -112,6 +113,7 @@ class Industry(grf.SpriteGenerator):
             props={
                 'substitute_type': 0,
                 'land_shape_flags': 0,
+                'tile_acceptance_list': [(c, 8) for c in acceptance_type_ids],
             }
         ))
 
@@ -216,7 +218,7 @@ class Industry(grf.SpriteGenerator):
                     ])
                     for lt in layout_tiles
                 ],
-                'acceptance_types': [g.get_cargo_id(x) for x in self.acceptance_types],
+                'acceptance_types': acceptance_type_ids,
                 'production_types': [g.get_cargo_id(x) for x in self.production_types],
                 **props,
             },
