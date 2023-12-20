@@ -426,15 +426,24 @@ class Sprite(Resource):
         crop_x = crop_y = 0
         if self.crop and w > 0 and h > 0:
             if npalpha is not None:
-                npcheck = npalpha
+                cols_bitset = npalpha.any(0)
+                rows_bitset = npalpha.any(1)
             elif self.bpp == BPP_32:
+                # much faster than using where argument of np.any, see cropspeed.py
                 npcheck = npimg[:, :, 3]
+                cols_bitset = npcheck.any(0)
+                rows_bitset = npcheck.any(1)
+            elif self.bpp == BPP_24:
+                cols_bitset = npimg.any((0, 2))
+                rows_bitset = npimg.any((1, 2))
             else:
                 assert self.bpp == BPP_8, self.bpp
-                npcheck = npimg
+                cols_bitset = npimg.any(0)
+                rows_bitset = npimg.any(1)
 
-            cols_used = np.arange(w)[npcheck.any(0)]
-            rows_used = np.arange(h)[npcheck.any(1)]
+            cols_used = np.arange(w)[cols_bitset]
+            rows_used = np.arange(h)[rows_bitset]
+
             crop_x = min(cols_used, default=0)
             crop_y = min(rows_used, default=0)
             w = max(cols_used, default=0) - crop_x + 1
