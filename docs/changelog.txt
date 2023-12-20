@@ -38,7 +38,8 @@
 - Support encoding of industry layouts.
 - Support encoding of tile acceptance lists for houses and industry tiles.
 - Support expressions for register value in PERM and TEMP access.
-- SUpport parameter expressions for vars60+ in `Switch` code (via var7b).
+- Support parameter expressions for vars60+ in `Switch` code (via var7b).
+- Support cropping 24bpp sprites.
 - Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Add `Sprite.save_gif` method to generate palette animated images.

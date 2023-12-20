@@ -620,7 +620,7 @@ class CallbackManager(object):
         if default_callbacks:
             default = grf.Switch(
                 ranges={**default_callbacks},
-                default=self.graphics.default if is_vehicle else 0,  # TODO should it return 0?
+                default=self.graphics.default or 0,  # TODO should it return 0?
                 code='current_callback',
             )
         return default, maps

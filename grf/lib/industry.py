@@ -83,6 +83,7 @@ class Industry(grf.SpriteGenerator):
         production_types=[],
         acceptance_types=[],
         callbacks=None,
+        tile_callbacks=None,
         **props,
     ):
         super().__init__()
@@ -94,6 +95,7 @@ class Industry(grf.SpriteGenerator):
         self.ground_sprite_id = ground_sprite_id
         self._props = props
         self.callbacks = make_callback_manager(grf.INDUSTRY, callbacks)
+        self.tile_callbacks = make_callback_manager(grf.INDUSTRY_TILE, tile_callbacks)
         self.acceptance_types = acceptance_types
         self.production_types = production_types
 
@@ -107,13 +109,16 @@ class Industry(grf.SpriteGenerator):
             name_id = g.strings.add(self.name).get_persistent_id()
         industry_id = g.resolve_id(grf.INDUSTRY, self.id)
         tile_id = g.resolve_id(grf.INDUSTRY_TILE, f'__industry_{industry_id}_main_tile')
+        tile_props = {}
+        self.tile_callbacks.set_flag_props(tile_props)
         res.append(tile_definition := grf.Define(
             feature=grf.INDUSTRY_TILE,
             id=tile_id,
             props={
-                'substitute_type': 0,
+                'substitute_type': 0,  # must be first
                 'land_shape_flags': 0,
                 'tile_acceptance_list': [(c, 8) for c in acceptance_type_ids],
+                **tile_props,
             }
         ))
 
@@ -181,7 +186,7 @@ class Industry(grf.SpriteGenerator):
             }],
         )
 
-        layout_switch = grf.Switch(
+        self.tile_callbacks.graphics = grf.Switch(
             code=f'''
                 TEMP[0] = get_sprite_num()
             ''',
@@ -192,11 +197,7 @@ class Industry(grf.SpriteGenerator):
             }
         )
 
-        res.append(grf.Map(
-            tile_definition,
-            maps={255: layout_switch},
-            default=layout_switch,
-        ))
+        res.extend(self.tile_callbacks.make_map_action(tile_definition))
 
         props = self._props.copy()
         self.callbacks.set_flag_props(props)
