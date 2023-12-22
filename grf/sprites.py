@@ -357,6 +357,8 @@ class Sprite(Resource):
             h=self.h,
             xofs=self.xofs,
             yofs=self.yofs,
+            zoom=self.zoom,
+            bpp=self.bpp,
             crop=self.crop,
             mask=None if self.mask is None else self.mask.get_fingerprint,
         )

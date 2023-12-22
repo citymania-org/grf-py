@@ -29,3 +29,7 @@ Use `MAJOR.MINOR.PATCH` versioning with `MAJOR` currently at 0 to signify it's c
 ### Implemented significant features.
 - **0.2.0** - GRF string and language API.
 - **0.3.0** - Sprite caching (fingerprints).
+
+
+## Keyword parameters
+- Force keyword parameters for functions with many arguments to improve code redability.
