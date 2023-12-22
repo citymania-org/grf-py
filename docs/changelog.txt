@@ -17,7 +17,7 @@
 - Fix `min_life` Action0 property size for houses (spec error).
 - Fix `Switch` code using wrong feature for related scope.
 - Fix `Switch` code grammar issues.
-- Fix alpha when using colourkey.
+- Fix alpha generation when using colourkey.
 - Add sprite cache.
 - Fix decompilation of action 7/9 with value > 4 bytes.
 - Optimize memory usage when writing NewGRF.

@@ -375,11 +375,46 @@ class Sprite(Resource):
     def get_colourkey(self):
         return None
 
-    def get_data_layers(self, encoder=None):
+    def _do_crop(self, w, h, npimg, npalpha):
+        crop_x = crop_y = 0
+        if self.crop and w > 0 and h > 0:
+            if npalpha is not None:
+                cols_bitset = npalpha.any(0)
+                rows_bitset = npalpha.any(1)
+            elif self.bpp == BPP_32:
+                # much faster than using where argument of np.any, see cropspeed.py
+                npcheck = npimg[:, :, 3]
+                cols_bitset = npcheck.any(0)
+                rows_bitset = npcheck.any(1)
+            elif self.bpp == BPP_24:
+                cols_bitset = npimg.any((0, 2))
+                rows_bitset = npimg.any((1, 2))
+            else:
+                assert self.bpp == BPP_8, self.bpp
+                cols_bitset = npimg.any(0)
+                rows_bitset = npimg.any(1)
+
+            cols_used = np.arange(w)[cols_bitset]
+            rows_used = np.arange(h)[rows_bitset]
+
+            crop_x = min(cols_used, default=0)
+            crop_y = min(rows_used, default=0)
+            w = max(cols_used, default=0) - crop_x + 1
+            h = max(rows_used, default=0) - crop_y + 1
+
+            if npalpha is not None:
+                npalpha = npalpha[crop_y: crop_y + h, crop_x: crop_x + w]
+            if self.bpp == BPP_8:
+                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w]
+            else:
+                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w, :]
+        return crop_x, crop_y, w, h, npimg, npalpha
+
+    def _do_get_image(self, encoder=None):
         t0 = time.time()
         # TODO move into get_image
         img, bpp = self.get_image()
-        w, h, xofs, yofs = self.w, self.h, self.xofs, self.yofs
+        w, h = self.w, self.h
         if w is None:
             w = img.size[0]
         if h is None:
@@ -387,6 +422,12 @@ class Sprite(Resource):
 
         if encoder:
             encoder.count_loading(time.time() - t0)
+        return w, h, img, bpp
+
+    def get_data_layers(self, encoder=None):
+        w, h, img, bpp = self._do_get_image(encoder)
+        xofs, yofs = self.xofs, self.yofs
+
         t0 = time.time()
 
         if self.bpp is None:
@@ -425,40 +466,9 @@ class Sprite(Resource):
             else:
                 print(f'Colour key on 8bpp sprites is not supported')
 
-        crop_x = crop_y = 0
-        if self.crop and w > 0 and h > 0:
-            if npalpha is not None:
-                cols_bitset = npalpha.any(0)
-                rows_bitset = npalpha.any(1)
-            elif self.bpp == BPP_32:
-                # much faster than using where argument of np.any, see cropspeed.py
-                npcheck = npimg[:, :, 3]
-                cols_bitset = npcheck.any(0)
-                rows_bitset = npcheck.any(1)
-            elif self.bpp == BPP_24:
-                cols_bitset = npimg.any((0, 2))
-                rows_bitset = npimg.any((1, 2))
-            else:
-                assert self.bpp == BPP_8, self.bpp
-                cols_bitset = npimg.any(0)
-                rows_bitset = npimg.any(1)
-
-            cols_used = np.arange(w)[cols_bitset]
-            rows_used = np.arange(h)[rows_bitset]
-
-            crop_x = min(cols_used, default=0)
-            crop_y = min(rows_used, default=0)
-            w = max(cols_used, default=0) - crop_x + 1
-            h = max(rows_used, default=0) - crop_y + 1
-            xofs += crop_x
-            yofs += crop_y
-
-            if npalpha is not None:
-                npalpha = npalpha[crop_y: crop_y + h, crop_x: crop_x + w]
-            if self.bpp == BPP_8:
-                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w]
-            else:
-                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w, :]
+        crop_x, crop_y, w, h, npimg, npalpha = self._do_crop(w, h, npimg, npalpha)
+        xofs += crop_x
+        yofs += crop_y
 
         if self.bpp == BPP_8:
             npmask = npimg
