@@ -415,12 +415,12 @@ class Sprite(Resource):
         colourkey = self.get_colourkey()
         if colourkey is not None:
             if self.bpp == BPP_24:
-                npalpha = 255 * np.all(np.not_equal(npimg, colourkey), axis=2)
+                npalpha = 255 * np.any(np.not_equal(npimg, colourkey), axis=2)
                 npalpha = npalpha.astype(np.uint8, copy=False)
             elif self.bpp == BPP_32:
                 if len(colourkey) == 3:
                     colourkey = (*colourkey, 255)
-                npalpha = 255 * np.all(np.not_equal(npimg, colourkey), axis=2)
+                npalpha = 255 * np.any(np.not_equal(npimg, colourkey), axis=2)
                 npalpha = npalpha.astype(np.uint8, copy=False)
             else:
                 print(f'Colour key on 8bpp sprites is not supported')
