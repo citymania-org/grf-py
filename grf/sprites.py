@@ -7,7 +7,8 @@ import numpy as np
 from PIL import Image
 
 from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE, ALL_COLOURS, SAFE_COLOURS, \
-    to_spectra, SPECTRA_PALETTE, WIN_TO_DOS
+    to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS
+
 
 
 def color_distance(c1, c2):
@@ -496,11 +497,11 @@ class Sprite(Resource):
                     npimg = npimg.copy()
                     has_mask = (npmask != 0)
                     if npimg.shape[2] == 3:
-                        npimg[has_mask] = (127, 127, 127)
+                        npimg[has_mask] = (DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS)
                         if npalpha is not None:
                             npalpha[has_mask] = 255
                     else:
-                        npimg[has_mask] = (127, 127, 127, 255)
+                        npimg[has_mask] = (DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, 255)
 
         if encoder is not None:
             encoder.count_composing(time.time() - t0)
