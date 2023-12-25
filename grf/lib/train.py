@@ -113,7 +113,7 @@ class Train(Vehicle):
             }
         self._articulated_parts.append((id, liveries, mid_liveries, callbacks, props))
 
-    def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, length=None, **props):
+    def add_articulated_part(self, *, id, liveries=None, callbacks=None, skip_props_check=False, length=None, weight=None, **props):
         if not skip_props_check:
             # TODO support flipping (id + 0x4000)
             if isinstance(id, int) and id >= 0x4000:
@@ -149,6 +149,10 @@ class Train(Vehicle):
             invalid_props = [p for p in props if p not in ALLOWED_PROPS]
             if invalid_props:
                 raise ValueError('Property not allowed for articulated part: {}'.format(', '.join(invalid_props)))
+
+        if weight is not None:
+            props['weight_low'] = self.weight % 256
+            props['weight_high'] = self.weight // 256
 
         mid_shorten, art_shorten, art_liveries = self._calc_length_articulation(
             length, props.get('shorten_by'), liveries)
