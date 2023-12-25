@@ -23,4 +23,8 @@ class Object(grf.Define):
     def __init__(self, id, **props):
         if 'size' in props:
             props['size'] = (props['size'][1] << 4) | props['size'][0]
-        super().__init__(OBJECT, id, 1, props)
+        super().__init__(
+            feature=grf.OBJECT,
+            id=id,
+            props=props,
+        )
