@@ -269,7 +269,7 @@ VEHICLE_CALLBACKS = {
     0x15e: {'name': 'refit_cost', 'flag': 0, 'class': DualCallback},
     0x161: {'name': 'name', 'flag': 0x100, 'class': PurchaseCallback},
     # 0x34: {'name': 'autoreplace_selection', 'flag': 0, 'class': DefaultCallback},
-    0x36: {'name': 'change_properties', 'class': DualCallback},
+    0x36: {'name': 'change_properties', 'flag': 0, 'class': DualCallback},
 }
 
 CALLBACKS = {

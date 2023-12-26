@@ -1,11 +1,4 @@
 {
     "version": 1,
-    "index": {
-        "industry_tile": {
-            "__industry_0_main_tile": 0
-        },
-        "train": {
-            "random-reverse-1": 300
-        }
-    }
+    "index": {}
 }

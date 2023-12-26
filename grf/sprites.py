@@ -376,9 +376,9 @@ class Sprite(Resource):
     def get_colourkey(self):
         return None
 
-    def _do_crop(self, w, h, npimg, npalpha):
+    def _do_crop(self, w, h, npimg, npalpha, crop=None):
         crop_x = crop_y = 0
-        if self.crop and w > 0 and h > 0:
+        if crop or (crop is None and self.crop):
             if npalpha is not None:
                 cols_bitset = npalpha.any(0)
                 rows_bitset = npalpha.any(1)
@@ -425,7 +425,7 @@ class Sprite(Resource):
             encoder.count_loading(time.time() - t0)
         return w, h, img, bpp
 
-    def get_data_layers(self, encoder=None):
+    def get_data_layers(self, encoder=None, crop=None):
         w, h, img, bpp = self._do_get_image(encoder)
         xofs, yofs = self.xofs, self.yofs
 
@@ -467,7 +467,7 @@ class Sprite(Resource):
             else:
                 print(f'Colour key on 8bpp sprites is not supported')
 
-        crop_x, crop_y, w, h, npimg, npalpha = self._do_crop(w, h, npimg, npalpha)
+        crop_x, crop_y, w, h, npimg, npalpha = self._do_crop(w, h, npimg, npalpha, crop=crop)
         xofs += crop_x
         yofs += crop_y
 
