@@ -333,7 +333,7 @@ class ImageMask(Mask):
 
 
 class Sprite(Resource):
-    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None, crop=True):
+    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_4X, bpp=None, mask=None, crop=True, name=None):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
         assert mask is None or isinstance(mask, Mask)
@@ -346,9 +346,16 @@ class Sprite(Resource):
         self.bpp = bpp
         self.mask = mask
         self.crop = crop
+        self._name = name
 
     @property
     def name(self):
+        if self._name is not None:
+            return self._name
+        return self.default_name
+
+    @property
+    def default_name(self):
         return f'{self.w}x{self.h}'
 
     def get_fingerprint_base(self):
@@ -755,7 +762,7 @@ class FileSprite(Sprite):
         self.file = file
 
     @property
-    def name(self):
+    def default_name(self):
         return f'{self.x},{self.y} {self.w}x{self.h}'
 
     def get_image(self):
