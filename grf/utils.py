@@ -124,7 +124,7 @@ def init_id_map_func(g, grf_file, args):
     print(f'Created id_map.json')
 
 
-def main(g, grf_file):
+def main(g, grf_file, commands=None):
     assert isinstance(g, BaseNewGRF)
     assert isinstance(grf_file, str)
     parser = argparse.ArgumentParser(description=g.name)
@@ -144,6 +144,12 @@ def main(g, grf_file):
 
     watch_parser = subparsers.add_parser('init_id_map', help='Initialize the automatic id index (id_map.json)')
     watch_parser.set_defaults(func=init_id_map_func)
+
+    for c in commands or []:
+        cmd_parser = subparsers.add_parser(c['name'], help=c['help'])
+        if 'add_args' in c:
+            c['add_args'](cmd_parser)
+        cmd_parser.set_defaults(func=c['handler'])
 
     args = parser.parse_args()
 
