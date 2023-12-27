@@ -12,6 +12,10 @@ This file contains documentation detailing the design decisions made during the 
 Use NML naming where advantageous but remain flexible without excessive reliance on it.
 
 
+# Zoom constants
+As of version 0.3 use "human"/nml naming of constants. I.e. `ZOOM_4X` -> `ZOOM_2X` -> `ZOOM_NORMAL` -> `ZOOM_OUT_2X` -> `ZOOM_OUT_4X` -> `ZOOM_OUT_8X`. In OpenTTD code 4x zoom is called "normal" and that is extremely confusing, don't copy that.
+
+
 ## Versioning
 Use `MAJOR.MINOR.PATCH` versioning with `MAJOR` currently at 0 to signify it's currently in early development and API is not stable at any point.
 `PATCH` version changes with every release and can be done at any point regardless of the amount of changes included.

@@ -121,7 +121,8 @@ class SingleResourceAction(ResourceAction):
 class AlternativeSprites(ResourceAction):
     def __init__(self, *sprites):
         assert all(isinstance(s, Sprite) for s in sprites), sprites
-        assert len(set((s.zoom, s.bpp) for s in sprites)) == len(sprites), sprites
+        if len(set((s.zoom, s.bpp) for s in sprites)) != len(sprites):
+            raise ValueError(f'AlternativeSprites need to have different zooms or bpp: {", ".join(s.name for s in sprites)}')
 
         super().__init__()
         self.sprites = sprites
