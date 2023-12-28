@@ -122,7 +122,8 @@ class AlternativeSprites(ResourceAction):
     def __init__(self, *sprites):
         assert all(isinstance(s, Sprite) for s in sprites), sprites
         if len(set((s.zoom, s.bpp) for s in sprites)) != len(sprites):
-            raise ValueError(f'AlternativeSprites need to have different zooms or bpp: {", ".join(s.name for s in sprites)}')
+            sprite_list = ", ".join(f'{s.name}<zoom={s.zoom}, bpp={s.bpp}>' for s in sprites)
+            raise ValueError(f'AlternativeSprites need to have different zooms or bpp: {sprite_list}')
 
         super().__init__()
         self.sprites = sprites
@@ -348,6 +349,9 @@ class Sprite(Resource):
         self.mask = mask
         self.crop = crop
         self._name = name
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}<{self.name}>'
 
     @property
     def name(self):
