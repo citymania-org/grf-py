@@ -2,7 +2,8 @@ import struct
 import numpy as np
 from PIL import Image, ImageDraw
 
-from .common import to_spectra, ZOOM_4X, ZOOM_2X, ZOOM_NORMAL, PALETTE
+from .common import ZOOM_4X, ZOOM_2X, ZOOM_NORMAL
+from .colour import to_spectra, PALETTE
 from .sprites import ImageSprite, convert_image, PaletteRemap, find_best_color
 
 

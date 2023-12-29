@@ -19,11 +19,13 @@
 - Fix `Switch` code grammar issues.
 - Fix alpha generation when using colourkey.
 - Add sprite cache.
-- Fix decompilation of action 7/9 with value > 4 bytes.
 - Optimize memory usage when writing NewGRF.
 - Optimize grf file size by removing duplicate sprites (by data).
 - Allow defining named temporary variables in `Switch` code.
 - Rename zoom constants to use natural/nml order: `ZOOM_4X` -> `ZOOM_2X` -> `ZOOM_NORMAL` -> `ZOOM_OUT_2X` -> `ZOOM_OUT_4X` -> `ZOOM_OUT_8X`.
+- Rename `PALETTE` to `PIL_PALETTE`, add `PALETTE` as a list of (r, g, b) tuples.
+- Add `OKLAB_PALETTE`, `NP_PALETTE`, `PALETTE_IDX` constants.
+- Add `srgb_to_linear`, `linear_to_srgb`, `srgb_to_oklab`, `oklab_to_srgb` colour conversion functions.
 - Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
@@ -72,6 +74,7 @@
 - grftopy: Fix missing sprite zoom
 - grftopy: Improve decoding of industry layouts.
 - grftopy: Fix decompilation of ActionB.
+- grftopy: Fix decompilation of action 7/9 with value > 4 bytes.
 
 ---------
 0.2.2

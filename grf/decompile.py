@@ -15,7 +15,8 @@ from PIL import Image, ImageDraw
 from nml import lz77
 
 import grf
-from grf.common import hex_str, utoi8, DataReader, read_extended_byte, read_dword, read_word, PALETTE, ZOOM_NORMAL, VEHICLE_FEATURES
+from grf.common import hex_str, utoi8, DataReader, read_extended_byte, read_dword, read_word, ZOOM_NORMAL, VEHICLE_FEATURES
+from grf.colour import PIL_PALETTE
 from grf.va2vars import VA2_VARS_INV
 from grf.parser import OP_INIT, SPRITE_FLAGS
 from grf.actions import ACTION0_PROPS, SpriteRef, Property, PyComment, PyCode, FakeAction
@@ -1351,7 +1352,7 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
 
         if any(s.type & 0x04 > 0 for s, _ in sprites):
             m = Image.new('P', (w, h), color=0xff)
-            m.putpalette(PALETTE)
+            m.putpalette(PIL_PALETTE)
 
         img_sprites = []
         for i, (s, si) in enumerate(sprites):

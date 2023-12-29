@@ -6,9 +6,8 @@ import time
 import numpy as np
 from PIL import Image
 
-from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32, PALETTE, ALL_COLOURS, SAFE_COLOURS, \
-    to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS
-
+from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32
+from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS
 
 
 def color_distance(c1, c2):
@@ -33,12 +32,13 @@ def find_best_color(x, in_range=SAFE_COLOURS):
 
 
 _remap_cache = {}
-_FIX_PALETTE_LOOKUP = {(PALETTE[3 * i], PALETTE[3 * i + 1], PALETTE[3 * i + 2]): i for i in ALL_COLOURS}
+_FIX_PALETTE_LOOKUP = {PALETTE[i]: i for i in ALL_COLOURS}
+
 
 def fix_palette(img, sprite_name):
     assert (img.mode == 'P')  # TODO
     pal = tuple(img.getpalette())
-    if pal == PALETTE: return img
+    if pal == PIL_PALETTE: return img
     print(f'Custom palette in sprite {sprite_name}, converting...')
     # for i in range(256):
     #     if tuple(pal[i * 3: i*3 + 3]) != PALETTE[i * 3: i*3 + 3]:
@@ -219,7 +219,7 @@ class PaletteRemap(Action):
         data = np.array(im)
         data = self.remap[data]
         res = Image.fromarray(data)
-        res.putpalette(PALETTE)
+        res.putpalette(PIL_PALETTE)
         return res
 
     def remap_array(self, a):
@@ -444,7 +444,7 @@ class Sprite(Resource):
                 img = img.convert('RGBA')
             elif self.bpp == BPP_8:
                 p_img = Image.new('P', (16, 16))
-                p_img.putpalette(PALETTE)
+                p_img.putpalette(PIL_PALETTE)
                 img = img.quantize(palette=p_img, dither=0)
         else:
             if bpp == BPP_8:
@@ -593,7 +593,8 @@ class Sprite(Resource):
 
         RADIO_TOWER = ((255, 0, 0), (20, 0, 0))
 
-        PAL_IDX = {tuple(PALETTE[i: i + 3]): i // 3 for i in range(0, 256 * 3, 3)}
+        # TODO there is also FIX_PALETTE
+        PAL_IDX = {PALETTE[i]: i for i in range(256)}
 
         def extr(p, q):
             return lambda counter: (((counter * p) & 0xFFFF) * q) >> 16
@@ -632,7 +633,7 @@ class Sprite(Resource):
         if img is not None or alpha is not None:
             raise NotImplementedError('Only 8bpp sprites are supported')
 
-        pal = [tuple(PALETTE[i: i + 3]) for i in range(0, 256 * 3, 3)]
+        pal = PALETTE[:]
         cycles = []
         has_colors = np.isin(np.arange(0xE8, 0xFF, dtype=np.uint8), mask)
         if any(has_colors[0xEF - 0xE8: 0xEF - 0xE8 + 2]):
@@ -821,3 +822,40 @@ class NMLFileSpriteWrapper:
 
     def get_resource_files(self):
         return (self.file.value,)
+
+
+class ZoomDebugRecolourSprite(Sprite):
+    RECOLOURS = {
+        # ZOOM_NORMAL: ((1, 0, 0), ),
+        # ZOOM_4X: (),
+        # ZOOM_2X,
+        # ZOOM_OUT_2X,
+        # ZOOM_OUT_4X,
+        # ZOOM_OUT_8X,
+    }
+
+    def __init__(self, sprite):
+        self.sprite = sprite
+        self.factors = np.array(factors, dtype=np.uint8)
+        super().__init__(w=sprite.w, h=sprite.h, xofs=sprite.xofs, yofs=sprite.yofs, zoom=sprite.zoom, bpp=sprite.bpp)
+
+    def get_data_layers(self, encoder=None, *args, **kw):
+        w, h, xofs, yofs, ni, na, nm = self.sprite.get_data_layers(encoder, crop=False)
+        factors = np.array([self.sprite.zoom])
+        if ni is not None:
+            ni = make_writable(ni)
+            ni[:, :, :3] *= self.factors
+        return w, h, xofs, yofs, ni, na, nm
+
+    def get_image_files(self):
+        return ()
+
+    def get_resource_files(self):
+        return super().get_resource_files() + (THIS_FILE, ) + self.sprite.get_resource_files()
+
+    def get_fingerprint(self):
+        return {
+            'class': self.__class__.__name__,
+            'sprite': self.sprite.get_fingerprint(),
+            'factors': tuple(map(int, self.factors)),
+        }

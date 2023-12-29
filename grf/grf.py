@@ -20,7 +20,8 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
-from .common import PALETTE, INDUSTRY_TILE, INDUSTRY
+from .common import INDUSTRY_TILE, INDUSTRY
+from .colour import PIL_PALETTE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
                      PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile, \
@@ -42,7 +43,7 @@ class SpriteSheet:
 
         w += (columns + 1) * padding
         im = Image.new('L', (w, h), color=0xff)
-        im.putpalette(PALETTE)
+        im.putpalette(PIL_PALETTE)
 
         x = 0
         for i, s in enumerate(self._sprites):
@@ -450,7 +451,7 @@ class BaseNewGRF:
 
         return res
 
-    def write(self, filename, clean_build=False, debug_loom_levels=False):
+    def write(self, filename, clean_build=False, debug_zoom_levels=False):
         t = Timer()
         t.start(f'Evaluating sprite generators')
         sprites = self.generate_sprites()
@@ -520,6 +521,8 @@ class BaseNewGRF:
 
             def get_sprite_data(s):
                 sprite_data = None
+                if debug_zoom_levels:
+                    s = ZoomDebugRecolourSprite(s)
                 if isinstance(s, Sprite):
                     sprite_data = get_sprite_fingerprint(s)
                 if sprite_data is not None:
