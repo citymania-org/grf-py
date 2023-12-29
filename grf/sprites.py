@@ -76,25 +76,16 @@ class Action:
     def get_data(self):
         raise NotImplemented
 
-    def get_data_size(self):
-        raise NotImplemented
-
 
 class FakeAction:
     def get_data(self):
         return b't'
-
-    def get_data_size(self):
-        return 0
 
 
 # Pseudo sprite (reference) + real sprite in grf
 class ResourceAction(Action):
     def __init__(self):
         self.sprite_id = None
-
-    def get_data_size(self):
-        return 4
 
     def get_data(self):
         return struct.pack('<I', self.sprite_id)
@@ -194,9 +185,6 @@ class PaletteRemap(Action):
 
     def get_data(self):
         return b'\x00' + self.remap.tobytes()
-
-    def get_data_size(self):
-        return len(self.remap) + 1
 
     @classmethod
     def from_function(cls, color_func, remap_water=False):

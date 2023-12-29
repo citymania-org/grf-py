@@ -17,7 +17,7 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      BasicSpriteLayout, AdvancedSpriteLayout, ExtendedSpriteLayout, Switch, \
                      IndustryProductionCallback, Action3, Map, DefineStrings, ReplaceNewSprites, \
                      ModifySprites, If, SetDescription, ReplaceOldSprites, ErrorMessage, Comment, \
-                     ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties, LazyAction
+                     ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
 from .common import PALETTE, INDUSTRY_TILE, INDUSTRY
@@ -61,9 +61,6 @@ class SpriteSheet:
 class DummySprite(Action):
     def get_data(self):
         return b'\x00'
-
-    def get_data_size(self):
-        return 1
 
 
 class SpriteGenerator:
@@ -453,7 +450,7 @@ class BaseNewGRF:
 
         return res
 
-    def write(self, filename, clean_build=False):
+    def write(self, filename, clean_build=False, debug_loom_levels=False):
         t = Timer()
         t.start(f'Evaluating sprite generators')
         sprites = self.generate_sprites()
@@ -473,14 +470,12 @@ class BaseNewGRF:
         sprite_cache = SpriteCache(self.sprite_cache_path)
         sprite_cache.load(clean_build=clean_build)
         sprite_order = self._enumerate_sprites(sprites)
-        data_offset = 14
-        for s in sprites:
-            data_offset += s.get_data_size() + 5
 
         t.log(f'Writing actions')
         with open(filename, 'wb') as f:
             f.write(b'\x00\x00GRF\x82\x0d\x0a\x1a\x0a')  # file header
-            f.write(struct.pack('<I', data_offset))
+            data_offset_pos = f.tell()
+            f.write(b'\x00\x00\x00\x00')  # data offset (overwritten later)
             f.write(b'\x00')  # compression(1)
             # f.write(b'\x04\x00\x00\x00')  # num(4)
             # f.write(b'\xFF')  # grf_type(1)
@@ -494,6 +489,8 @@ class BaseNewGRF:
                     resource_references[s.sprite_id].append(self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd))
                 else:
                     self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
+
+            data_offset = f.tell() - data_offset_pos
             f.write(b'\x00\x00\x00\x00')
 
             t.log(f'Writing resources')
@@ -577,7 +574,9 @@ class BaseNewGRF:
 
             f.write(b'\x00\x00\x00\x00')
 
-            # print('RENUMERATE', renumerate_sprites)
+            f.seek(data_offset_pos)
+            f.write(struct.pack('<I', data_offset))
+
             for k, v in renumerate_sprites.items():
                 for ofs in resource_references[k]:
                     f.seek(ofs)

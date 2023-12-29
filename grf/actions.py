@@ -1313,24 +1313,7 @@ class CargoClass:
     # ALL_CARGO_CLASSES   bitmask(CC_SPECIAL) Note: This is already a bitmask, don't use the bitmask(..) function with this.
 
 
-class LazyAction(Action):
-    def __init__(self):
-        super().__init__()
-        self._data = None
-
-    def _encode(self):
-        raise NotImplemented
-
-    def get_data(self):
-        if self._data is None:
-            self._data = self._encode()
-        return self._data
-
-    def get_data_size(self):
-        return len(self.get_data())
-
-
-class DefineMultiple(LazyAction):
+class DefineMultiple(Action):
     def __init__(self, *, feature, first_id, props, count=None):
         assert isinstance(feature, Feature)
         super().__init__()
@@ -1380,7 +1363,7 @@ class DefineMultiple(LazyAction):
             return res
         raise RuntimeError(f'Unsupported property format `{fmt}`')
 
-    def _encode(self):
+    def get_data(self):
         res = struct.pack('<BBBBBH',
             0, self.feature.id, len(self.props), self.count, 255, self.first_id)
         pdict = ACTION0_PROP_DICT[self.feature]
@@ -1441,7 +1424,7 @@ class Define(DefineMultiple):
 
 # Action 1
 
-class Action1(LazyAction):
+class Action1(Action):
     def __init__(self, feature, set_count, sprite_count, *, first_set=None):
         assert isinstance(feature, Feature)
         super().__init__()
@@ -1450,7 +1433,7 @@ class Action1(LazyAction):
         self.sprite_count = sprite_count
         self.first_set = first_set
 
-    def _encode(self):
+    def get_data(self):
         if self.set_count <= 255 and self.first_set is None:
             # Basic format
             return struct.pack('<BBBBH', 0x01,
@@ -1523,7 +1506,7 @@ class GenericSpriteLayout(Action, ReferenceableAction):
         '''
 
 
-class BasicSpriteLayout(LazyAction, ReferenceableAction):
+class BasicSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ground, building, feature=None, ref_id=None):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         super().__init__()
@@ -1532,7 +1515,7 @@ class BasicSpriteLayout(LazyAction, ReferenceableAction):
         self.ground = ground
         self.building = building
 
-    def _encode(self):
+    def get_data(self):
         return struct.pack('<BBBBIIbbBBB', 0x02, self.feature.id, self.ref_id, 0,
                            self.ground['sprite'].to_grf(global_if_flagged=False),
                            self.building['sprite'].to_grf(global_if_flagged=False),
@@ -1549,7 +1532,7 @@ class BasicSpriteLayout(LazyAction, ReferenceableAction):
         '''
 
 
-class AdvancedSpriteLayout(LazyAction, ReferenceableAction):
+class AdvancedSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ground, feature=None, ref_id=None, buildings=(), has_flags=True):
         assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
         assert len(buildings) < 64, len(buildings)
@@ -1591,7 +1574,7 @@ class AdvancedSpriteLayout(LazyAction, ReferenceableAction):
                 res += bytes((val, ))
         return res
 
-    def _encode(self):
+    def get_data(self):
         res = struct.pack('<BBBB', 0x02, self.feature.id, self.ref_id, len(self.buildings) + 0x40)
         res += self._encode_sprite(self.ground)
         for s in self.buildings:
@@ -1649,7 +1632,7 @@ class CodeContext:
         return self._variables.get(name)
 
 
-class Switch(LazyAction, ReferenceableAction, ReferencingAction):
+class Switch(Action, ReferenceableAction, ReferencingAction):
     def __init__(self, code, ranges, default, *, feature=None, ref_id=None, related_scope=False, subroutines=None):
         super().__init__()
         self.feature = feature
@@ -1723,7 +1706,7 @@ class Switch(LazyAction, ReferenceableAction, ReferencingAction):
     def __str__(self):
         return str(self.ref_id)
 
-    def _encode(self):
+    def get_data(self):
         context = CodeContext(subroutines=self.subroutines, register=0x80)
         res = bytes((0x02, self.feature.id, self.ref_id, 0x8a if self.related_scope else 0x89))
         ast = self.parsed_code
@@ -1784,7 +1767,7 @@ class Eval(Switch):
         super().__init__(code=code, ranges=(), default=default, **kw)
 
 
-class RandomSwitch(LazyAction, ReferenceableAction, ReferencingAction):
+class RandomSwitch(Action, ReferenceableAction, ReferencingAction):
     def __init__(self, *, scope, triggers, cmp_all, lowest_bit, groups, count=None, feature=None, ref_id=None):
         if scope == 'relative' and feature in VEHICLE_FEATURES:
             assert count is not None
@@ -1806,7 +1789,7 @@ class RandomSwitch(LazyAction, ReferenceableAction, ReferencingAction):
     def set_refs(self, refs):
         self.groups = refs
 
-    def _encode(self):
+    def get_data(self):
         atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[self.scope]
         res = bytes((0x02, self.feature.id, self.ref_id, atype))
         if self.scope == 'relative' and self.feature not in VEHICLE_FEATURES:
@@ -1835,7 +1818,7 @@ class RandomSwitch(LazyAction, ReferenceableAction, ReferencingAction):
         )'''
 
 
-class IndustryProductionCallback(LazyAction):
+class IndustryProductionCallback(Action):
     def __init__(self, *, inputs, outputs, do_again, version=2):
         assert isinstance(version, int)
         assert 0 <= version <= 2, version
@@ -1852,7 +1835,7 @@ class IndustryProductionCallback(LazyAction):
         self.outputs = outputs
         self.do_again = do_again
 
-    def _encode(self):
+    def get_data(self):
         inputs = self.inputs
         outputs = self.outputs
         if self.version == 0:
@@ -1885,7 +1868,7 @@ class IndustryProductionCallback(LazyAction):
 
 # Action 3
 
-class Action3(LazyAction, ReferencingAction):
+class Action3(Action, ReferencingAction):
     def __init__(self, *, feature, ids, maps, default, wagon_override=False):
         assert isinstance(feature, Feature), feature
         super().__init__()
@@ -1904,7 +1887,7 @@ class Action3(LazyAction, ReferencingAction):
         for i, k in enumerate(self.maps.keys()):
             self.maps[k] = refs[i]
 
-    def _encode(self):
+    def get_data(self):
         idcount = len(self.ids)
         mcount = len(self.maps)
         if idcount == 0:
@@ -2029,7 +2012,7 @@ class DefineStrings(Action):
 
 # Action 5
 
-class ReplaceNewSprites(LazyAction):
+class ReplaceNewSprites(Action):
     def __init__(self, set_type, count, *, offset=None):
         assert isinstance(set_type, int)
         assert isinstance(count, int)
@@ -2039,7 +2022,7 @@ class ReplaceNewSprites(LazyAction):
         self.count = count
         self.offset = offset
 
-    def _encode(self):
+    def get_data(self):
         if self.offset is None:
             return bytes((0x5,)) + struct.pack('<BBH', self.set_type, 0xff, self.count)
         return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0x80, 0xff, self.count, 0xff, self.offset)
@@ -2050,12 +2033,12 @@ class ReplaceNewSprites(LazyAction):
 
 # Action 6
 
-class ModifySprites(LazyAction):
+class ModifySprites(Action):
     def __init__(self, params):
         super().__init__()
         self.params = params
 
-    def _encode(self):
+    def get_data(self):
         return struct.pack(
             '<B' + 'BBBH' * len(self.params) + 'B',
             0x06,
@@ -2069,7 +2052,7 @@ class ModifySprites(LazyAction):
 
 # Action 7, Action 9
 
-class If(LazyAction):
+class If(Action):
     def __init__(self, *, is_static, variable, condition, value, skip, varsize=None):
         assert varsize is not None or isinstance(value, bytes)
 
@@ -2081,7 +2064,7 @@ class If(LazyAction):
         self.value = value
         self.skip = skip
 
-    def _encode(self):
+    def get_data(self):
         varsize = self.varsize if self.varsize is not None else len(self.value)
         res = bytes((0x09 if self.is_static else 0x07, self.variable, varsize, self.condition))
         if isinstance(self.value, bytes):
@@ -2179,7 +2162,7 @@ ActionA = ReplaceOldSprites
 
 # Action B
 
-class ErrorMessage(LazyAction):
+class ErrorMessage(Action):
     def __init__(self, *, severity, lang, message, text_param=None, params=None):
         super().__init__()
         assert 0 <= severity < 256, severity
@@ -2192,7 +2175,7 @@ class ErrorMessage(LazyAction):
         self.text_param = text_param
         self.params = params or []
 
-    def _encode(self):
+    def get_data(self):
         message_id = self.message if isinstance(self.message, int) else 0xFF
         data = bytes((0x0B, self.severity, self.lang, message_id))
         if message_id == 0xFF:
@@ -2218,12 +2201,12 @@ ActionB = ErrorMessage
 
 # Action C
 
-class Comment(LazyAction):
+class Comment(Action):
     def __init__(self, data):
         super().__init__()
         self.data = data
 
-    def _encode(self):
+    def get_data(self):
         return bytes((0x0C)) + self.data
 
     def py(self, context):
@@ -2233,7 +2216,7 @@ ActionC = Comment
 
 # Action D
 
-class ComputeParameters(LazyAction):
+class ComputeParameters(Action):
     def __init__(self, *, target, operation, if_undefined, source1, source2, value=None):
             super().__init__()
             self.target = target
@@ -2243,7 +2226,7 @@ class ComputeParameters(LazyAction):
             self.source2 = source2
             self.value = value
 
-    def _encode(self):
+    def get_data(self):
         operation_byte = self.operation | 0x80 * self.if_undefined
         res = bytes((0x0D, self.target, operation_byte, self.source1, self.source2))
         if self.source1 == 0xff or self.source2 == 0xff:
@@ -2272,7 +2255,7 @@ class ComputeParameters(LazyAction):
 
 # Action 10
 
-class Label(LazyAction):
+class Label(Action):
     def __init__(self, label, comment):
         if not(0 <= label <= 255):
             raise ValueError(f'label {label} not in range 0..255')
@@ -2280,7 +2263,7 @@ class Label(LazyAction):
         self.label = label
         self.comment = comment
 
-    def _encode(self):
+    def get_data(self):
         return bytes((0x10, self.label)) + self.comment
 
     def py(self, context):
@@ -2289,25 +2272,25 @@ class Label(LazyAction):
 
 # Action 11
 
-class SoundEffects(LazyAction):
+class SoundEffects(Action):
     def __init__(self, count):
         super().__init__()
         self.count = count
 
-    def _encode(self):
+    def get_data(self):
         return struct.pack('<BH', 0x11, self.count)
 
     def py(self, context):
         return f'SoundEffects({self.count})'
 
 
-class ImportSound(LazyAction):
+class ImportSound(Action):
     def __init__(self, grfid, number):
         super().__init__()
         self.grfid = grfid
         self.number = number
 
-    def _encode(self):
+    def get_data(self):
         return b'\xFE\x00' + self.grfid + struct.pack('<H', self.number)
 
     def py(self, context):
@@ -2316,13 +2299,13 @@ class ImportSound(LazyAction):
 
 # Action 12
 
-class UnicodeGlyphs(LazyAction):
+class UnicodeGlyphs(Action):
     def __init__(self, glyphs):
         assert len(glyphs) < 256
         super().__init__()
         self.glyphs = []
 
-    def _encode(self):
+    def get_data(self):
         data = bytes((0x12, len(self.glyphs)))
         for g in self.glyphs:
             data += struct.pack('<BBH', g['font'], g['count'], g['base'])
@@ -2331,7 +2314,7 @@ class UnicodeGlyphs(LazyAction):
 
 # Action 13
 
-class Translations(LazyAction):
+class Translations(Action):
     def __init__(self, *, grfid, offset, is_generic_offset, lang=ANY_LANGUAGE):
         if not 0xD000 <= offset <= 0xDC00:
             raise ValueError(f'{self.__class__.__name__} `offset` {offset} is not in range 0xD000..0xDC00')
@@ -2348,7 +2331,7 @@ class Translations(LazyAction):
                 assert isinstance(s, str), type(s)
                 self.strings.append(s.encode('utf-8'))
 
-    def _encode(self):
+    def get_data(self):
         res = bytes((0x13,)) + self.grfid
         str_data = b'\0'.join(self.strings) + b'\0'
         res += struct.pack('<BBH', self.lang, len(self.strings), self.offset) + str_data
@@ -2367,7 +2350,7 @@ class Translations(LazyAction):
 
 # Action 14
 
-class SetProperties(LazyAction):
+class SetProperties(Action):
     def __init__(self, props):
         super().__init__()
         self.props = props
@@ -2378,7 +2361,7 @@ class SetProperties(LazyAction):
             self.props == action.props
         )
 
-    def _encode(self):
+    def get_data(self):
         data = b'\x14'
 
         def rec(k, v):
