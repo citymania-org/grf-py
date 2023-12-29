@@ -394,18 +394,19 @@ class Sprite(Resource):
             if npalpha is not None:
                 cols_bitset = npalpha.any(0)
                 rows_bitset = npalpha.any(1)
-            elif self.bpp == BPP_32:
+            elif len(npimg.shape) == 2:
+                cols_bitset = npimg.any(0)
+                rows_bitset = npimg.any(1)
+            elif npimg.shape[2] == 4:
                 # much faster than using where argument of np.any, see cropspeed.py
                 npcheck = npimg[:, :, 3]
                 cols_bitset = npcheck.any(0)
                 rows_bitset = npcheck.any(1)
-            elif self.bpp == BPP_24:
+            elif npimg.shape[2] == 3:
                 cols_bitset = npimg.any((0, 2))
                 rows_bitset = npimg.any((1, 2))
             else:
-                assert self.bpp == BPP_8, self.bpp
-                cols_bitset = npimg.any(0)
-                rows_bitset = npimg.any(1)
+                raise RuntimeError('Unknown npimg format')
 
             cols_used = np.arange(w)[cols_bitset]
             rows_used = np.arange(h)[rows_bitset]
@@ -417,7 +418,7 @@ class Sprite(Resource):
 
             if npalpha is not None:
                 npalpha = npalpha[crop_y: crop_y + h, crop_x: crop_x + w]
-            if self.bpp == BPP_8:
+            if len(npimg.shape) == 2:
                 npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w]
             else:
                 npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w, :]
