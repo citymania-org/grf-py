@@ -20,7 +20,7 @@ from .actions import Ref, CB, Range, ReferenceableAction, ReferencingAction, get
                      ComputeParameters, Label, SoundEffects, ImportSound, Translations, SetProperties
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS, GenericVar
 from .common import Feature, hex_str, utoi32, FeatureMeta, to_bytes, GLOBAL_VAR
-from .common import INDUSTRY_TILE, INDUSTRY
+from .common import INDUSTRY_TILE, INDUSTRY, byte_size_format
 from .colour import PIL_PALETTE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
@@ -576,6 +576,7 @@ class BaseNewGRF:
                         rf.unload()
 
             f.write(b'\x00\x00\x00\x00')
+            file_size = f.tell()
 
             f.seek(data_offset_pos)
             f.write(struct.pack('<I', data_offset))
@@ -591,6 +592,7 @@ class BaseNewGRF:
         self._id_map.save()
         t.stop()
         self._sprite_encoder.print_time_report()
+        print(f'Generated grf size: {byte_size_format(file_size)}')
 
         watched = set()
         for s in sprites:

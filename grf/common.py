@@ -308,3 +308,11 @@ class TTDIndustry:
 
     UNKNOWN = 0xFE
     TOWN = 0xFF
+
+
+def byte_size_format(num):
+    for unit in ("B", "KiB", "MiB"):
+        if abs(num) < 1024.0:
+            return f"{num:.2f} {unit}"
+        num /= 1024.0
+    return f"{num:.2f} GiB"
