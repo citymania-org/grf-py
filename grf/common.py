@@ -316,3 +316,11 @@ def byte_size_format(num):
             return f"{num:.2f} {unit}"
         num /= 1024.0
     return f"{num:.2f} GiB"
+
+
+# make sure that numpy array is writable by making copy if it's not
+def np_make_writable(nparray):
+    if not nparray.flags.writeable:
+        return nparray.copy()
+    return nparray
+

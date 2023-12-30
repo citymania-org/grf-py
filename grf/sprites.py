@@ -6,8 +6,10 @@ import time
 import numpy as np
 from PIL import Image
 
-from .common import ZOOM_4X, BPP_8, BPP_24, BPP_32
+from .common import BPP_8, BPP_24, BPP_32, np_make_writable
+from .common import ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X
 from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS
+from .colour import srgb_to_oklab, oklab_blend, oklab_find_best_colour
 
 
 def color_distance(c1, c2):
@@ -825,26 +827,40 @@ class NMLFileSpriteWrapper:
 
 
 class ZoomDebugRecolourSprite(Sprite):
-    RECOLOURS = {
-        # ZOOM_NORMAL: ((1, 0, 0), ),
-        # ZOOM_4X: (),
-        # ZOOM_2X,
-        # ZOOM_OUT_2X,
-        # ZOOM_OUT_4X,
-        # ZOOM_OUT_8X,
+
+    ZOOM_DEBUG_COLOURS = {
+        ZOOM_4X: np.array((0, 1, 0), dtype=np.uint8),
+        ZOOM_2X: np.array((0, 0, 1), dtype=np.uint8),
+        ZOOM_NORMAL: np.array((1, 0, 0), dtype=np.uint8),
+        ZOOM_OUT_2X: np.array((0, 1, 1), dtype=np.uint8),
+        ZOOM_OUT_4X: np.array((1, 1, 0), dtype=np.uint8),
+        ZOOM_OUT_8X: np.array((1, 0, 1), dtype=np.uint8),
     }
+
+    _ZOOM_DEBUG_RECOLOURS = {}
+
+    @classmethod
+    def _get_debug_recolour(cls, zoom):
+        res = cls._ZOOM_DEBUG_RECOLOURS.get(zoom)
+        if res is None:
+            from .colour import OKLAB_PALETTE  # lazy constant, don't import on top level
+            c = cls.ZOOM_DEBUG_COLOURS[zoom]
+            blended = oklab_blend(OKLAB_PALETTE, srgb_to_oklab(c * 255), ratio=.8)
+            res = np.array([0] + oklab_find_best_colour(blended[1:]))
+            cls._ZOOM_DEBUG_RECOLOURS[zoom] = res.astype(np.uint8)
+        return res
 
     def __init__(self, sprite):
         self.sprite = sprite
-        self.factors = np.array(factors, dtype=np.uint8)
         super().__init__(w=sprite.w, h=sprite.h, xofs=sprite.xofs, yofs=sprite.yofs, zoom=sprite.zoom, bpp=sprite.bpp)
 
     def get_data_layers(self, encoder=None, *args, **kw):
-        w, h, xofs, yofs, ni, na, nm = self.sprite.get_data_layers(encoder, crop=False)
-        factors = np.array([self.sprite.zoom])
+        w, h, xofs, yofs, ni, na, nm = self.sprite.get_data_layers(*args, encoder=encoder, **kw)
         if ni is not None:
-            ni = make_writable(ni)
-            ni[:, :, :3] *= self.factors
+            ni = np_make_writable(ni)
+            ni[:, :, :3] *= self.ZOOM_DEBUG_COLOURS[self.sprite.zoom]
+        if nm is not None:
+            nm = self._get_debug_recolour(self.sprite.zoom)[nm]
         return w, h, xofs, yofs, ni, na, nm
 
     def get_image_files(self):
@@ -857,5 +873,4 @@ class ZoomDebugRecolourSprite(Sprite):
         return {
             'class': self.__class__.__name__,
             'sprite': self.sprite.get_fingerprint(),
-            'factors': tuple(map(int, self.factors)),
         }

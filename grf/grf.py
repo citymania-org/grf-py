@@ -25,7 +25,7 @@ from .colour import PIL_PALETTE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
                      PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile, \
-                     SingleResourceAction
+                     SingleResourceAction, ZoomDebugRecolourSprite
 from .strings import StringManager, StringRef
 
 

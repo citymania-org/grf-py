@@ -61,7 +61,11 @@ async def reload_newgrfs():
 
 def build_func(g, grf_file, args):
     print(f'Building {grf_file}')
-    g.write(grf_file, clean_build=False if args is None else args.clean)
+    g.write(
+        grf_file,
+        clean_build=False if args is None else args.clean,
+        debug_zoom_levels=False if args is None else args.debug_zoom_levels,
+    )
 
 
 def watch_func(g, grf_file, args):
@@ -135,6 +139,7 @@ def main(g, grf_file, commands=None):
     # Create a parser for the 'build' command
     build_parser = subparsers.add_parser('build', help='Build newgrf')
     build_parser.add_argument('--clean', action='store_true', help='Clean build (don''t use sprite cache)')
+    build_parser.add_argument('--debug-zoom-levels', action='store_true', help='Recolor sprites according to their zoom level: 4x - red, 2x - blue, 1x - green, out-2x - cyan, out-4x - yellow, out-8x - magenta')
     # create_parser.add_argument('--size', type=int, required=True, help='Size of the item')
     build_parser.set_defaults(func=build_func)
 

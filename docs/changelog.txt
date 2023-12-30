@@ -36,6 +36,8 @@
 - Add `TownGrowthEffect` constants.
 - Add `Eval` as a version of `Switch` without ranges.
 - Add `subroutines` argument to `Switch` and allow `name()` call syntax.
+- Add `debug_zoom_levels` argument to `BaseNewGRF.write` to recolour sprites according to their zoom level: 4x - red, 2x - blue, 1x - green, out-2x - cyan, out-4x - yellow, out-8x - magenta.
+- Add `--debug-zoom-levels` command line argument to `build` command of `main` function.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of bridge layouts.
