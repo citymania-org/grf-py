@@ -670,6 +670,8 @@ class IDMap:
         self._auto_ids = used_ids
 
     def save(self):
+        if not self._index:
+            return
         self._check_path()
         index = {}
         for (feature, name), value in self._index.items():
