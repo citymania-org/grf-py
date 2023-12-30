@@ -102,6 +102,7 @@ class SpriteEncoder:
         self.conversion_time = 0
         self.composing_time = 0
         self.compression_time = 0
+        self.custom_time = defaultdict(int)
         self.num_sprites = 0
         self.num_cached = 0
         self.num_uncacheable = 0
@@ -116,6 +117,9 @@ class SpriteEncoder:
     def count_composing(self, t):
         self.composing_time += t
 
+    def count_custom(self, category, t):
+        self.custom_time[category] += t
+
     def sprite_compress(self, raw_data):
         t0 = time.time()
         res = self._nml.sprite_compress(raw_data)
@@ -123,10 +127,12 @@ class SpriteEncoder:
         return res
 
     def print_time_report(self):
-        print(f'   Graphics loading time: {self.loading_time:.02f}')
-        print(f'   Graphics conversion time: {self.conversion_time:.02f}')
-        print(f'   Graphics composing time: {self.composing_time:.02f}')
-        print(f'   Graphics compression time: {self.compression_time:.02f}')
+        print(f'   Resource loading: {self.loading_time:.02f}')
+        print(f'   Graphics conversion: {self.conversion_time:.02f}')
+        print(f'   Graphics composing: {self.composing_time:.02f}')
+        for cat, time in self.custom_time.items():
+            print(f'   {cat}: {time:.02f}')
+        print(f'   Graphics compression: {self.compression_time:.02f}')
         print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
 
 
@@ -544,8 +550,10 @@ class BaseNewGRF:
             written_resources = set()
             for sl, load_files, unload_files in sprite_order:
                 if load_files:
+                    t0 = time.time()
                     for rf in load_files:
                         rf.load()
+                    self._sprite_encoder.count_loading(time.time() - t0)
 
                 if isinstance(sl, ResourceAction):
                     if sl in written_resources:
