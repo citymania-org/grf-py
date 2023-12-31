@@ -57,6 +57,7 @@
 - Rename some of the Action0 properties for `CARGO` to match nml.
 - Don't write redundant actions for railtypes without fallbacks in railtype table.
 - Return cargo type ids in `NewGRF.set_cargo_table`.
+- Remove `find_best_colour` (that used spectra), add `srgb_find_best_colour` and `oklab_find_best_colour` instead.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
 - lib: Fix incorrect 2cc colors for auto-articulated parts.

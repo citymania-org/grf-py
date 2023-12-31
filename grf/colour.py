@@ -153,7 +153,7 @@ def oklab_blend(source, tint, ratio=0.5):
     return source * (1 - ratio) + tint * ratio
 
 
-def find_best_colour(x, in_range=SAFE_COLOURS):
+def srgb_find_best_colour(x, in_range=SAFE_COLOURS):
     return oklab_find_best_colour(srgb_to_oklab(x), in_range=in_range)
 
 
@@ -164,3 +164,14 @@ def make_palette_image(palette, size=20):
         y = (i // 16) * size
         npimg[y:y + size, x:x + size] = c
     return Image.fromarray(npimg)
+
+
+def srgb_color_distance(c1, c2):
+    rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
+    r = c1.rgb[0] - c2.rgb[0]
+    g = c1.rgb[1] - c2.rgb[1]
+    b = c1.rgb[2] - c2.rgb[2]
+    return math.sqrt(
+        ((2 + rmean) * r * r) +
+        4 * g * g +
+        (3 - rmean) * b * b)

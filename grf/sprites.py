@@ -8,29 +8,9 @@ from PIL import Image
 
 from .common import BPP_8, BPP_24, BPP_32, np_make_writable
 from .common import ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X
-from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS
-from .colour import srgb_to_oklab, oklab_blend, oklab_find_best_colour
-
-
-def color_distance(c1, c2):
-    rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
-    r = c1.rgb[0] - c2.rgb[0]
-    g = c1.rgb[1] - c2.rgb[1]
-    b = c1.rgb[2] - c2.rgb[2]
-    return math.sqrt(
-        ((2 + rmean) * r * r) +
-        4 * g * g +
-        (3 - rmean) * b * b)
-
-
-def find_best_color(x, in_range=SAFE_COLOURS):
-    mj, md = 0, 1e100
-    for j in in_range:
-        c = SPECTRA_PALETTE[j]
-        d = color_distance(x, c)
-        if d < md:
-            mj, md = j, d
-    return mj
+from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS, WATER_COLOURS
+from .colour import srgb_to_oklab, oklab_blend, oklab_find_best_colour, srgb_find_best_colour
+from . import colour
 
 
 _remap_cache = {}
@@ -50,10 +30,10 @@ def fix_palette(img, sprite_name):
     if remap is None:
         remap = PaletteRemap()
         for i in range(len(pal) // 3):
-            color = (pal[3 * i], pal[3 * i + 1], pal[3 * i + 2])
-            res = _FIX_PALETTE_LOOKUP.get(color)
+            colour = (pal[3 * i], pal[3 * i + 1], pal[3 * i + 2])
+            res = _FIX_PALETTE_LOOKUP.get(colour)
             if res is None:
-                res = find_best_color(to_spectra(*color), in_range=ALL_COLOURS)
+                res = srgb_find_best_colour(colour, in_range=ALL_COLOURS)
             remap.remap[i] = res
         _remap_cache[pal_hash] = remap
     return remap.remap_image(img)
@@ -189,13 +169,14 @@ class PaletteRemap(Action):
         return b'\x00' + self.remap.tobytes()
 
     @classmethod
-    def from_function(cls, color_func, remap_water=False):
+    def oklab_from_function(cls, colour_func, remap_water=False):
         res = cls()
+        # TODO use numpy vector operations
         for i in SAFE_COLOURS:
-            res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
+            res.remap[i] = oklab_find_best_colour(colour_func(colour.OKLAB_PALETTE[i]))
         if remap_water:
             for i in WATER_COLOURS:
-                res.remap[i] = find_best_color(color_func(SPECTRA_PALETTE[i]))
+                res.remap[i] = oklab_find_best_colour(colour_func(colour.OKLAB_PALETTE[i]))
         return res
 
     @classmethod
