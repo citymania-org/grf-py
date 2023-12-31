@@ -276,8 +276,6 @@ class MaskMode:
 
 class Sprite(Resource):
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None):
-        if bpp == BPP_8 and mask is not None:
-            raise ValueError("8bpp sprites can't have a mask")
         super().__init__()
         self.w = w
         self.h = h
