@@ -268,7 +268,7 @@ class ClimateProperty(Property):
 
         # Preserve incorrect decompiled values
         if not (0 < value < ALL_CLIMATES):
-            return value
+            return repr(value)
 
         climates = {
             TEMPERATE: 'grf.TEMPERATE',
