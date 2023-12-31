@@ -29,8 +29,10 @@ RoadVehicle(
     name='2cc 32bpp road vehicle example',
     liveries=[{
         'name': 'Default',
-        'sprites': tmpl_rv(0, 20, lambda *args, **kw: grf.FileSprite(rv_png, *args, **kw, bpp=24,
-                                                                     mask=(rv_mask_png, 0, 0))),
+        'sprites': tmpl_rv(0, 20, lambda *args, **kw: grf.WithMask(
+            grf.FileSprite(rv_png, *args, **kw, bpp=24),
+            grf.FileSprite(rv_mask_png, *args, **kw),
+        )),
     }],
     introduction_date=date(1900, 1, 1),
     max_speed=RoadVehicle.kmhish(200),

@@ -11,6 +11,9 @@ g = grf.NewGRF(
 water_png = grf.ImageFile("sprites/water_noise.png", colourkey=(0, 0, 255))
 water_mask_png = grf.ImageFile("sprites/ogfx_water.png")
 g.add(grf.ReplaceOldSprites([(WATER_SPRITE_ID, 1)]))
-g.add(grf.FileSprite(water_png, 1, 1, 64, 31, xofs=-31, bpp=24, mask=(water_mask_png, 0, 0)))
+g.add(grf.WithMask(
+    grf.FileSprite(water_png, 1, 1, 64, 31, xofs=-31, bpp=24),
+    grf.FileSprite(water_mask_png, 1, 1, 64, 31),
+))
 g.write('water_32bpp_anim.grf')
 

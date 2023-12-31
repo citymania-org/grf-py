@@ -26,7 +26,6 @@
 - Rename `PALETTE` to `PIL_PALETTE`, add `PALETTE` as a list of (r, g, b) tuples.
 - Add `OKLAB_PALETTE`, `NP_PALETTE`, `PALETTE_IDX` constants.
 - Add `srgb_to_linear`, `linear_to_srgb`, `srgb_to_oklab`, `oklab_to_srgb` colour conversion functions.
-- Add `Mask`, `FileMask` and `ImageMask` classes to define sprite masks.
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
 - Add support for the extended format in Action1.
@@ -38,6 +37,7 @@
 - Add `subroutines` argument to `Switch` and allow `name()` call syntax.
 - Add `debug_zoom_levels` argument to `BaseNewGRF.write` to recolour sprites according to their zoom level: 4x - red, 2x - blue, 1x - green, out-2x - cyan, out-4x - yellow, out-8x - magenta.
 - Add `--debug-zoom-levels` command line argument to `build` command of `main` function.
+- Add `WithMask` sprite class to add mask layer to images.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of bridge layouts.
@@ -52,7 +52,6 @@
 - Add init_id_map command line command to initialize id_map.json.
 - Add `Date` type to represent dates that don't fit into `datetime.date`.
 - Start auto-assiged IDs from 0 for INDUSTRY_TILE feature.
-- Remove `Mask` offset, add `FileMask` absolute positioning.
 - Rename `AlternativeSprites.get_zoom` to `get_sprite` and add bpp argument.
 - Rename some of the Action0 properties for `CARGO` to match nml.
 - Don't write redundant actions for railtypes without fallbacks in railtype table.

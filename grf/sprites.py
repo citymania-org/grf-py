@@ -53,6 +53,47 @@ def convert_image(image):
     return img, BPP_24
 
 
+# Tries to get the original rgba that rgb and alpha channels were split from, returns None if not possible
+def restore_rgba_image(rgb, alpha):
+    # We rely on base of both arrays to still be the original array
+    base = rgb.base
+    if base is not alpha.base:
+        return None
+
+    ii = rgb.__array_interface__
+    ai = alpha.__array_interface__
+
+    # Check that it starts on the same pixel but skips RGB components
+    if ii['data'][0] + 3 != ai['data'][0]:
+        return None
+
+    # Check that they have the same strides (offsets to next element)
+    if ii['strides'][:2] != ai['strides'] or ii['strides'][2] != 1:
+        return None
+
+    # Check that they have the same shape
+    if ii['shape'][:2] != ai['shape'] or ii['shape'][2] != 3:
+        return None
+
+    # Check that all other metadata matches
+    if ii['descr'] != ai['descr'] or ii['typestr'] != ai['typestr'] or ii['version'] != ai['version']:
+        return None
+
+    if base.shape[:2] == alpha.shape:
+        return base
+
+    # Sanity check for crop calculation
+    if rgb.dtype != np.uint8 or alpha.dtype != np.uint8:
+        return None
+
+    sx, sy = alpha.shape
+    x, y, z = base.strides
+    flat_offset = ii['data'][0] - base.__array_interface__['data'][0]
+    ox, oy, oz = flat_offset // x, (flat_offset % x) // y, (flat_offset % y) // z
+
+    return base[ox:ox + sx, oy:oy + sy, oz:oz + 4]
+
+
 # Pseudo sprite in grf
 class Action:
     def get_data(self):
@@ -228,88 +269,15 @@ def combine_fingerprint(*args, **kw):
     return res
 
 
-class Mask:
-    class Mode:
-        DEFAULT = 0
-        OVERDRAW = 1
-
-    def __init__(self, mode=Mode.DEFAULT):
-        self.mode = mode
-
-    def get_image(self):
-        raise NotImplementedError
-
-    def get_resource_files(self):
-        raise NotImplementedError
-
-    def get_fingerprint(self):
-        return {
-            'class': self.__class__.__name__,
-            'mode': self.mode,
-        }
-
-
-class FileMask(Mask):
-    def __init__(self, file, x=0, y=0, w=None, h=None, *args, **kw):
-        assert(isinstance(file, ImageFile))
-        super().__init__(*args, **kw)
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.file = file
-
-    def get_image(self):
-        img, bpp = self.file.get_image()
-        if self.w is None or self.h is None:
-            self.w, self.h = img.size
-        img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
-        return img, bpp
-
-    def __str__(self):
-        return str(self.file.path)
-
-    def get_fingerprint(self):
-        return combine_fingerprint(
-            super().get_fingerprint(),
-            x=self.x,
-            y=self.y,
-            w=self.w,
-            h=self.h,
-        )
-
-    def get_resource_files(self):
-        return (self.file, THIS_FILE)
-
-
-class ImageMask(Mask):
-    def __init__(self, image, *args, **kw):
-        assert(isinstance(file, ImageFile))
-        super.__init__(*args, **kw)
-        self.image = image
-        self._converted_image = None
-
-    def get_image(self):
-        if self._converted_image is None:
-            self._converted_image = convert_image(self.image)
-        return self._converted_image
-
-    def __str__(self):
-        w, h = self.image.size()
-        return f'Image({w}*{h} {self.xofs:+},{self.yofs:+})'
-
-    def get_resource_files(self):
-        return (THIS_FILE,)
-
-    def get_fingerprint(self):
-        return None
+class MaskMode:
+    DEFAULT = 0
+    OVERDRAW = 1
 
 
 class Sprite(Resource):
-    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, mask=None, crop=True, name=None):
+    def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None):
         if bpp == BPP_8 and mask is not None:
             raise ValueError("8bpp sprites can't have a mask")
-        assert mask is None or isinstance(mask, Mask)
         super().__init__()
         self.w = w
         self.h = h
@@ -317,7 +285,6 @@ class Sprite(Resource):
         self.yofs = yofs
         self.zoom = zoom
         self.bpp = bpp
-        self.mask = mask
         self.crop = crop
         self._name = name
 
@@ -344,7 +311,6 @@ class Sprite(Resource):
             zoom=self.zoom,
             bpp=self.bpp,
             crop=self.crop,
-            mask=None if self.mask is None else self.mask.get_fingerprint,
         )
 
     def get_fingerprint(self):
@@ -359,25 +325,21 @@ class Sprite(Resource):
     def get_colourkey(self):
         return None
 
-    def _do_crop(self, w, h, npimg, npalpha, crop=None):
+    def _do_crop(self, w, h, rgb, alpha, mask, encoder=None):
         crop_x = crop_y = 0
-        if crop or (crop is None and self.crop):
-            if npalpha is not None:
-                cols_bitset = npalpha.any(0)
-                rows_bitset = npalpha.any(1)
-            elif len(npimg.shape) == 2:
-                cols_bitset = npimg.any(0)
-                rows_bitset = npimg.any(1)
-            elif npimg.shape[2] == 4:
-                # much faster than using where argument of np.any, see cropspeed.py
-                npcheck = npimg[:, :, 3]
-                cols_bitset = npcheck.any(0)
-                rows_bitset = npcheck.any(1)
-            elif npimg.shape[2] == 3:
-                cols_bitset = npimg.any((0, 2))
-                rows_bitset = npimg.any((1, 2))
+        if self.crop:
+            t0 = time.time()
+            if alpha is not None:
+                cols_bitset = alpha.any(0)
+                rows_bitset = alpha.any(1)
+            elif rgb is not None:
+                cols_bitset = rgb.any((0, 2))
+                rows_bitset = rgb.any((1, 2))
+            elif mask is not None:
+                cols_bitset = mask.any(0)
+                rows_bitset = mask.any(1)
             else:
-                raise RuntimeError('Unknown npimg format')
+                raise RuntimeError('All data layers are None')
 
             cols_used = np.arange(w)[cols_bitset]
             rows_used = np.arange(h)[rows_bitset]
@@ -387,17 +349,19 @@ class Sprite(Resource):
             w = max(cols_used, default=0) - crop_x + 1
             h = max(rows_used, default=0) - crop_y + 1
 
-            if npalpha is not None:
-                npalpha = npalpha[crop_y: crop_y + h, crop_x: crop_x + w]
-            if len(npimg.shape) == 2:
-                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w]
-            else:
-                npimg = npimg[crop_y: crop_y + h, crop_x: crop_x + w, :]
-        return crop_x, crop_y, w, h, npimg, npalpha
+            if rgb is not None:
+                rgb = rgb[crop_y: crop_y + h, crop_x: crop_x + w]
+            if alpha is not None:
+                alpha = alpha[crop_y: crop_y + h, crop_x: crop_x + w]
+            if mask is not None:
+                mask = mask[crop_y: crop_y + h, crop_x: crop_x + w]
+            if encoder is not None:
+                encoder.count_custom('Cropping', time.time() - t0)
+        return crop_x, crop_y, w, h, rgb, alpha, mask
+
 
     def _do_get_image(self, encoder=None):
         t0 = time.time()
-        # TODO move into get_image
         img, bpp = self.get_image()
         w, h = self.w, self.h
         if w is None:
@@ -407,19 +371,9 @@ class Sprite(Resource):
 
         if encoder:
             encoder.count_loading(time.time() - t0)
-        return w, h, img, bpp
-
-    def get_data_layers(self, encoder=None, crop=None):
-        w, h, img, bpp = self._do_get_image(encoder)
-        xofs, yofs = self.xofs, self.yofs
-
         t0 = time.time()
 
-        if self.bpp is None:
-            self.bpp = bpp
-        npalpha = None
-
-        if bpp != self.bpp:
+        if self.bpp is not None and bpp != self.bpp:
             print(f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
             if self.bpp == BPP_24:
                 img = img.convert('RGB')
@@ -429,108 +383,80 @@ class Sprite(Resource):
                 p_img = Image.new('P', (16, 16))
                 p_img.putpalette(PIL_PALETTE)
                 img = img.quantize(palette=p_img, dither=0)
+            bpp = self.bpp
         else:
             if bpp == BPP_8:
                 img = fix_palette(img, self.name)
 
         if encoder is not None:
             encoder.count_conversion(time.time() - t0)
-        t0 = time.time()
+
+        return w, h, img, bpp
+
+    def get_data_layers(self, encoder=None):
+        w, h, img, bpp = self._do_get_image(encoder)
 
         npimg = np.asarray(img)
-        colourkey = self.get_colourkey()
-        if colourkey is not None:
-            if self.bpp == BPP_24:
-                npalpha = 255 * np.any(np.not_equal(npimg, colourkey), axis=2)
-                npalpha = npalpha.astype(np.uint8, copy=False)
-            elif self.bpp == BPP_32:
-                if len(colourkey) == 3:
-                    colourkey = (*colourkey, 255)
-                npalpha = 255 * np.any(np.not_equal(npimg, colourkey), axis=2)
-                npalpha = npalpha.astype(np.uint8, copy=False)
-            else:
-                print(f'Colour key on 8bpp sprites is not supported')
-
-        crop_x, crop_y, w, h, npimg, npalpha = self._do_crop(w, h, npimg, npalpha, crop=crop)
-        xofs += crop_x
-        yofs += crop_y
-
-        if self.bpp == BPP_8:
-            npmask = npimg
-            npalpha = npimg = None
+        if bpp == BPP_32:
+            rgb = npimg[:, :, :3]
+            alpha = npimg[:, :, 3]
+            mask = None
+        elif bpp == BPP_24:
+            rgb = npimg
+            alpha = mask = None
         else:
-            assert self.bpp == BPP_24 or self.bpp == BPP_32
+            assert bpp == BPP_8
+            rgb = alpha = None
+            mask = npimg
 
-            if self.bpp == BPP_32 and npalpha is not None:
-                # Remove alpha from npimg
-                npimg = npimg[:, :, :3]
-
-            mask = self.mask
-            npmask = None
-            if mask is not None:
-                mask_img, mask_bpp = mask.get_image()
-                if mask_bpp != BPP_8:
-                    raise RuntimeError(f'Mask {mask} is not an 8bpp image')
-                mask_img = fix_palette(mask_img, mask)
-                if mask_img.size != (self.w, self.h):
-                    print(mask)
-                    raise RuntimeError(f'Mask {mask} size {mask_img.size} doesn'f't match image size {(self.w, self.h)}')
-                npmask = np.asarray(mask_img)
-                npmask = npmask[crop_y: crop_y + h, crop_x: crop_x + w]
-                if mask.mode == Mask.Mode.OVERDRAW:
-                    npimg = npimg.copy()
-                    has_mask = (npmask != 0)
-                    if npimg.shape[2] == 3:
-                        npimg[has_mask] = (DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS)
-                        if npalpha is not None:
-                            npalpha[has_mask] = 255
-                    else:
-                        npimg[has_mask] = (DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, 255)
-
-        if encoder is not None:
-            encoder.count_composing(time.time() - t0)
-
-        return w, h, xofs, yofs, npimg, npalpha, npmask
+        return w, h, rgb, alpha, mask
 
     # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
     def get_real_data(self, encoder):
-        w, h, xofs, yofs, npimg, npalpha, npmask = self.get_data_layers(encoder)
+        w, h, rgb, alpha, mask = self.get_data_layers(encoder=encoder)
+
+        # It's common to override get_data_layers so check returned layers carefully
+        if rgb is not None and rgb.shape != (h, w, 3):
+            raise RuntimeError(f'get_data_layers returned RGB layer with wrong shape: {rgb.shape}, expected ({w}, {h}, 3)')
+        if alpha is not None and alpha.shape != (h, w):
+            raise RuntimeError(f'get_data_layers returned alpha layer with wrong shape: {alpha.shape}, expected ({w}, {h})')
+        if mask is not None and mask.shape != (h, w):
+            raise RuntimeError(f'get_data_layers returned mask layer with wrong shape: {mask.shape}, expected ({w}, {h})')
+        crop_x, crop_y, w, h, rgb, alpha, mask = self._do_crop(w, h, rgb, alpha, mask, encoder=encoder)
+        xofs, yofs = self.xofs + crop_x, self.yofs + crop_y
 
         t0 = time.time()
         info_byte = 0x40
         stack = []
-        rbpp = 0
-        if npimg is not None:
-            if npimg.ndim != 3:
-                raise RuntimeError('Image layer is not a 3 dimensional array')
-            bpp = npimg.shape[2]
-            if bpp not in (3, 4):
-                raise RuntimeError('Image layer should use 3 or 4 bpp')
-            if bpp == 4:
-                if npalpha is not None:
-                    raise RuntimeError('4bpp image layer doesn''t allow separate alpha layer')
-                info_byte |= 0x2
+        bpp = 0
+        wh = w * h
+        if rgb is not None:
             info_byte |= 0x1
-            rbpp += bpp
-            stack.append(npimg.reshape(w * h, bpp))
-        if npalpha is not None:
-            if npalpha.ndim != 2:
-                raise RuntimeError('Alpha layer is not a 2-dimensional array')
+            bpp += 3
+            if alpha is None: # if both not None handle separately
+                stack.append(rgb.reshape(wh, 3))
+        if alpha is not None:
             info_byte |= 0x2
-            rbpp += 1
-            stack.append(npalpha.reshape((w * h, 1)))
-        if npmask is not None:
-            if npmask.ndim != 2:
-                raise RuntimeError('Mask layer is not a 2-dimensional array')
+            bpp += 1
+            if rgb is None:  # if both not None handle separately
+                stack.append(alpha.reshape((wh, 1)))
+        if rgb is not None and alpha is not None:
+            # Try to find original RGBA array to avoid wasting time on composing it back
+            rgba = restore_rgba_image(rgb, alpha)
+            if rgba is not None:
+                stack.append(rgba.reshape(wh, 4))
+            else:
+                stack.append(rgb.reshape(wh, 3))
+                stack.append(alpha.reshape(wh, 1))
+        if mask is not None:
             info_byte |= 0x4
-            rbpp += 1
-            stack.append(npmask.reshape((w * h, 1)))
-
+            bpp += 1
+            stack.append(mask.reshape((wh, 1)))
         if len(stack) > 1:
             raw_data = np.concatenate(stack, axis=1)
         else:
             raw_data = stack[0]
-        raw_data = raw_data.reshape(w * h * rbpp)
+        raw_data = raw_data.reshape(wh * bpp)
 
         encoder.count_composing(time.time() - t0)
         data = encoder.sprite_compress(np.ascontiguousarray(raw_data))
@@ -548,11 +474,7 @@ class Sprite(Resource):
         raise NotImplementedError
 
     def get_resource_files(self):
-        res = list(self.get_image_files())
-        if self.mask is not None:
-            res.extend(self.mask.get_resource_files())
-        res.append(THIS_FILE)
-        return tuple(res)
+        return self.get_image_files() + (THIS_FILE,)
 
     def save_gif(self, filename: str):
         DARK_BLUE_WATER = ((32,  68, 112), (36,  72, 116), (40,  76, 120), (44,  80, 124), (48,  84, 128))
@@ -655,6 +577,71 @@ class Sprite(Resource):
         frames[0].save(filename, save_all=True, append_images=frames[1:], duration=27, loop=0, optimize=False, transparency=0, dispose=1)
 
 
+class WithMask(Sprite):
+    def __init__(self, sprite, mask, name=None, mode=MaskMode.DEFAULT):
+        if mask.bpp is not None and mask.bpp != BPP_8:
+            raise ValueError('Mask is not a 8bpp sprite')
+        self.sprite = sprite
+        self.mask = mask
+        self.mode = mode
+        super().__init__(
+            self.sprite.w,
+            self.sprite.h,
+            xofs=self.sprite.xofs,
+            yofs=self.sprite.yofs,
+            zoom=self.sprite.zoom,
+            bpp=None,
+            crop=self.sprite.crop and self.mask.crop,
+            name=name,
+        )
+
+    def get_data_layers(self, encoder=None):
+        w, h, rgb, alpha, mask = self.sprite.get_data_layers()
+        mw, mh, mrgb, malpha, mmask = self.mask.get_data_layers()
+
+        t0 = time.time()
+        if w != mw or h != mh:
+            raise RuntimeError('Dimensions don''t match for sprite({w}, {h}) and mask({mw}, {mh})')
+        if mrgb is not None:
+            raise RuntimeError('Mask has an RGB layer')
+        if malpha is not None:
+            raise RuntimeError('Mask has an alpha layer')
+
+        has_mask = (mmask != 0)
+        if mask is not None:
+            mask = np_make_writable(mask)
+            mask[has_mask] = mmask[has_mask]
+        else:
+            mask = mmask
+
+        if self.mode == MaskMode.OVERDRAW:
+            if rgb is not None:
+                rgb = np_make_writable(rgb)
+                rgb[has_mask] = (DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS)
+            if alpha is not None:
+                alpha = np_make_writable(alpha)
+                alpha[has_mask] = 255
+
+        if encoder is not None:
+            encoder.count_composing(time.time() - t0)
+
+        return w, h, rgb, alpha, mask
+
+    def get_image_files(self):
+        return ()
+
+    def get_resource_files(self):
+        return super().get_resource_files() + (THIS_FILE,) + self.sprite.get_resource_files() + self.mask.get_resource_files()
+
+    def get_fingerprint(self):
+        return {
+            'class': self.__class__.__name__,
+            'sprite': self.sprite.get_fingerprint(),
+            'mask': self.mask.get_fingerprint(),
+            'mode': self.mode,
+        }
+
+
 class EmptySprite(Sprite):
     def __init__(self):
         super().__init__(1, 1)
@@ -687,7 +674,7 @@ EMPTY_SPRITE = EmptySprite()
 
 
 class ImageSprite(Sprite):
-    def __init__(self, image, *, mask=None, **kw):
+    def __init__(self, image, **kw):
         self._image = convert_image(image)
         super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
 
@@ -732,9 +719,9 @@ class ImageFile(LoadedResourceFile):
 
 
 class FileSprite(Sprite):
-    def __init__(self, file, x, y, w, h, *, bpp=None, mask=None, **kw):
+    def __init__(self, file, x, y, w, h, *, bpp=None, **kw):
         assert(isinstance(file, ImageFile))
-        super().__init__(w, h, bpp=bpp, mask=mask, **kw)
+        super().__init__(w, h, bpp=bpp, **kw)
         self.x = x
         self.y = y
         self.file = file
@@ -750,8 +737,17 @@ class FileSprite(Sprite):
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
         return img, bpp
 
-    def get_colourkey(self):
-        return self.file.colourkey
+    def get_data_layers(self, encoder=None):
+        w, h, rgb, alpha, mask = super().get_data_layers(encoder=encoder)
+        if self.file.colourkey is not None:
+            is_key = np.any(np.equal(rgb, self.file.colourkey), axis=2)
+            if np.any(is_key):
+                if alpha is None:
+                    alpha = np.full((h, w), 255, dtype=np.uint8)
+                else:
+                    alpha = np_make_writable(alpha)
+                alpha[is_key] = 0
+        return w, h, rgb, alpha, mask
 
     def get_image_files(self):
         return (self.file,)
