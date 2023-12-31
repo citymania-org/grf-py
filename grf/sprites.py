@@ -831,21 +831,21 @@ class ZoomDebugRecolourSprite(Sprite):
         self.sprite = sprite
         super().__init__(w=sprite.w, h=sprite.h, xofs=sprite.xofs, yofs=sprite.yofs, zoom=sprite.zoom, bpp=sprite.bpp)
 
-    def get_data_layers(self, encoder=None, *args, **kw):
-        w, h, xofs, yofs, ni, na, nm = self.sprite.get_data_layers(*args, encoder=encoder, **kw)
+    def get_data_layers(self, encoder=None):
+        w, h, ni, na, nm = self.sprite.get_data_layers(encoder=encoder)
 
         t0 = time.time()
 
         if ni is not None:
             ni = np_make_writable(ni)
-            ni[:, :, :3] *= self.ZOOM_DEBUG_COLOURS[self.sprite.zoom]
+            ni *= self.ZOOM_DEBUG_COLOURS[self.sprite.zoom]
         if nm is not None:
             nm = self._get_debug_recolour(self.sprite.zoom)[nm]
 
         if encoder is not None:
             encoder.count_custom('Zoom level debug recolouring', time.time() - t0)
 
-        return w, h, xofs, yofs, ni, na, nm
+        return w, h, ni, na, nm
 
     def get_image_files(self):
         return ()
