@@ -131,7 +131,7 @@ def init_id_map_func(g, grf_file, args):
 def main(g, grf_file, commands=None):
     assert isinstance(g, BaseNewGRF)
     assert isinstance(grf_file, str)
-    parser = argparse.ArgumentParser(description=g.name)
+    parser = argparse.ArgumentParser(description=getattr(g, 'name', None))
 
     # Create subparsers for different commands
     subparsers = parser.add_subparsers(title='commands', dest='command')
