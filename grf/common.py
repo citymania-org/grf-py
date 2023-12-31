@@ -1,8 +1,6 @@
 import datetime
 import struct
 
-import spectra
-
 
 ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X = range(6)
 # ZOOM_OUT_4X, ZOOM_NORMAL, , ZOOM_OUT_16X, ZOOM_OUT_32X = range(6)

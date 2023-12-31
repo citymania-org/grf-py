@@ -8,7 +8,7 @@ from PIL import Image
 
 from .common import BPP_8, BPP_24, BPP_32, np_make_writable
 from .common import ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X
-from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, to_spectra, SPECTRA_PALETTE, WIN_TO_DOS, DEFAULT_BRIGHTNESS, WATER_COLOURS
+from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, WIN_TO_DOS, DEFAULT_BRIGHTNESS, WATER_COLOURS
 from .colour import srgb_to_oklab, oklab_blend, oklab_find_best_colour, srgb_find_best_colour
 from . import colour
 

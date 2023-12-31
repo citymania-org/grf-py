@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from .common import ZOOM_4X, ZOOM_2X, ZOOM_NORMAL
-from .colour import to_spectra, PALETTE, srgb_find_best_colour
+from .colour import PALETTE, srgb_find_best_colour
 from .sprites import ImageSprite, convert_image, PaletteRemap
 
 
@@ -41,8 +41,8 @@ class VoxReader:
         vox_palette = np.concatenate(([0, 0, 0, 0], vox_palette))
         vox_palette.shape = (256, 4)
         self.vox_palette = vox_palette
-        self.palette = [to_spectra(r, g, b) for r, g, b, _ in vox_palette]
-        self.ttd_palette = [srgb_find_best_colour(c) for c in self.palette]
+        self.palette = [srgb_to_oklab((r, g, b)) for r, g, b, _ in vox_palette]
+        self.ttd_palette = [oklab_find_best_colour(c) for c in self.palette]
 
     def read(self):
         with open(self.path, 'rb') as f:

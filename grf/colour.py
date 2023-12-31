@@ -1,7 +1,6 @@
 from typing import Any
 
 import numpy as np
-import spectra  # TODO remove in favor of oklab stuff
 from PIL import Image
 
 
@@ -70,7 +69,6 @@ WIN_TO_DOS = [
 LAZY_CONSTANT_GENERATORS = {
     'OKLAB_PALETTE': lambda: np.array([srgb_to_oklab(c) for c in PALETTE]),
     'NP_PALETTE': lambda: np.array(PALETTE),
-    'SPECTRA_PALETTE': lambda: {i:to_spectra(*PALETTE[i]) for i in range(256)},
     'PALETTE_IDX': lambda: {p: i for i, p in enumerate(PALETTE)},
 }
 _LAZY_CONSTANTS = {}
@@ -85,9 +83,6 @@ def __getattr__(name: str) -> Any:
             _LAZY_CONSTANTS[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-to_spectra = lambda r, g, b: spectra.rgb(float(r) / 255., float(g) / 255., float(b) / 255.)
 
 
 def srgb_to_linear(rgb):
