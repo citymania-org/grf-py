@@ -354,7 +354,7 @@ class Sprite(Resource):
             if mask is not None:
                 mask = mask[crop_y: crop_y + h, crop_x: crop_x + w]
             if encoder is not None:
-                encoder.count_custom('Cropping', time.time() - t0)
+                encoder.count_custom('Cropping sprites', time.time() - t0)
         return crop_x, crop_y, w, h, rgb, alpha, mask
 
 
@@ -674,7 +674,7 @@ EMPTY_SPRITE = EmptySprite()
 class ImageSprite(Sprite):
     def __init__(self, image, **kw):
         self._image = convert_image(image)
-        super().__init__(*self._image[0].size, bpp=self._image[1], mask=mask, **kw)
+        super().__init__(*self._image[0].size, bpp=self._image[1], **kw)
 
     def get_fingerprint(self):
         return None
