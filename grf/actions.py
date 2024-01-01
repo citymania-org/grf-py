@@ -1617,7 +1617,7 @@ class CodeContext:
         return register
 
     def release_register(self, register):
-        self.used_registers.remove(register)
+        self._used_registers.remove(register)
         self._min_register = min(self._min_register, register)
 
     def reserve_variable(self, name):
