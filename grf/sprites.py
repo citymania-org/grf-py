@@ -626,7 +626,7 @@ class WithMask(Sprite):
             xofs=self.sprite.xofs,
             yofs=self.sprite.yofs,
             zoom=self.sprite.zoom,
-            bpp=None,
+            bpp=self.sprite.bpp,
             crop=self.sprite.crop and self.mask.crop,
             name=name,
         )
