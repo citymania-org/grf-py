@@ -710,7 +710,6 @@ class ImageFile(LoadedResourceFile):
             self._image[0].close()
             self._image = None
 
-
     def get_image(self):
         self.load()
         return self._image
@@ -738,13 +737,13 @@ class FileSprite(Sprite):
     def get_data_layers(self, encoder=None):
         w, h, rgb, alpha, mask = super().get_data_layers(encoder=encoder)
         if self.file.colourkey is not None:
-            is_key = np.any(np.equal(rgb, self.file.colourkey), axis=2)
-            if np.any(is_key):
+            mask = np.all(np.equal(rgb, self.file.colourkey), axis=2)
+            if np.any(mask):
                 if alpha is None:
                     alpha = np.full((h, w), 255, dtype=np.uint8)
                 else:
                     alpha = np_make_writable(alpha)
-                alpha[is_key] = 0
+                alpha[mask] = 0
         return w, h, rgb, alpha, mask
 
     def get_image_files(self):
