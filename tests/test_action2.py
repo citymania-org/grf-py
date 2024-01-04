@@ -11,7 +11,7 @@ def hex_eq(value, result):
 
 
 def check_action(action, result):
-	encoded = action._encode()
+	encoded = action.get_data(grf.WriteContext())
 	hex_eq(encoded, result)
 
 
@@ -30,9 +30,10 @@ def test_switch_var_param():
 
 def check_code(feature, code, result):
 	ast = parse_code(feature, code)
+	context = grf.actions.CodeContext(subroutines={}, register=0x80)
 	eq_(len(ast), len(result))
 	for a, r in zip(ast, result):
-		is_value, data = a.compile(register=0x80)
+		is_value, data = a.compile(context)
 		eq_(is_value, r[0])
 		hex_eq(data, r[1])
 

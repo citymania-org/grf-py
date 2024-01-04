@@ -17,14 +17,15 @@ _remap_cache = {}
 _FIX_PALETTE_LOOKUP = {PALETTE[i]: i for i in ALL_COLOURS}
 
 
-def fix_palette(img, sprite_name):
+def fix_palette(obj, context, img, sprite_name):
     assert (img.mode == 'P')  # TODO
     pal = tuple(img.getpalette())
     if pal == PIL_PALETTE: return img
-    print(f'Custom palette in sprite {sprite_name}, converting...')
-    # for i in range(256):
-    #     if tuple(pal[i * 3: i*3 + 3]) != PALETTE[i * 3: i*3 + 3]:
-    #         print(i, pal[i * 3: i*3 + 3], PALETTE[i * 3: i*3 + 3])
+
+    context.warning('sprite-palette-conversion', obj, f'Sprite required palette conversion')
+
+    timer = context.start_timer()
+
     pal_hash = hash(pal)
     remap = _remap_cache.get(pal_hash)
     if remap is None:
@@ -36,11 +37,9 @@ def fix_palette(img, sprite_name):
                 res = srgb_find_best_colour(colour, in_range=ALL_COLOURS)
             remap.remap[i] = res
         _remap_cache[pal_hash] = remap
-    return remap.remap_image(img)
-
-
-def open_image(filename, *args, **kw):
-    return fix_palette(Image.open(filename, *args, **kw), filename)
+    res = remap.remap_image(img)
+    timer.count_custom('Custom palette conversion')
+    return res
 
 
 def convert_image(image):
@@ -96,12 +95,12 @@ def restore_rgba_image(rgb, alpha):
 
 # Pseudo sprite in grf
 class Action:
-    def get_data(self):
+    def get_data(self, context):
         raise NotImplemented
 
 
 class FakeAction:
-    def get_data(self):
+    def get_data(self, context):
         return b't'
 
 
@@ -110,7 +109,7 @@ class ResourceAction(Action):
     def __init__(self):
         self.sprite_id = None
 
-    def get_data(self):
+    def get_data(self, context):
         return struct.pack('<I', self.sprite_id)
 
     def get_resources(self):
@@ -206,7 +205,7 @@ class PaletteRemap(Action):
         if ranges:
             self.set_ranges(ranges)
 
-    def get_data(self):
+    def get_data(self, context):
         return b'\x00' + self.remap.tobytes()
 
     @classmethod
@@ -323,10 +322,10 @@ class Sprite(Resource):
     def get_colourkey(self):
         return None
 
-    def _do_crop(self, w, h, rgb, alpha, mask, encoder=None):
+    def _do_crop(self, context, w, h, rgb, alpha, mask):
         crop_x = crop_y = 0
         if self.crop:
-            t0 = time.time()
+            timer = context.start_timer()
             if alpha is not None:
                 cols_bitset = alpha.any(0)
                 rows_bitset = alpha.any(1)
@@ -337,7 +336,7 @@ class Sprite(Resource):
                 cols_bitset = mask.any(0)
                 rows_bitset = mask.any(1)
             else:
-                raise RuntimeError('All data layers are None')
+                raise context.log_error('sprite-no-layers', self, 'All data layers are None')
 
             cols_used = np.arange(w)[cols_bitset]
             rows_used = np.arange(h)[rows_bitset]
@@ -353,13 +352,14 @@ class Sprite(Resource):
                 alpha = alpha[crop_y: crop_y + h, crop_x: crop_x + w]
             if mask is not None:
                 mask = mask[crop_y: crop_y + h, crop_x: crop_x + w]
-            if encoder is not None:
-                encoder.count_custom('Cropping sprites', time.time() - t0)
+
+            timer.count_custom('Cropping sprites')
+
         return crop_x, crop_y, w, h, rgb, alpha, mask
 
+    def _do_get_image(self, context):
+        timer = context.start_timer()
 
-    def _do_get_image(self, encoder=None):
-        t0 = time.time()
         img, bpp = self.get_image()
         w, h = self.w, self.h
         if w is None:
@@ -367,12 +367,10 @@ class Sprite(Resource):
         if h is None:
             h = img.size[1]
 
-        if encoder:
-            encoder.count_loading(time.time() - t0)
-        t0 = time.time()
+        timer.count_loading()
 
         if self.bpp is not None and bpp != self.bpp:
-            print(f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
+            context.log_warning('sprite-bpp-mismatch', self, f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
             if self.bpp == BPP_24:
                 img = img.convert('RGB')
             elif self.bpp == BPP_32:
@@ -384,15 +382,14 @@ class Sprite(Resource):
             bpp = self.bpp
         else:
             if bpp == BPP_8:
-                img = fix_palette(img, self.name)
+                img = fix_palette(self, context, img, self.name)
 
-        if encoder is not None:
-            encoder.count_conversion(time.time() - t0)
+        timer.count_conversion()
 
         return w, h, img, bpp
 
-    def get_data_layers(self, encoder=None):
-        w, h, img, bpp = self._do_get_image(encoder)
+    def get_data_layers(self, context):
+        w, h, img, bpp = self._do_get_image(context)
 
         npimg = np.asarray(img)
         if bpp == BPP_32:
@@ -410,20 +407,21 @@ class Sprite(Resource):
         return w, h, rgb, alpha, mask
 
     # https://github.com/OpenTTD/grfcodec/blob/master/docs/grf.txt
-    def get_real_data(self, encoder):
-        w, h, rgb, alpha, mask = self.get_data_layers(encoder=encoder)
+    def get_real_data(self, context):
+        w, h, rgb, alpha, mask = self.get_data_layers(context)
 
         # It's common to override get_data_layers so check returned layers carefully
         if rgb is not None and rgb.shape != (h, w, 3):
-            raise RuntimeError(f'get_data_layers returned RGB layer with wrong shape: {rgb.shape}, expected ({w}, {h}, 3)')
+            raise context.log_error('sprite-rgb-shape', self, f'get_data_layers returned RGB layer with wrong shape: {rgb.shape}, expected ({w}, {h}, 3)')
         if alpha is not None and alpha.shape != (h, w):
-            raise RuntimeError(f'get_data_layers returned alpha layer with wrong shape: {alpha.shape}, expected ({w}, {h})')
+            raise context.log_error('sprite-alpha-shape', self, f'get_data_layers returned alpha layer with wrong shape: {alpha.shape}, expected ({w}, {h})')
         if mask is not None and mask.shape != (h, w):
-            raise RuntimeError(f'get_data_layers returned mask layer with wrong shape: {mask.shape}, expected ({w}, {h})')
-        crop_x, crop_y, w, h, rgb, alpha, mask = self._do_crop(w, h, rgb, alpha, mask, encoder=encoder)
+            raise context.log_error('sprite-mask-shape', self, f'get_data_layers returned mask layer with wrong shape: {mask.shape}, expected ({w}, {h})')
+        crop_x, crop_y, w, h, rgb, alpha, mask = self._do_crop(context, w, h, rgb, alpha, mask)
         xofs, yofs = self.xofs + crop_x, self.yofs + crop_y
 
-        t0 = time.time()
+        timer = context.start_timer()
+
         info_byte = 0x40
         stack = []
         bpp = 0
@@ -456,8 +454,9 @@ class Sprite(Resource):
             raw_data = stack[0]
         raw_data = raw_data.reshape(wh * bpp)
 
-        encoder.count_composing(time.time() - t0)
-        data = encoder.sprite_compress(np.ascontiguousarray(raw_data))
+        timer.count_composing()
+
+        data = context.sprite_compress(np.ascontiguousarray(raw_data))
         return struct.pack(
             '<BBHHhh',
             info_byte,
@@ -593,17 +592,18 @@ class WithMask(Sprite):
             name=name,
         )
 
-    def get_data_layers(self, encoder=None):
-        w, h, rgb, alpha, mask = self.sprite.get_data_layers()
-        mw, mh, mrgb, malpha, mmask = self.mask.get_data_layers()
+    def get_data_layers(self, context):
+        w, h, rgb, alpha, mask = self.sprite.get_data_layers(context)
+        mw, mh, mrgb, malpha, mmask = self.mask.get_data_layers(context)
 
-        t0 = time.time()
+        timer = context.start_timer()
+
         if w != mw or h != mh:
-            raise RuntimeError('Dimensions don''t match for sprite({w}, {h}) and mask({mw}, {mh})')
+            raise context.log_error('with-mask-dimensions-mismatch', self, f'Dimensions don''t match for sprite({w}, {h}) and mask({mw}, {mh})')
         if mrgb is not None:
-            raise RuntimeError('Mask has an RGB layer')
+            raise context.log_error('with-mask-has-rgb', self, 'Mask has an RGB layer')
         if malpha is not None:
-            raise RuntimeError('Mask has an alpha layer')
+            raise context.log_error('with-mask-has-alpha', self, 'Mask has an alpha layer')
 
         has_mask = (mmask != 0)
         if mask is not None:
@@ -620,8 +620,7 @@ class WithMask(Sprite):
                 alpha = np_make_writable(alpha)
                 alpha[has_mask] = 255
 
-        if encoder is not None:
-            encoder.count_composing(time.time() - t0)
+        timer.count_composing()
 
         return w, h, rgb, alpha, mask
 
@@ -647,7 +646,7 @@ class EmptySprite(Sprite):
     def draw(self, img):
         pass
 
-    def get_real_data(self, encoder):
+    def get_real_data(self, context):
         return struct.pack(
             '<BBHHhhBB',
             0x4,
@@ -734,16 +733,16 @@ class FileSprite(Sprite):
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
         return img, bpp
 
-    def get_data_layers(self, encoder=None):
-        w, h, rgb, alpha, mask = super().get_data_layers(encoder=encoder)
+    def get_data_layers(self, context):
+        w, h, rgb, alpha, mask = super().get_data_layers(context)
         if self.file.colourkey is not None:
-            ckmask = np.all(np.equal(rgb, self.file.colourkey), axis=2)
-            if np.any(ckmask):
+            is_key = np.all(np.equal(rgb, self.file.colourkey), axis=2)
+            if np.any(is_key):
                 if alpha is None:
                     alpha = np.full((h, w), 255, dtype=np.uint8)
                 else:
                     alpha = np_make_writable(alpha)
-                alpha[ckmask] = 0
+                alpha[is_key] = 0
         return w, h, rgb, alpha, mask
 
     def get_image_files(self):
@@ -765,7 +764,7 @@ class RAWSound(Sound):
             file = SoundFile(file)
         self.file = file
 
-    def get_real_data(self, encoder):
+    def get_real_data(self, context):
         data = open(self.file.path, 'rb').read()
         name = os.path.basename(self.file.path).encode()
         if len(name) > 256:
@@ -829,10 +828,10 @@ class ZoomDebugRecolourSprite(Sprite):
         self.sprite = sprite
         super().__init__(w=sprite.w, h=sprite.h, xofs=sprite.xofs, yofs=sprite.yofs, zoom=sprite.zoom, bpp=sprite.bpp)
 
-    def get_data_layers(self, encoder=None):
-        w, h, ni, na, nm = self.sprite.get_data_layers(encoder=encoder)
+    def get_data_layers(self, context):
+        w, h, ni, na, nm = self.sprite.get_data_layers(context)
 
-        t0 = time.time()
+        timer = context.start_timer()
 
         if ni is not None:
             ni = np_make_writable(ni)
@@ -840,8 +839,7 @@ class ZoomDebugRecolourSprite(Sprite):
         if nm is not None:
             nm = self._get_debug_recolour(self.sprite.zoom)[nm]
 
-        if encoder is not None:
-            encoder.count_custom('Zoom level debug recolouring', time.time() - t0)
+        timer.count_custom('Zoom level debug recolouring')
 
         return w, h, ni, na, nm
 

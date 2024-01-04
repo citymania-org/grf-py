@@ -14,6 +14,7 @@ from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HO
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
 from .sprites import Action, Sound, FakeAction
+from .exceptions import FormatError
 
 
 class Ref:
@@ -1335,7 +1336,7 @@ class DefineMultiple(Action):
         assert len(value) == 4, (len(value), value)
         return value
 
-    def _encode_value(self, value, fmt):
+    def _encode_value(self, context, value, fmt):
         if isinstance(fmt, Property):
             return fmt.encode(value)
         if fmt == 'B': return struct.pack('<B', value)
@@ -1346,14 +1347,19 @@ class DefineMultiple(Action):
         if fmt == 'B*': return struct.pack('<BH', 255, value)
         if fmt == 'n*B':
             if isinstance(value, bytes):
-                assert len(value) < 256, len(value)
+                if len(value) >= 256:
+                    context.format_error(self, f'Too many bytes ({len(value)}) for property format n*B (max 255)')
                 return struct.pack('<B', len(value)) + value
             elif isinstance(value, list):
-                assert len(value) < 256, len(value)
-                assert all(isinstance(x, int) for x in value)
+                if len(value) >= 256:
+                    context.format_error(self, f'Too many items ({len(value)}) for property format n*B (max 255)')
+                fail = next((isinstance(x, int) and 0 <= x <= 255 for x in value), None)
+                if fail is not None:
+                    context.format_error(self, f'Items should be integers in range(0, 256) for property format n*B (max 255), found {fail}')
                 return struct.pack('<B', len(value)) + bytes(value)
         if fmt == '2*L':
-            assert isinstance(value, tuple), type(value)
+            if not isinstance(value, tuple):
+                raise FormatError(self, )
             assert len(value) == 2, (len(value), value)
             return self._encode_label(value[0]) + self._encode_label(value[1])
         if fmt == 'n*L':
@@ -1363,7 +1369,7 @@ class DefineMultiple(Action):
             return res
         raise RuntimeError(f'Unsupported property format `{fmt}`')
 
-    def get_data(self):
+    def get_data(self, context):
         res = struct.pack('<BBBBBH',
             0, self.feature.id, len(self.props), self.count, 255, self.first_id)
         pdict = ACTION0_PROP_DICT[self.feature]
@@ -1372,9 +1378,9 @@ class DefineMultiple(Action):
             res += bytes((code,))
             for i in range(self.count):
                 try:
-                    res += self._encode_value(value[i], fmt)
+                    res += self._encode_value(context, value[i], fmt)
                 except Exception as e:
-                    raise RuntimeError(f'Error encoding value {value[i]} for property {prop} with format `{fmt}`: {e}')
+                    raise context.log_error(self, f'Error encoding value {value[i]} for property {prop} with format `{fmt}`: {e}')
         return res
 
     def py(self, context):
@@ -1433,7 +1439,7 @@ class Action1(Action):
         self.sprite_count = sprite_count
         self.first_set = first_set
 
-    def get_data(self):
+    def get_data(self, context):
         if self.set_count <= 255 and self.first_set is None:
             # Basic format
             return struct.pack('<BBBBH', 0x01,
@@ -1480,10 +1486,7 @@ class GenericSpriteLayout(Action, ReferenceableAction):
         self.ent1 = ent1
         self.ent2 = ent2
 
-    def get_data_size(self):
-        return 5 + 2 * (len(self.ent1) + len(self.ent2))
-
-    def get_data(self):
+    def get_data(self, context):
         return struct.pack(
             '<BBBBB' + 'H' * (len(self.ent1) + len(self.ent2)),
             0x02,
@@ -1515,7 +1518,7 @@ class BasicSpriteLayout(Action, ReferenceableAction):
         self.ground = ground
         self.building = building
 
-    def get_data(self):
+    def get_data(self, context):
         return struct.pack('<BBBBIIbbBBB', 0x02, self.feature.id, self.ref_id, 0,
                            self.ground['sprite'].to_grf(global_if_flagged=False),
                            self.building['sprite'].to_grf(global_if_flagged=False),
@@ -1574,7 +1577,7 @@ class AdvancedSpriteLayout(Action, ReferenceableAction):
                 res += bytes((val, ))
         return res
 
-    def get_data(self):
+    def get_data(self, context):
         res = struct.pack('<BBBB', 0x02, self.feature.id, self.ref_id, len(self.buildings) + 0x40)
         res += self._encode_sprite(self.ground)
         for s in self.buildings:
@@ -1706,7 +1709,7 @@ class Switch(Action, ReferenceableAction, ReferencingAction):
     def __str__(self):
         return str(self.ref_id)
 
-    def get_data(self):
+    def get_data(self, context):
         context = CodeContext(subroutines=self.subroutines, register=0x80)
         res = bytes((0x02, self.feature.id, self.ref_id, 0x8a if self.related_scope else 0x89))
         ast = self.parsed_code
@@ -1789,7 +1792,7 @@ class RandomSwitch(Action, ReferenceableAction, ReferencingAction):
     def set_refs(self, refs):
         self.groups = refs
 
-    def get_data(self):
+    def get_data(self, context):
         atype = {'self': 0x80, 'parent': 0x83, 'relative': 0x84}[self.scope]
         res = bytes((0x02, self.feature.id, self.ref_id, atype))
         if self.scope == 'relative' and self.feature not in VEHICLE_FEATURES:
@@ -1835,7 +1838,7 @@ class IndustryProductionCallback(Action):
         self.outputs = outputs
         self.do_again = do_again
 
-    def get_data(self):
+    def get_data(self, context):
         inputs = self.inputs
         outputs = self.outputs
         if self.version == 0:
@@ -1887,7 +1890,7 @@ class Action3(Action, ReferencingAction):
         for i, k in enumerate(self.maps.keys()):
             self.maps[k] = refs[i]
 
-    def get_data(self):
+    def get_data(self, context):
         idcount = len(self.ids)
         mcount = len(self.maps)
         if idcount == 0:
@@ -1971,16 +1974,7 @@ class DefineStrings(Action):
         self.is_generic_offset = is_generic_offset
         self.strings = strings
 
-    def get_data_size(self):
-        str_size = max(1, sum(len(s) + 1 for s in self.strings))
-        if self.is_generic_offset:
-            return 6 + str_size
-        elif self.feature in VEHICLE_FEATURES and self.offset >= 0xff:
-            return 7 + str_size
-        else:
-            return 5 + str_size
-
-    def get_data(self):
+    def get_data(self, context):
         str_data = b'\0'.join(self.strings) + b'\0'
         if self.is_generic_offset:
             return struct.pack('<BBBBH', 0x04, self.feature.id, self.lang | 0x80, len(self.strings), self.offset) + str_data
@@ -2022,7 +2016,7 @@ class ReplaceNewSprites(Action):
         self.count = count
         self.offset = offset
 
-    def get_data(self):
+    def get_data(self, context):
         if self.offset is None:
             return bytes((0x5,)) + struct.pack('<BBH', self.set_type, 0xff, self.count)
         return bytes((0x5,)) + struct.pack('<BBHBH', self.set_type | 0x80, 0xff, self.count, 0xff, self.offset)
@@ -2038,7 +2032,7 @@ class ModifySprites(Action):
         super().__init__()
         self.params = params
 
-    def get_data(self):
+    def get_data(self, context):
         return struct.pack(
             '<B' + 'BBBH' * len(self.params) + 'B',
             0x06,
@@ -2064,7 +2058,7 @@ class If(Action):
         self.value = value
         self.skip = skip
 
-    def get_data(self):
+    def get_data(self, context):
         varsize = self.varsize if self.varsize is not None else len(self.value)
         res = bytes((0x09 if self.is_static else 0x07, self.variable, varsize, self.condition))
         if isinstance(self.value, bytes):
@@ -2119,11 +2113,8 @@ class SetDescription(Action):
             self.format_version == action.format_version
         )
 
-    def get_data(self):
+    def get_data(self, context):
         return self._data
-
-    def get_data_size(self):
-        return len(self._data)
 
     def py(self, context):
         return f'''
@@ -2149,11 +2140,8 @@ class ReplaceOldSprites(Action):
         super().__init__()
         self.sets = sets
 
-    def get_data(self):
+    def get_data(self, context):
         return bytes((0xa, len(self.sets))) + b''.join(struct.pack('<BH', num, first) for first, num in self.sets)
-
-    def get_data_size(self):
-        return 2 + 3 * len(self.sets)
 
     def py(self, context):
         return f'ReplaceOldSprites(sets={self.sets!r})'
@@ -2175,7 +2163,7 @@ class ErrorMessage(Action):
         self.text_param = text_param
         self.params = params or []
 
-    def get_data(self):
+    def get_data(self, context):
         message_id = self.message if isinstance(self.message, int) else 0xFF
         data = bytes((0x0B, self.severity, self.lang, message_id))
         if message_id == 0xFF:
@@ -2206,7 +2194,7 @@ class Comment(Action):
         super().__init__()
         self.data = data
 
-    def get_data(self):
+    def get_data(self, context):
         return bytes((0x0C)) + self.data
 
     def py(self, context):
@@ -2226,7 +2214,7 @@ class ComputeParameters(Action):
             self.source2 = source2
             self.value = value
 
-    def get_data(self):
+    def get_data(self, context):
         operation_byte = self.operation | 0x80 * self.if_undefined
         res = bytes((0x0D, self.target, operation_byte, self.source1, self.source2))
         if self.source1 == 0xff or self.source2 == 0xff:
@@ -2263,7 +2251,7 @@ class Label(Action):
         self.label = label
         self.comment = comment
 
-    def get_data(self):
+    def get_data(self, context):
         return bytes((0x10, self.label)) + self.comment
 
     def py(self, context):
@@ -2277,7 +2265,7 @@ class SoundEffects(Action):
         super().__init__()
         self.count = count
 
-    def get_data(self):
+    def get_data(self, context):
         return struct.pack('<BH', 0x11, self.count)
 
     def py(self, context):
@@ -2290,7 +2278,7 @@ class ImportSound(Action):
         self.grfid = grfid
         self.number = number
 
-    def get_data(self):
+    def get_data(self, context):
         return b'\xFE\x00' + self.grfid + struct.pack('<H', self.number)
 
     def py(self, context):
@@ -2305,7 +2293,7 @@ class UnicodeGlyphs(Action):
         super().__init__()
         self.glyphs = []
 
-    def get_data(self):
+    def get_data(self, context):
         data = bytes((0x12, len(self.glyphs)))
         for g in self.glyphs:
             data += struct.pack('<BBH', g['font'], g['count'], g['base'])
@@ -2331,7 +2319,7 @@ class Translations(Action):
                 assert isinstance(s, str), type(s)
                 self.strings.append(s.encode('utf-8'))
 
-    def get_data(self):
+    def get_data(self, context):
         res = bytes((0x13,)) + self.grfid
         str_data = b'\0'.join(self.strings) + b'\0'
         res += struct.pack('<BBH', self.lang, len(self.strings), self.offset) + str_data
@@ -2361,7 +2349,7 @@ class SetProperties(Action):
             self.props == action.props
         )
 
-    def get_data(self):
+    def get_data(self, context):
         data = b'\x14'
 
         def rec(k, v):

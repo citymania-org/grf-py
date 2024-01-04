@@ -60,7 +60,7 @@ class SpriteSheet:
 
 
 class DummySprite(Action):
-    def get_data(self):
+    def get_data(self, context):
         return b'\x00'
 
 
@@ -95,46 +95,102 @@ class Timer:
         print(f'{t - self.t:.02f}')
 
 
-class SpriteEncoder:
+class WriteContext:
+    class MessageType:
+        FORMAT = 0  # grf format limitation
+        SANITY = 1  # techically allowed by format but nonsensical values
+        WARNING = 2  # general warning
+        ERROR = 3  # fatal errors
+
+    class Timer:
+        def __init__(self, encoder):
+            self.encoder = encoder
+            self.loading_time = 0
+            self.conversion_time = 0
+            self.composing_time = 0
+            self.compression_time = 0
+            self.custom_time = defaultdict(int)
+            self.time = time.time()
+
+        def start(self):
+            self.time = time.time()
+            return self
+
+        def count_loading(self):
+            now = time.time()
+            self.loading_time += now - self.time
+            self.time = now
+
+        def count_conversion(self):
+            now = time.time()
+            self.conversion_time += now - self.time
+            self.time = now
+
+        def count_composing(self):
+            now = time.time()
+            self.composing_time += now - self.time
+            self.time = now
+
+        def count_custom(self, category):
+            now = time.time()
+            self.custom_time[category] += now - self.time
+            self.time = now
+
+        def print_time_report(self):
+            print(f'   Resource loading: {self.loading_time:.02f}')
+            print(f'   Graphics conversion: {self.conversion_time:.02f}')
+            print(f'   Graphics composing: {self.composing_time:.02f}')
+            for cat, time in self.custom_time.items():
+                print(f'   {cat}: {time:.02f}')
+            print(f'   Graphics compression: {self.compression_time:.02f}')
+
+
     def __init__(self):
         self._nml = nml.spriteencoder.SpriteEncoder(True, False, None)
-        self.loading_time = 0
-        self.conversion_time = 0
-        self.composing_time = 0
-        self.compression_time = 0
-        self.custom_time = defaultdict(int)
         self.num_sprites = 0
         self.num_cached = 0
         self.num_uncacheable = 0
         self.num_duplicate = 0
+        self.messages = []
+        self.timer = self.Timer(self)
 
-    def count_loading(self, t):
-        self.loading_time += t
+    def failure(self, obj, message):
+        # self.messages.append((MessageType.ERROR, code, obj, message))
+        return RuntimeError(message)
 
-    def count_conversion(self, t):
-        self.conversion_time += t
+    def format_error(self, obj, message):
+        # self.messages.append((MessageType.FORMAT, code, obj, message))
+        return ValueError(message)
 
-    def count_composing(self, t):
-        self.composing_time += t
+    def sanity_warning(self, code, obj, message):
+        self.messages.append((self.MessageType.SANITY, code, obj, message))
 
-    def count_custom(self, category, t):
-        self.custom_time[category] += t
+    def warning(self, code, obj, message):
+        self.messages.append((self.MessageType.WARNING, code, obj, message))
+
+    def start_timer(self):
+        return self.timer.start()
 
     def sprite_compress(self, raw_data):
         t0 = time.time()
         res = self._nml.sprite_compress(raw_data)
-        self.compression_time += time.time() - t0
+        self.timer.compression_time += time.time() - t0
         return res
 
-    def print_time_report(self):
-        print(f'   Resource loading: {self.loading_time:.02f}')
-        print(f'   Graphics conversion: {self.conversion_time:.02f}')
-        print(f'   Graphics composing: {self.composing_time:.02f}')
-        for cat, time in self.custom_time.items():
-            print(f'   {cat}: {time:.02f}')
-        print(f'   Graphics compression: {self.compression_time:.02f}')
+    def print_report(self):
+        self.timer.print_time_report()
+        scount = wcount = 0
+        for mt, code, obj, message in self.messages:
+            if mt == self.MessageType.SANITY:
+                wcode = f's-{code}'
+                scount += 1
+            elif mt == self.MessageType.WARNING:
+                wcode = f'w-{code}'
+                wcount += 1
+            print(f'WARNING in {obj}: {message} [{wcode}]')
+        if wcount + scount > 0:
+            print(f'Total warnings: {wcount + scount}')
         print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
-
 
 class BaseNewGRF:
     def __init__(self, *, strings=None, id_map_file=None, sprite_cache_path='.cache'):
@@ -142,7 +198,7 @@ class BaseNewGRF:
         self._next_sound_id = 73
         self._sounds = {}
         self.strings = StringManager() if strings is None else strings
-        self._sprite_encoder = SpriteEncoder()
+        self._context = WriteContext()
         self._id_map = IDMap(id_map_file)
         self.sprite_cache_path = sprite_cache_path
 
@@ -493,9 +549,9 @@ class BaseNewGRF:
             resource_references = defaultdict(list)
             for s in sprites:
                 if isinstance(s, ResourceAction):
-                    resource_references[s.sprite_id].append(self._write_pseudo_sprite(f, s.get_data(), grf_type=0xfd))
+                    resource_references[s.sprite_id].append(self._write_pseudo_sprite(f, s.get_data(self._context), grf_type=0xfd))
                 else:
-                    self._write_pseudo_sprite(f, s.get_data(), grf_type=0xff)
+                    self._write_pseudo_sprite(f, s.get_data(self._context), grf_type=0xff)
 
             data_offset = f.tell() - data_offset_pos
             f.write(b'\x00\x00\x00\x00')
@@ -534,15 +590,15 @@ class BaseNewGRF:
                 if sprite_data is not None:
                     data = sprite_cache.get(sprite_data)
                     if data is None:
-                        data = s.get_real_data(self._sprite_encoder)
+                        data = s.get_real_data(self._context)
                         sprite_cache.set(sprite_data, data)
                     else:
-                        self._sprite_encoder.num_cached += 1
+                        self._context.num_cached += 1
                 else:
-                    data = s.get_real_data(self._sprite_encoder)
-                    self._sprite_encoder.num_uncacheable += 1
+                    data = s.get_real_data(self._context)
+                    self._context.num_uncacheable += 1
 
-                self._sprite_encoder.num_sprites += 1
+                self._context.num_sprites += 1
                 return data
 
             renumerate_sprites = {}
@@ -550,10 +606,10 @@ class BaseNewGRF:
             written_resources = set()
             for sl, load_files, unload_files in sprite_order:
                 if load_files:
-                    t0 = time.time()
+                    timer = self._context.start_timer()
                     for rf in load_files:
                         rf.load()
-                    self._sprite_encoder.count_loading(time.time() - t0)
+                    timer.count_loading()
 
                 if isinstance(sl, ResourceAction):
                     if sl in written_resources:
@@ -594,12 +650,12 @@ class BaseNewGRF:
                     f.seek(ofs)
                     f.write(struct.pack('<I', v))
 
-            self._sprite_encoder.num_duplicate = len(renumerate_sprites)
+            self._context.num_duplicate = len(renumerate_sprites)
 
         sprite_cache.save()
         self._id_map.save()
         t.stop()
-        self._sprite_encoder.print_time_report()
+        self._context.print_report()
         print(f'Generated grf size: {byte_size_format(file_size)}')
 
         watched = set()

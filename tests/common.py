@@ -3,7 +3,7 @@ import os
 
 from nose.tools import eq_
 
-from grf import BaseNewGRF, hex_str
+from grf import BaseNewGRF, hex_str, WriteContext
 
 
 def _do_check_grf(newgrf, expected):
@@ -61,6 +61,6 @@ def check_lib(prepare, obj, result):
 
 def check_action(action, result):
 	result = ''.join(result.split()).lower()
-	encoded = action._encode()
+	encoded = action.get_data(WriteContext())
 	encoded_hex = hex_str(encoded)
 	eq_(encoded_hex, result)
