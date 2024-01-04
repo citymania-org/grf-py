@@ -737,13 +737,13 @@ class FileSprite(Sprite):
     def get_data_layers(self, encoder=None):
         w, h, rgb, alpha, mask = super().get_data_layers(encoder=encoder)
         if self.file.colourkey is not None:
-            mask = np.all(np.equal(rgb, self.file.colourkey), axis=2)
-            if np.any(mask):
+            ckmask = np.all(np.equal(rgb, self.file.colourkey), axis=2)
+            if np.any(ckmask):
                 if alpha is None:
                     alpha = np.full((h, w), 255, dtype=np.uint8)
                 else:
                     alpha = np_make_writable(alpha)
-                alpha[mask] = 0
+                alpha[ckmask] = 0
         return w, h, rgb, alpha, mask
 
     def get_image_files(self):
