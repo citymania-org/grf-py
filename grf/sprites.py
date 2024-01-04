@@ -752,6 +752,7 @@ class FileSprite(Sprite):
     def get_fingerprint(self):
         return combine_fingerprint(
             super().get_fingerprint_base(),
+            colourkey=None if self.file.colourkey is None else tuple(self.file.colourkey),
             x=self.x,
             y=self.y,
         )
