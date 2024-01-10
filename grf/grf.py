@@ -568,13 +568,16 @@ class BaseNewGRF:
                     return None
 
                 files = s.get_resource_files()
-                files_data = {}
+                files_data = []
                 for f in files:
-                    path = str(f.path)
-                    fmod = file_mod_date.get(path)
-                    if fmod is None:
-                        fmod = file_mod_date[path] = os.path.getmtime(path)
-                    files_data[path] = fmod
+                    fmod = None
+                    if f.path is not None:
+                        path = str(f.path)
+                        fmod = file_mod_date.get(path)
+                        if fmod is None:
+                            fmod = file_mod_date[path] = os.path.getmtime(path)
+                    files_data.append((f.get_fingerprint(), fmod))
+
 
                 return {
                     'data': fingerprint,

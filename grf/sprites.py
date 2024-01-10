@@ -161,6 +161,9 @@ class ResourceFile:
     def __init__(self, path):
         self.path = path
 
+    def get_fingerprint(self):
+        return {'path': str(self.path)}
+
 
 class CodeFile(ResourceFile):
     pass
