@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 from collections import defaultdict
 from pathlib import Path
 import functools
@@ -16,7 +17,7 @@ from nml import lz77
 
 import grf
 from grf.common import hex_str, utoi8, DataReader, read_extended_byte, read_dword, read_word, ZOOM_NORMAL, VEHICLE_FEATURES
-from grf.colour import PIL_PALETTE
+from grf.colour import PIL_PALETTE, PIL_PALETTE_WIN, PIL_PALETTE_DOS_TOYLAND, PIL_PALETTE_WIN_TOYLAND, PIL_PALETTE_TTO, PIL_PALETTE_TTO_MARS
 from grf.va2vars import VA2_VARS_INV
 from grf.parser import OP_INIT, SPRITE_FLAGS
 from grf.actions import ACTION0_PROPS, SpriteRef, Property, PyComment, PyCode, FakeAction
@@ -1315,7 +1316,7 @@ class GraphicsSpriteGen(FakeAction):
         return res
 
 
-def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, sprites, out_sprites):
+def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, sprites, out_sprites, palette):
     by_group = defaultdict(list)
     for sl in sprites.values():
         for i, s in enumerate(sl):
@@ -1352,7 +1353,7 @@ def save_graphic_resources(container, f, resource_dir, resource_dir_rel, context
 
         if any(s.type & 0x04 > 0 for s, _ in sprites):
             m = Image.new('P', (w, h), color=0xff)
-            m.putpalette(PIL_PALETTE)
+            m.putpalette(palette)
 
         img_sprites = []
         for i, (s, si) in enumerate(sprites):
@@ -1499,7 +1500,7 @@ def read(f, context):
     return gen, container, real_sprites
 
 
-def decompile(in_grf_path):
+def decompile(in_grf_path, palette):
     out_dir_name = in_grf_path.name
     if '.' in out_dir_name:
         out_dir_name = out_dir_name[:out_dir_name.rfind('.')]
@@ -1521,7 +1522,7 @@ def decompile(in_grf_path):
         gen, container, real_sprites = read(f, context)
 
         res_sprites = defaultdict(list)
-        save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
+        save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites, palette)
         save_sound_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites)
 
         # Save recolour sprites
@@ -1551,8 +1552,22 @@ def decompile(in_grf_path):
 
 
 def main():
-    in_grf_path = Path(sys.argv[1])
-    decompile(in_grf_path)
+    parser = argparse.ArgumentParser(description='NewGRF decompiler')
+    parser.add_argument('filename', help='NewGRF file to decompile')
+    parser.add_argument('-p', '--palette', choices=('dos', 'win', 'dos-toyland', 'win-toyland', 'tto', 'tto-mars'),
+                        default='dos', help='Set palette for 8bpp image resource files')
+
+    args = parser.parse_args()
+    in_grf_path = Path(args.filename)
+    palette = {
+        'dos': PIL_PALETTE,
+        'win': PIL_PALETTE_WIN,
+        'dos-toyland': PIL_PALETTE_DOS_TOYLAND,
+        'win-toyland': PIL_PALETTE_WIN_TOYLAND,
+        'tto': PIL_PALETTE_TTO,
+        'tto-mars': PIL_PALETTE_TTO_MARS,
+    }[args.palette]
+    decompile(in_grf_path, palette)
 
 
 if __name__ == "__main__":
