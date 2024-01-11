@@ -37,3 +37,10 @@ Use `MAJOR.MINOR.PATCH` versioning with `MAJOR` currently at 0 to signify it's c
 
 ## Keyword parameters
 - Force keyword parameters for functions with many arguments to improve code redability.
+
+
+## VarAction2 Subroutines/Procedures/Functions terminology
+
+- NFO: procedure+subroutine (https://newgrf-specs.tt-wiki.net/wiki/VarAction2Advanced).
+- NML: procedure (https://github.com/OpenTTD/nml/issues/105).
+- Call them "function" in grf-py, "subrotine" is too archaic and "procedure" is deceptive as they return a value.

@@ -1636,6 +1636,7 @@ class CodeContext:
 
 
 class Switch(Action, ReferenceableAction, ReferencingAction):
+    # TODO Change archaic term "subrotine" to "function"
     def __init__(self, code, ranges, default, *, feature=None, ref_id=None, related_scope=False, subroutines=None):
         super().__init__()
         self.feature = feature
