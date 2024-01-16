@@ -732,8 +732,10 @@ class FileSprite(Sprite):
 
     def get_image(self):
         img, bpp = self.file.get_image(**self.kw)
-        if self.w is None or self.h is None:
+        if self.w is None or self.h is None and self.x == 0 and self.y == 0:
             self.w, self.h = img.size
+        if self.x < 0 or self.y < 0 or self.x + self.w > img.size[0] or self.y + self.h > img.size[1]:
+            raise RuntimeError(f"Sprite {self.name} area ({self.x}..{self.x + self.w}, {self.y}..{self.y + self.h}) is outside image borders (0..{img.size[0]}, 0..{img.size[1]})")
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
         return img, bpp
 
