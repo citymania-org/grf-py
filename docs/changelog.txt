@@ -77,7 +77,7 @@
 - grftopy: Improve decoding of industry layouts.
 - grftopy: Fix decompilation of ActionB.
 - grftopy: Fix decompilation of action 7/9 with value > 4 bytes.
-- grftopy: Add -p/--palette cli option to set output palette.
+- grftopy: Add -p/--palette cli option to set output palette for 8bpp images.
 ---------
 0.2.2
 ---------

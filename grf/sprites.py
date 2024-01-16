@@ -67,7 +67,7 @@ def restore_rgba_image(rgb, alpha):
         return None
 
     # Check that they have the same strides (offsets to next element)
-    if ii['strides'][:2] != ai['strides'] or ii['strides'][2] != 1:
+    if ii['strides'] is None or ii['strides'][:2] != ai['strides'] or ii['strides'][2] != 1:
         return None
 
     # Check that they have the same shape
@@ -718,19 +718,20 @@ class ImageFile(LoadedResourceFile):
 
 
 class FileSprite(Sprite):
-    def __init__(self, file, x, y, w, h, *, bpp=None, **kw):
+    def __init__(self, file, x, y, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None, **kw):
         assert(isinstance(file, ImageFile))
-        super().__init__(w, h, bpp=bpp, **kw)
+        super().__init__(w, h, xofs=xofs, yofs=yofs, bpp=bpp, zoom=zoom, crop=crop, name=name)
         self.x = x
         self.y = y
         self.file = file
+        self.kw = kw
 
     @property
     def default_name(self):
         return f'{self.x},{self.y} {self.w}x{self.h}'
 
     def get_image(self):
-        img, bpp = self.file.get_image()
+        img, bpp = self.file.get_image(**self.kw)
         if self.w is None or self.h is None:
             self.w, self.h = img.size
         img = img.crop((self.x, self.y, self.x + self.w, self.y + self.h))
@@ -757,6 +758,7 @@ class FileSprite(Sprite):
             colourkey=None if self.file.colourkey is None else tuple(self.file.colourkey),
             x=self.x,
             y=self.y,
+            kw=self.kw,
         )
 
 
