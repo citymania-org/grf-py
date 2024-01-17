@@ -456,6 +456,7 @@ class BaseNewGRF:
         fingerprints = {}
         for s in sprites:
             if isinstance(s, ResourceAction):
+                s.prepare_files()
                 resource_files = s.get_resource_files()
                 for f in resource_files:
                     assert isinstance(f, ResourceFile), type(f)

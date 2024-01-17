@@ -130,6 +130,10 @@ class SingleResourceAction(ResourceAction):
     def get_resource_files(self):
         return self.resource.get_resource_files()
 
+    # NOTE: may be removed in future in favor of preparing in constructor
+    def prepare_files(self):
+        self.resource.prepare_files()
+
 
 class AlternativeSprites(ResourceAction):
     def __init__(self, *sprites):
@@ -155,6 +159,11 @@ class AlternativeSprites(ResourceAction):
         for s in self.sprites:
             res.extend(s.get_resource_files())
         return res
+
+    # NOTE: may be removed in future in favor of preparing in constructor
+    def prepare_files(self):
+        for s in self.sprites:
+            s.prepare_files()
 
 
 class ResourceFile:
@@ -194,6 +203,10 @@ class Resource:
 
     def get_resource_files(self):
         return NotImplemented
+
+    # NOTE: may be removed in future in favor of preparing in constructor
+    def prepare_files(self):
+        pass
 
 
 class Sound(Resource):
@@ -694,6 +707,9 @@ class ImageFile(LoadedResourceFile):
         self.colourkey = colourkey
         self._image = None
 
+    def prepare(self, kw):
+        pass
+
     def load(self):
         if self._image is not None:
             return
@@ -729,6 +745,9 @@ class FileSprite(Sprite):
     @property
     def default_name(self):
         return f'{self.x},{self.y} {self.w}x{self.h}'
+
+    def prepare_files(self):
+        self.file.prepare(**self.kw)
 
     def get_image(self):
         img, bpp = self.file.get_image(**self.kw)
