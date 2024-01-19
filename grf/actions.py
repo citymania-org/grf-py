@@ -1020,7 +1020,7 @@ class IndustryLayoutsProperty(Property):
         for l in value:
             for t in l:
                 res += t.encode()
-        res += bytes((0, 0x80))
+            res += bytes((0, 0x80))
         return struct.pack('<BI', len(value), len(res)) + res
 
     def format(self, value, indent):
