@@ -707,7 +707,7 @@ class ImageFile(LoadedResourceFile):
         self.colourkey = colourkey
         self._image = None
 
-    def prepare(self, kw):
+    def prepare(self, **kw):
         pass
 
     def load(self):
