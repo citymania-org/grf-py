@@ -192,6 +192,7 @@ class WriteContext:
             print(f'Total warnings: {wcount + scount}')
         print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
 
+
 class BaseNewGRF:
     def __init__(self, *, strings=None, id_map_file=None, sprite_cache_path='.cache'):
         self.generators = []
