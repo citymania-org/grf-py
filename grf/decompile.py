@@ -32,7 +32,7 @@ class ParsingContext:
     GRAPHICS = 1
     SOUND = 2
 
-    def __init__(self):
+    def __init__(self, *, baseset=False):
         self.type = self.DEFAULT
         self.group = None
         self._groups = {}
@@ -41,6 +41,7 @@ class ParsingContext:
         self.action_count = defaultdict(int)
         self.action_size = defaultdict(int)
         self.v1_sprite_id = 0
+        self.baseset = baseset
 
     def get_v1_sprite_id(self):
         self.v1_sprite_id += 1
@@ -1029,7 +1030,7 @@ def decode_pseudo_sprite(data, context):
             return res
         res.append(PyComment(f'Unexpected action 0x{action_id:02x} in sound context, reverting to global'))
         context.reset()
-    elif context.type == ParsingContext.SOUND:
+    elif context.type == ParsingContext.SOUND:  # FIXME GRAPHICS?
         decoder = GRAPHICS_ACTIONS.get(data[0])
         if decoder is not None:
             res.extend(decoder(data[1:]))
@@ -1071,10 +1072,12 @@ def read_pseudo_sprite(f, nfo_line, container, context):
         # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
         context.count_action(data[0], l + size_bytes * 2 + 1)
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}'))
-        # if container == 1:
-        #     sprite = RealRemapSprite(context.get_v1_sprite_id(), data)
-        #     res.append(SpritePlaceholder(sprite.id))
-        #     return True, res, sprite
+        if context.baseset:
+            # "old fashioned" files, i.e. basesets don't have actions
+            sprite = RealRemapSprite(context.get_v1_sprite_id(), data)
+            res.append(sprite)
+            # res.append(SpritePlaceholder(sprite.id))
+            return True, res, sprite
         try:
             res.extend(decode_pseudo_sprite(data, context))
         except Exception as e:
@@ -1481,8 +1484,11 @@ def read(f, context):
     # print('Magic sprite:', hex_str(f.read(4)))
     nfo_line = 1
     real_sprites = defaultdict(list)
+    pseudo_sprites = {}
     while (res := read_pseudo_sprite(f, nfo_line, container, context))[0]:
         gen.add(*res[1])
+        pseudo_sprites[nfo_line] = res[1][-1] if res[1] else None
+
         if (sprite := res[2]) is not None:
             real_sprites[sprite.id].append(sprite)
         nfo_line += 1
@@ -1497,7 +1503,7 @@ def read(f, context):
 
         if data_offest != real_data_offset:
             comment(f'[ERROR] Data offset check failed: {data_offest} {real_data_offset}')
-    return gen, container, real_sprites
+    return gen, container, real_sprites, pseudo_sprites
 
 
 def decompile(in_grf_path, palette):
@@ -1519,7 +1525,7 @@ def decompile(in_grf_path, palette):
 
     with open(in_grf_path, 'rb') as f:
         context = ParsingContext()
-        gen, container, real_sprites = read(f, context)
+        gen, container, real_sprites, _ = read(f, context)
 
         res_sprites = defaultdict(list)
         save_graphic_resources(container, f, resource_dir, resource_dir_rel, context, real_sprites, res_sprites, palette)
