@@ -1303,7 +1303,7 @@ class GraphicsSpriteGen(FakeAction):
             else:
                 mask_str = ''
             try:
-                zoom_str = ['ZOOM_4X', 'ZOOM_NORMAL', 'ZOOM_2X', 'ZOOM_8X', 'ZOOM_16X', 'ZOOM_32X'][sprite.zoom]
+                zoom_str = ['ZOOM_NORMAL', 'ZOOM_4X', 'ZOOM_2X', 'ZOOM_OUT_2X', 'ZOOM_OUT_4X', 'ZOOM_OUT_8X'][sprite.zoom]
             except IndexError:
                 zoom_str = str(sprite.zoom)
             sprite_sl.append(f'FileSprite({main_file_var}, {x}, {y}, {sprite.width}, {sprite.height}, xofs={sprite.xofs}, yofs={sprite.yofs}{mask_str}, zoom={zoom_str})')
