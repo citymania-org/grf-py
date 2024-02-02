@@ -1313,13 +1313,13 @@ class GraphicsSpriteGen(FakeAction):
                 sprite_sl.append(sprite_str)
 
         if len(sprite_sl) > 1:
-            res += 'g.add((\n'
+            res += 'g.add(\n'
             for s in sprite_sl:
                 res += f'    {s}'
                 if not s.endswith('('):
                     res += ','
                 res += '\n'
-            res += '))'
+            res += ')'
         else:
             res += f'g.add({sprite_sl[0]})'
 
