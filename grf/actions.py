@@ -2377,6 +2377,9 @@ class SetProperties(Action):
                 if isinstance(text, str):
                     text = text.encode('utf-8')
                 data += b'T' + k + bytes((lang_id,)) + text + b'\0'
+            elif isinstance(v, list):
+                for x in v:
+                    rec(k, x)
             elif isinstance(v, str):
                 data += b'T' + k + b'\0' + v.encode('utf-8') + b'\0'
             elif isinstance(v, int):
