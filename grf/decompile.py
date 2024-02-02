@@ -1297,21 +1297,28 @@ class GraphicsSpriteGen(FakeAction):
                 sprite_sl.append(f'EMPTY_SPRITE')
                 continue
             main_file_var = context.resources[rgba_path or m_path]
-            if rgba_path and m_path:
-                mask_file_var = context.resources[m_path]
-                mask_str = f', mask=FileMask({mask_file_var}, {x}, {y}, {sprite.width}, {sprite.height})'
-            else:
-                mask_str = ''
             try:
                 zoom_str = ['ZOOM_NORMAL', 'ZOOM_4X', 'ZOOM_2X', 'ZOOM_OUT_2X', 'ZOOM_OUT_4X', 'ZOOM_OUT_8X'][sprite.zoom]
             except IndexError:
                 zoom_str = str(sprite.zoom)
-            sprite_sl.append(f'FileSprite({main_file_var}, {x}, {y}, {sprite.width}, {sprite.height}, xofs={sprite.xofs}, yofs={sprite.yofs}{mask_str}, zoom={zoom_str})')
+            sprite_str = f'FileSprite({main_file_var}, {x}, {y}, {sprite.width}, {sprite.height}, xofs={sprite.xofs}, yofs={sprite.yofs}, zoom={zoom_str})'
+            if rgba_path and m_path:
+                mask_file_var = context.resources[m_path]
+                mask_str = f'FileSprite({mask_file_var}, {x}, {y}, {sprite.width}, {sprite.height})'
+                sprite_sl.append('WithMask(')
+                sprite_sl.append(f'    {sprite_str}')
+                sprite_sl.append(f'    {mask_str}')
+                sprite_sl.append(')')
+            else:
+                sprite_sl.append(sprite_str)
 
         if len(sprite_sl) > 1:
             res += 'g.add((\n'
             for s in sprite_sl:
-                res += f'    {s},\n'
+                res += f'    {s}'
+                if not s.endswith('('):
+                    res += ','
+                res += '\n'
             res += '))'
         else:
             res += f'g.add({sprite_sl[0]})'

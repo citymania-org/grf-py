@@ -255,7 +255,7 @@ class BaseNewGRF:
         make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
         res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
         res += 'from grf import ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X\n'
-        res += 'from grf import Ref, CB, ImageFile, FileSprite, FileMask, RAWSound, PaletteRemap\n\n'
+        res += 'from grf import Ref, CB, ImageFile, FileSprite, WithMask, RAWSound, PaletteRemap\n\n'
         res += 'g = grf.BaseNewGRF()\n\n'
         used_classes = set(x.__class__.__name__ for x in self.generators if not isinstance(x, (tuple, FakeAction)))
         # used_classes.update(('ImageFile', 'ImageSprite', 'RAWSound'))  # TODO check usage of FakeAction
