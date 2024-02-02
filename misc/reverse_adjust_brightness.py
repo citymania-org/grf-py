@@ -2,17 +2,21 @@ import sys
 import math
 from collections import defaultdict
 from pprint import pprint
+
 from PIL import Image
 import numpy as np
+import spectra
 
 import grf
 
 
 def mtorgb(c):
-    return grf.PALETTE[3 * c:3 * c + 3]
+    return grf.PALETTE[c]
+
+to_spectra = lambda r, g, b: spectra.rgb(float(r) / 255., float(g) / 255., float(b) / 255.)
 
 def mtospectra(c):
-    return grf.to_spectra(*mtorgb(c))
+    return to_spectra(*mtorgb(c))
 
 def spectratorgb(c):
     r, g, b = c.clamped_rgb
@@ -20,6 +24,7 @@ def spectratorgb(c):
 
 def blend(a, b, ratio):
     return spectratorgb(a.blend(b, ratio=r))
+
 
 
 r = [0] * 8
@@ -75,8 +80,8 @@ def adjust_brightness(c, brightness):
 
 target = []
 
-BLACK = grf.to_spectra(0, 0, 0)
-WHITE = grf.to_spectra(255, 255, 255)
+BLACK = to_spectra(0, 0, 0)
+WHITE = to_spectra(255, 255, 255)
 for cl in grf.CC_COLOURS:
     res = []
     for v in range(511):
