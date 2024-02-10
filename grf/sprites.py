@@ -6,10 +6,10 @@ import time
 import numpy as np
 from PIL import Image
 
-from .common import BPP_8, BPP_24, BPP_32, np_make_writable
+from .common import BPP_8, BPP_24, BPP_32, np_make_writable, DummyWriteContext
 from .common import ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X
-from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, WIN_TO_DOS, DEFAULT_BRIGHTNESS, WATER_COLOURS
-from .colour import srgb_to_oklab, oklab_blend, oklab_find_best_colour, srgb_find_best_colour
+from .colour import PALETTE, PIL_PALETTE, ALL_COLOURS, SAFE_COLOURS, WIN_TO_DOS, DEFAULT_BRIGHTNESS, WATER_COLOURS, NP_PALETTE
+from .colour import srgb_to_oklab, oklab_blend, oklab_find_best_colour, srgb_find_best_colour, openttd_adjust_brightness
 from . import colour
 
 
@@ -588,6 +588,29 @@ class Sprite(Resource):
             im.putpalette(frame_pal)
             frames.append(im)
         frames[0].save(filename, save_all=True, append_images=frames[1:], duration=27, loop=0, optimize=False, transparency=0, dispose=1)
+
+    def make_rgba_image(self, context=None):
+        w, h, rgb, alpha, mask = self.get_data_layers(DummyWriteContext() if context is None else context)
+        img = np.zeros((h, w, 4), dtype=np.uint8)
+        if alpha is not None:
+            img[:, :, 3] = alpha
+
+        if mask is None:
+            img[:, :, :3] = rgb
+            if alpha is None:
+                img[:, :, 3] = 255
+        elif rgb is None:
+            has_mask = (mask > 0)
+            img[has_mask, :3] = NP_PALETTE[mask[has_mask]]
+            img[has_mask, 3] = 255
+        else:
+            has_mask = (mask > 0)
+            img[not has_mask, :3] = rgb
+            # TODO use animated palette
+            img[has_mask] = (openttd_adjust_brightness(grf.PALETTE[m], max(c)) for c, m in zip(rgb[has_mask], mask[has_mask]))
+            if alpha is None:
+                img[:, :, 3] = 255
+        return Image.fromarray(img, mode='RGBA')
 
 
 class WithMask(Sprite):

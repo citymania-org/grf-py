@@ -322,3 +322,47 @@ def np_make_writable(nparray):
         return nparray.copy()
     return nparray
 
+
+class DummyWriteContext:
+    class Timer:
+        def start(self):
+            return self
+
+        def count_loading(self):
+            pass
+
+        def count_conversion(self):
+            pass
+
+        def count_composing(self):
+            pass
+
+        def count_custom(self, category):
+            pass
+
+        def print_time_report(self):
+            pass
+
+    def __init__(self):
+        self.timer = self.Timer()
+
+    def failure(self, obj, message):
+        return RuntimeError(message)
+
+    def format_error(self, obj, message):
+        return ValueError(message)
+
+    def sanity_warning(self, code, obj, message):
+        pass
+
+    def warning(self, code, obj, message):
+        pass
+
+    def start_timer(self):
+        return self.timer.start()
+
+    def sprite_compress(self, raw_data):
+        raise NotImplementedError
+
+    def print_report(self):
+        pass

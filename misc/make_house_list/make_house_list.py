@@ -61,23 +61,6 @@ class RecolourSprite(grf.Sprite):
         self._image = im2, grf.BPP_8
         return self._image
 
-    def get_rgba_image(self):
-        if self._image is not None:
-            return self._image
-        im, bpp = self.sprite.get_image()
-        assert bpp == 8
-        data = np.array(im)
-        data = self.recolour[data]
-        # data = np.array(grf.WIN_TO_DOS)[data]
-        h, w = data.shape
-        rgba = np.zeros((h, w, 4), np.uint8)
-        rgba[:, :, 3] = 255
-        for y in range(h):
-            for x in range(w):
-                rgba[y, x, :3] = grf.PALETTE[data[y, x]]
-        rgba[data == 0, 3] = 0
-        return Image.fromarray(rgba)
-
 
 class GRFFile(grf.LoadedResourceFile):
     def __init__(self, path, *, baseset=False, real_offset=1, pseudo_offset=0):
@@ -369,7 +352,7 @@ for i, h, variations, years_str, zones, bb in houses:
             if building_id > 0:
                 building = ogfx.get_sprites(building_id)[0]
                 building = RecolourSprite(building, PALETTE_REMAPS[building_pal_id])
-                building_img = building.get_rgba_image()
+                building_img = building.make_rgba_image()
                 w, h = building_img.size
                 im.alpha_composite(building_img, (IMG_OFS + building.xofs + 31, gy - h))
                 draw.text((IMG_OFS + 64 + PADDING, gy - h),
@@ -386,7 +369,7 @@ for i, h, variations, years_str, zones, bb in houses:
             if ground_id > 0:
                 ground = ogfx.get_sprites(ground_id)[0]
                 ground = RecolourSprite(ground, PALETTE_REMAPS[ground_pal_id])
-                ground_img = ground.get_rgba_image()
+                ground_img = ground.make_rgba_image()
                 w, h = ground_img.size
                 im.alpha_composite(ground_img, (IMG_OFS, gy + 1))
                 draw.text((IMG_OFS + 64 + PADDING, gy + 33 - LINE_HEIGHT // 2), str(ground_id), font=font_small, fill=(0, 0, 0))
