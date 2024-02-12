@@ -460,7 +460,7 @@ class Sprite(Resource):
             else:
                 stack.append(rgb.reshape(wh, 3))
                 stack.append(alpha.reshape(wh, 1))
-        if mask is not None:
+        if mask is not None and (bpp == 0 or np.any(mask)):
             info_byte |= 0x4
             bpp += 1
             stack.append(mask.reshape((wh, 1)))
