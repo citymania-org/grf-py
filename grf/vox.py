@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from .common import ZOOM_4X, ZOOM_2X, ZOOM_NORMAL
-from .colour import PALETTE, srgb_find_best_colour
+from .colour import PIL_PALETTE, oklab_find_best_colour, srgb_to_oklab, oklab_blend
 from .sprites import ImageSprite, convert_image, PaletteRemap
 
 
@@ -11,6 +11,9 @@ VOX_SIDE_RIGHT, VOX_SIDE_BOTTOM = 0x100, 0x200
 VOX_SIDE_SHIFT, VOX_SIDE_MASK = 8, VOX_SIDE_RIGHT | VOX_SIDE_BOTTOM
 VOX_SIDE_ZL, VOX_SIDE_ZR, VOX_SIDE_X, VOX_SIDE_Y = 0, VOX_SIDE_RIGHT, VOX_SIDE_BOTTOM, VOX_SIDE_RIGHT | VOX_SIDE_BOTTOM
 VOX_SIDE_Z, VOX_SIDE_XY = 0, 0x100
+
+WHITE = srgb_to_oklab((255, 255, 255))
+BLACK = srgb_to_oklab((0, 0,0))
 
 
 class VoxReader:
@@ -65,9 +68,9 @@ class VoxReader:
 
 class VoxFile:
     def __init__(self, path, *,
-                 x_colour_func=lambda c: c.darken(20),
+                 x_colour_func=lambda c: oklab_blend(c, BLACK, ratio=.2),
                  y_colour_func=None,
-                 z_colour_func=lambda c: c.brighten(10)):
+                 z_colour_func=lambda c: oklab_blend(c, WHITE, ratio=.1)):
         if isinstance(path, VoxReader):
             self.reader = path
             self.path = None
@@ -120,7 +123,7 @@ class VoxFile:
         def make_remap(func):
             if func is None:
                 return np.arange(256)
-            return PaletteRemap.from_function(func).remap
+            return PaletteRemap.oklab_from_function(func).remap
 
         REMAP_X = make_remap(self.x_colour_func)
         REMAP_Y = make_remap(self.y_colour_func)
@@ -131,11 +134,11 @@ class VoxFile:
         if self.data is None:
             self._load()
 
-        if zoom == ZOOM_4X:
+        if zoom == ZOOM_NORMAL:
             data = self.palette[self.data[::2, :]]
         elif zoom == ZOOM_2X:
             data = self.palette[np.repeat(self.data, repeats=2, axis=1)]
-        elif zoom == ZOOM_NORMAL:
+        elif zoom == ZOOM_4X:
             data = np.zeros((self.data.shape[0] * 2 + 1, self.data.shape[1] * 4), dtype=np.uint8)
             SIDE_PIXELS = (
                 (                (2, 0), (3, 0),  # Z left
@@ -199,7 +202,7 @@ class VoxFile:
             raise ValueError(f'Requested unsuported vox rendering zoom: {zoom}')
 
         im = Image.fromarray(data, mode='P')
-        im.putpalette(PALETTE)
+        im.putpalette(PIL_PALETTE)
         return ImageSprite(im, zoom=zoom, **kw)
 
 
