@@ -698,6 +698,9 @@ class EmptySprite(Sprite):
             0,
         )
 
+    def get_data_layers(self, context):
+        return 1, 1, None, None, np.zeros((1, 1), dtype=np.uint8)
+
     def get_resource_files(self):
         return (THIS_FILE,)
 
