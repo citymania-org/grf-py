@@ -548,7 +548,7 @@ class CallbackManager(object):
             return default_switch, purchase_switch
 
     def __init__(self, callbacks=None):
-        callbacks = callbacks or {}
+        callbacks = (callbacks or {}).copy()
         self._callbacks = {}
         self.graphics = callbacks.pop('graphics', None)
 
