@@ -196,6 +196,54 @@ def str_zones(availability):
             res.append(str(i))
     return ', '.join(res)
 
+
+# g = GRFFile('', baseset=False, real_offset=0)
+# sprite_dict = g.action_a_map[0x06]
+# foundations = [None] * 90
+# for ofs in sorted(sprite_dict.keys()):
+#     sprites = g.get_sprites(sprite_dict[ofs])
+#     sprite = None
+#     for s in sprites:
+#         if s.bpp == grf.BPP_32 and s.zoom == grf.ZOOM_2X:
+#             sprite = s
+#             break
+#     assert sprite is not None
+#     foundations[ofs] = sprite
+
+# assert all(foundations)
+# print('W', set(s.w for s in foundations))
+# print('H', set(s.h for s in foundations))
+# print('W', set(s.xofs for s in foundations))
+# print('H', set(s.yofs for s in foundations))
+# print([(s.xofs - (128 - s.w), s.yofs, s.w, s.h) for s in foundations])
+
+def yoink(sprites, *, padding=0):
+    sw = max(s.w for s in sprites)
+    sh = max(s.h for s in sprites)
+    w = padding + (sw + padding) * len(sprites)
+    h = sh + padding * 2
+    rgba = np.zeros((h, w, 4), dtype=np.uint8)
+    rgba[:, :] = (0, 0, 255, 255)
+
+    x = padding
+    y = padding
+    for _ in sprites:
+        rgba[y: y + sh, x: x + sw, :] = (0, 0, 0, 0)
+        x += sw + padding
+
+    im = Image.fromarray(rgba, mode="RGBA")
+    x = padding
+    y = padding
+    for s in sprites:
+        im.paste(s.make_rgba_image(), (x + sw - s.w, y))
+        x += sw + padding
+
+    return im
+
+
+# yoink(foundations, padding=2).save("foundations.png")
+# print(foundations)
+
 # def str_availability(f):
 #   if f == ALL_CLIMATES: return 'ALL'
 #   res = []
