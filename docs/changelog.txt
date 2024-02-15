@@ -49,8 +49,10 @@
 - Add `preferred_blitter` argument to `NewGRF` constructor, possible values `NewGRF.BLITTER_BPP_8` and `NewGRF.BLITTER_BPP_32`.
 - Add `StringManager.get_persistent_id` function to register strings in "persistent" range (0xDCxx).
 - Add `Sprite.save_gif` method to generate palette animated images.
+- Add `Sprite.make_rgba_image` method to generate static PIL `Image`.
 - Add init_id_map command line command to initialize id_map.json.
 - Add `Date` type to represent dates that don't fit into `datetime.date`.
+- Add example of a simple eyecandy station.
 - Start auto-assiged IDs from 0 for INDUSTRY_TILE feature.
 - Rename `AlternativeSprites.get_zoom` to `get_sprite` and add bpp argument.
 - Rename some of the Action0 properties for `CARGO` to match nml.
@@ -61,6 +63,7 @@
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
 - lib: Fix incorrect 2cc colors for auto-articulated parts.
 - lib: Fix unicode vehicle names.
+- lib: Don't change callbacks passed to `CallbackMananger`.
 - lib: Set correct flags and track_type on auto-articulated parts.
 - lib: Add high-level `Industry` class.
 - lib: `CallbackManager` rewrite:

@@ -253,16 +253,22 @@ for set_type in sorted(set_types):
 
 w += TABLE_X
 
-CHECK_1 = 200
-CHECK_2 = 150
+make_check_colour = lambda c: (c // 2, c // 2, c, 255)
+
+CHECK_1 = make_check_colour(40)
+CHECK_2 = make_check_colour(80)
+
+TEXT_COLOUR = (255, 255, 255)
 CELL = 20
 rgba = np.zeros((h, w, 4), dtype=np.uint8)
-rgba[:, :] = (CHECK_1, CHECK_1, CHECK_1, 255)
+
+
+rgba[:, :] = CHECK_1
 
 for y in range(2 * CELL):
     for x in range(CELL):
         ox = CELL if y >= CELL else 0
-        rgba[y::2 * CELL, ox + x::2 * CELL, :] = (CHECK_2, CHECK_2, CHECK_2, 255)
+        rgba[y::2 * CELL, ox + x::2 * CELL, :] = CHECK_2
 
 im = Image.fromarray(rgba, mode="RGBA")
 # im = Image.new(mode="RGBA", size=(w, h), color=(0, 0, 255, 0))
@@ -274,20 +280,20 @@ for set_type, sheet, col_width, row_height in full_sheet:
     if first:
         first = False
     else:
-        draw.line(((0, y), (w - 1, y)), fill=(0, 0, 0))
+        draw.line(((0, y), (w - 1, y)), fill=TEXT_COLOUR)
     x = padding
     y += padding
-    draw.text((x, y), f'0x{set_type:02X}', font=font, fill=(0, 0, 0))
+    draw.text((x, y), f'0x{set_type:02X}', font=font, fill=TEXT_COLOUR)
     ox = x + TABLE_X
     for i in range(COLUMNS):
-        draw.text((ox + col_width[i] // 2, y), str(i), font=font, fill=(0, 0, 0), anchor='mt')
+        draw.text((ox + col_width[i] // 2, y), str(i), font=font, fill=TEXT_COLOUR, anchor='mt')
         ox += col_width[i] + padding
 
     y += FONT_SIZE + padding
 
     oy = y
     for i in range(len(row_height)):
-        draw.text((x + TABLE_X - padding, oy + row_height[i] // 2), str(i * COLUMNS), font=font, fill=(0, 0, 0), anchor='rm')
+        draw.text((x + TABLE_X - padding, oy + row_height[i] // 2), str(i * COLUMNS), font=font, fill=TEXT_COLOUR, anchor='rm')
         oy += row_height[i] + padding
 
     for (cx, cy), sprite in sheet.items():
@@ -298,4 +304,4 @@ for set_type, sheet, col_width, row_height in full_sheet:
 
     y += padding + sum(row_height) + len(row_height) * padding
 
-im.save("action_a.png")
+im.save("action5.png")
