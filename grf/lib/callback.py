@@ -602,7 +602,7 @@ class CallbackManager(object):
 
 
         maps = {}
-        default = None
+        default = self.graphics.default
         if is_vehicle:
             if purchase_callbacks:
                 # TODO purchase_switch can be the same as default
@@ -614,8 +614,6 @@ class CallbackManager(object):
                 maps = {255: purchase_switch}
             elif self.graphics.purchase is not None:
                 maps = {255: self.graphics.purchase}
-
-            default = self.graphics.default
 
         if default_callbacks:
             default = grf.Switch(
