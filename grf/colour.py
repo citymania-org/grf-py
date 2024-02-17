@@ -123,6 +123,9 @@ def srgb_to_oklab(rgb):
     rgb_linear = srgb_to_linear(rgb)
     x = LRGB_TO_OKLAB_M1.dot(rgb_linear)
     return LRGB_TO_OKLAB_M2.dot(np.cbrt(x))
+    # TOOD mass convert ?
+    # x = LRGB_TO_OKLAB_M1 @ rgb_linear.T
+    # return (LRGB_TO_OKLAB_M2 @ np.cbrt(x)).T
 
 
 OKLAB_TO_LRGB_M1 = np.array((
