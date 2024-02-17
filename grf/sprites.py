@@ -352,7 +352,7 @@ class Sprite(Resource):
                 cols_bitset = mask.any(0)
                 rows_bitset = mask.any(1)
             else:
-                raise context.log_error('sprite-no-layers', self, 'All data layers are None')
+                raise context.failure(self, 'All data layers are None')
 
             cols_used = np.arange(w)[cols_bitset]
             rows_used = np.arange(h)[rows_bitset]
@@ -428,11 +428,11 @@ class Sprite(Resource):
 
         # It's common to override get_data_layers so check returned layers carefully
         if rgb is not None and rgb.shape != (h, w, 3):
-            raise context.log_error('sprite-rgb-shape', self, f'get_data_layers returned RGB layer with wrong shape: {rgb.shape}, expected ({w}, {h}, 3)')
+            raise context.failure(self, f'get_data_layers returned RGB layer with wrong shape: {rgb.shape}, expected ({h}, {w}, 3)')
         if alpha is not None and alpha.shape != (h, w):
-            raise context.log_error('sprite-alpha-shape', self, f'get_data_layers returned alpha layer with wrong shape: {alpha.shape}, expected ({w}, {h})')
+            raise context.failure(self, f'get_data_layers returned alpha layer with wrong shape: {alpha.shape}, expected ({h}, {w})')
         if mask is not None and mask.shape != (h, w):
-            raise context.log_error('sprite-mask-shape', self, f'get_data_layers returned mask layer with wrong shape: {mask.shape}, expected ({w}, {h})')
+            raise context.failure(self, f'get_data_layers returned mask layer with wrong shape: {mask.shape}, expected ({h}, {w})')
         crop_x, crop_y, w, h, rgb, alpha, mask = self._do_crop(context, w, h, rgb, alpha, mask)
         xofs, yofs = self.xofs + crop_x, self.yofs + crop_y
 
@@ -638,11 +638,11 @@ class WithMask(Sprite):
         timer = context.start_timer()
 
         if w != mw or h != mh:
-            raise context.log_error('with-mask-dimensions-mismatch', self, f'Dimensions don''t match for sprite({w}, {h}) and mask({mw}, {mh})')
+            raise context.failure(self, f'Dimensions don''t match for sprite({w}, {h}) and mask({mw}, {mh})')
         if mrgb is not None:
-            raise context.log_error('with-mask-has-rgb', self, 'Mask has an RGB layer')
+            raise context.failure(self, 'Mask has an RGB layer')
         if malpha is not None:
-            raise context.log_error('with-mask-has-alpha', self, 'Mask has an alpha layer')
+            raise context.failure(self, 'Mask has an alpha layer')
 
         has_mask = (mmask != 0)
         if mask is not None:
