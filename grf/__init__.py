@@ -23,7 +23,7 @@ from . import decompile
 from .utils import main
 from .colour import PALETTE, PIL_PALETTE, SAFE_COLOURS, ALL_COLOURS, WATER_COLOURS, DEFAULT_BRIGHTNESS, \
     CC_COLOURS, WIN_TO_DOS, srgb_to_linear, linear_to_srgb, srgb_to_oklab, oklab_to_srgb, \
-    srgb_find_best_colour, oklab_blend, make_palette_image
+    srgb_find_best_colour, oklab_blend, make_palette_image, oklab_find_best_colour
 
 
 try:

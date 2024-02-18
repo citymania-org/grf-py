@@ -71,17 +71,26 @@ class GRFFile(grf.LoadedResourceFile):
         self.context = grf.decompile.ParsingContext(baseset=baseset)
         self.f = open(self.path, 'rb')
         self.g, self.container, self.real_sprites, self.pseudo_sprites = grf.decompile.read(self.f, self.context)
-        cur_action_a = None
+        cur_action = None
         cur_count = 0
         cur_offset = 0
-        self.action_a_map = defaultdict(dict)
+        self.action_5_map = defaultdict(dict)
+        self.action_a_map = {}
         for s in self.g.generators:
             if isinstance(s, grf.ReplaceNewSprites):
-                cur_action_a = s
+                cur_action = s
                 cur_count = s.count
                 cur_offset = s.offset or 0
+            elif isinstance(s, grf.ReplaceOldSprites):
+                assert len(s.sets) == 1
+                cur_action = s
+                cur_count = s.sets[0][1]
+                cur_offset = s.sets[0][0]
             elif isinstance(s, grf.decompile.SpritePlaceholder) and cur_count > 0:
-                self.action_a_map[cur_action_a.set_type][cur_offset] = s.sprite_id
+                if isinstance(cur_action, grf.ReplaceNewSprites):
+                    self.action_5_map[cur_action.set_type][cur_offset] = s.sprite_id
+                else:
+                    self.action_a_map[cur_offset] = s.sprite_id
                 cur_offset += 1
                 cur_count -= 1
 
@@ -198,8 +207,9 @@ def str_zones(availability):
 
 
 # g = GRFFile('', baseset=False, real_offset=0)
-# sprite_dict = g.action_a_map[0x06]
-# foundations = [None] * 90
+# # sprite_dict = g.action_5_map[0x06]
+# sprite_dict = g.action_a_map
+# foundations = [None] * 14
 # for ofs in sorted(sprite_dict.keys()):
 #     sprites = g.get_sprites(sprite_dict[ofs])
 #     sprite = None
@@ -208,7 +218,8 @@ def str_zones(availability):
 #             sprite = s
 #             break
 #     assert sprite is not None
-#     foundations[ofs] = sprite
+#     if ofs > 1003: continue
+#     foundations[ofs - 990] = sprite
 
 # assert all(foundations)
 # print('W', set(s.w for s in foundations))
@@ -241,8 +252,11 @@ def yoink(sprites, *, padding=0):
     return im
 
 
+# yoink(foundations, padding=2).show()
 # yoink(foundations, padding=2).save("foundations.png")
 # print(foundations)
+# import sys
+# sys.exit(0)
 
 # def str_availability(f):
 #   if f == ALL_CLIMATES: return 'ALL'
@@ -263,16 +277,16 @@ grfs = [
 ]
 set_types = set()
 for g in grfs:
-    set_types.update(g.action_a_map.keys())
+    set_types.update(g.action_5_map.keys())
 
 full_sheet = []
 
 for set_type in sorted(set_types):
     for g in grfs:
-        if set_type in g.action_a_map:
+        if set_type in g.action_5_map:
             break
 
-    sprite_dict = g.action_a_map[set_type]
+    sprite_dict = g.action_5_map[set_type]
 
     sheet = {}
     n_rows = 0
