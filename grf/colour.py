@@ -13,7 +13,7 @@ PIL_PALETTE_TTO_MARS = (0, 0, 255, 16, 16, 16, 32, 32, 32, 48, 48, 48, 68, 68, 6
 
 PALETTE = [tuple(PIL_PALETTE[3 * i: 3 * i + 3]) for i in range(256)]
 NP_PALETTE = np.array(PALETTE, dtype=np.uint8)
-SAFE_COLOURS = tuple(range(1, 0xD7))
+SAFE_COLOURS = tuple((*range(1, 0xD7), 0xFF))
 ALL_COLOURS = tuple(range(256))
 WATER_COLOURS = tuple(range(0xF5, 0xFF))
 DEFAULT_BRIGHTNESS = 128  # RGB brightness used to pass masked colour without adjustment
