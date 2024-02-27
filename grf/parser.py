@@ -698,9 +698,9 @@ def p_expression_var_call_param_shift_and(t):
 
 
 def p_expression_var_call_shift_and_add_divmod(t):
-    #               1     2        3       4     5     6        7       8     9    10       11       12   13    14     15     16   17    18     19     20
+    #               1     2        3       4     5     6        7       8     9    10       11       12   13    14       15      16    17    18       19       20
     'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
-    '           | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN NUMBER COMMA NAME ASSIGN NUMBER RPAREN'
+    '           | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
     assert t[1] == 'var'
     var = t[3].const_eval()
     if var is None:
@@ -749,7 +749,15 @@ def p_error(t):
         print("Unexpected syntax error")
         return
 
+    s = t.lexer.lexdata
+    pos = t.lexpos
+    st = s.rfind('\n', 0, pos)
+    et = s.find('\n', pos)
+    s = s[st + 1: et] if et > 0 else s[st + 1: ]
+
     print(f'Syntax error at `{t.value}` line {t.lineno}')
+    print(s)
+    print(' ' * (pos - st - 1) + '^')
     print(f'T={t}')
 
 
@@ -784,7 +792,7 @@ SPRITE_FLAGS = {
 if __name__ == "__main__":
     from .common import OBJECT
     res = parse_code(OBJECT, '''
-        TEMP[0x00] = var(0x61, param=(198), shift=0, and=0xffff)
+        TEMP[0x00] = var(0x61, param=(198), shift=0, and=0, add=1, div=3)
         ''')
     # res = parse_code(OBJECT, '''
     #     TEMP[0x7f] = TEMP[0x1]
