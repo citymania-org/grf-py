@@ -720,7 +720,7 @@ def p_expression_var_call_param_shift_and_add_divmod(t):
     if and_mask is None:
         raise ValueError('`and` value must be a constant expression')
     op_type, add_val, divmod_val = parse_divmod(t, 17)
-    t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask, param=t[7], op_type=op_type, add_val=add_val, divmod_val=divmod_val)
+    t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask, param=t[7], type=op_type, add_val=add_val, divmod_val=divmod_val)
 
 
 def p_expression_var_call_shift_and_add_divmod(t):
