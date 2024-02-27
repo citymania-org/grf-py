@@ -337,6 +337,7 @@ class GenericVar(Node):
         shift += self.shift
         assert shift < 0x20, shift
         assert and_mask <= 0xffffffff, and_mask
+        if self.add_val is not None or self.divmod_val is not None: raise NotImplementedError
         if self.param is not None:
             param = self.param.const_eval()
             if param is None:
@@ -680,9 +681,33 @@ def p_expression_call_2(t):
     t[0] = Expr(op, t[3], t[5])
 
 
-def p_expression_var_call_param_shift_and(t):
-    #               1     2        3       4     5     6        7       8     9    10       11       12    13   14       15       16
-    'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
+def parse_divmod(t, ofs):
+    if len(t) <= ofs:
+        return 0, None, None
+
+    assert t[ofs] == 'add'
+    add_val = t[ofs + 2].const_eval()
+    if add_val is None:
+        raise ValueError('`add` value must be a constant expression')
+    divmod_val = t[ofs + 6].const_eval()
+    if t[ofs + 4] == 'div':
+        op_type = 1
+        if divmod_val is None:
+            raise ValueError('`div` value must be a constant expression')
+    elif t[ofs + 4] == 'mod':
+        op_type = 2
+        if divmod_val is None:
+            raise ValueError('`mod` value must be a constant expression')
+    else:
+        raise ValueError(t[ofs + 4])
+
+    return op_type, add_val, divmod_val
+
+
+def p_expression_var_call_param_shift_and_add_divmod(t):
+    #                 1     2        3       4     5     6        7       8     9    10       11       12    13   14       15       16   17    18      19       20    21    22      23        24
+    '''expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN
+                  | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'''
     assert t[1] == 'var'
     var = t[3].const_eval()
     if var is None:
@@ -694,13 +719,14 @@ def p_expression_var_call_param_shift_and(t):
     and_mask = t[15].const_eval()
     if and_mask is None:
         raise ValueError('`and` value must be a constant expression')
-    t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask, param=t[7])
+    op_type, add_val, divmod_val = parse_divmod(t, 17)
+    t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask, param=t[7], op_type=op_type, add_val=add_val, divmod_val=divmod_val)
 
 
 def p_expression_var_call_shift_and_add_divmod(t):
-    #               1     2        3       4     5     6        7       8     9    10       11       12   13    14       15      16    17    18       19       20
-    'expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
-    '           | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'
+    #                 1     2        3       4     5     6        7       8     9    10       11       12   13    14       15      16    17    18       19       20
+    '''expression : NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN
+                  | NAME LPAREN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression COMMA NAME ASSIGN expression RPAREN'''
     assert t[1] == 'var'
     var = t[3].const_eval()
     if var is None:
@@ -712,24 +738,7 @@ def p_expression_var_call_shift_and_add_divmod(t):
     and_mask = t[11].const_eval()
     if and_mask is None:
         raise ValueError('`and` value must be a constant expression')
-    if len(t) > 13:
-        assert t[13] == 'add'
-        add_val = t[15].const_eval()
-        if add_val is None:
-            raise ValueError('`add` value must be a constant expression')
-        divmod_val = t[19].const_eval()
-        if t[17] == 'div':
-            op_type = 1
-            if divmod_val is None:
-                raise ValueError('`div` value must be a constant expression')
-        elif t[17] == 'mod':
-            op_type = 2
-            if divmod_val is None:
-                raise ValueError('`mode` value must be a constant expression')
-        else:
-            raise ValueError(t[17])
-    else:
-        add_val = divmod_val = None
+    op_type, add_val, divmod_val = parse_divmod(t, 13)
     t[0] = GenericVar(var=var, shift=shift, and_mask=and_mask,
                       type=op_type, add_val=add_val, divmod_val=divmod_val)
 
@@ -755,7 +764,7 @@ def p_error(t):
     et = s.find('\n', pos)
     s = s[st + 1: et] if et > 0 else s[st + 1: ]
 
-    print(f'Syntax error at `{t.value}` line {t.lineno}')
+    print(f'Syntax error at `{t.value}` line {t.lineno}:')
     print(s)
     print(' ' * (pos - st - 1) + '^')
     print(f'T={t}')
@@ -792,8 +801,9 @@ SPRITE_FLAGS = {
 if __name__ == "__main__":
     from .common import OBJECT
     res = parse_code(OBJECT, '''
-        TEMP[0x00] = var(0x61, param=(198), shift=0, and=0, add=1, div=3)
+        TEMP[0x00] = var(0x61, shift=0, and=0, add=1, div=1)
         ''')
+        # TEMP[0x00] = var(0x61, param=(198), shift=0, and=0, add=1)
     # res = parse_code(OBJECT, '''
     #     TEMP[0x7f] = TEMP[0x1]
     #     TEMP[0x7f] = var(0x10, shift=11, and=12)
