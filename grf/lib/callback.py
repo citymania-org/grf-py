@@ -575,8 +575,9 @@ class CallbackManager(object):
             props['extra_cb_flags'] = props.get('extra_cb_flags', 0) | (res >> 8)
 
     def make_switch(self):
-        is_vehicle = self.feature in grf.VEHICLE_FEATURES
-        if self.graphics.default is None and is_vehicle:
+        has_graphics = self.feature in grf.VEHICLE_FEATURES or self.feature in {grf.HOUSE, grf.INDUSTRY_TILE}
+        has_purchase = self.feature in grf.VEHICLE_FEATURES or self.feature in {grf.STATION, grf.OBJECT, grf.ROAD_STOP}
+        if self.graphics.default is None and has_graphics:
             raise ValueError('No graphics')
 
         default_callbacks = {}
@@ -602,8 +603,13 @@ class CallbackManager(object):
 
 
         maps = {}
-        default = self.graphics.default
-        if is_vehicle:
+
+        if has_graphics:
+            default = self.graphics.default
+        else:
+            default = None
+
+        if has_purchase:
             if purchase_callbacks:
                 # TODO purchase_switch can be the same as default
                 purchase_switch = grf.Switch(
@@ -612,7 +618,7 @@ class CallbackManager(object):
                     code='current_callback',
                 )
                 maps = {255: purchase_switch}
-            elif self.graphics.purchase is not None:
+            elif has_graphics and self.graphics.purchase is not None:
                 maps = {255: self.graphics.purchase}
 
         if default_callbacks:
