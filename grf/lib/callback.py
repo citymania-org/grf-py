@@ -307,8 +307,8 @@ CALLBACKS = {
         **VEHICLE_CALLBACKS,
     },
     grf.STATION: {
-        0x13: {'name': 'availability', 'flag': 0, 'class': DefaultCallback},
-        0x14: {'name': 'select_sprite_layout', 'flag': 0x1, 'class': DualCallback},
+        0x13: {'name': 'availability', 'flag': 0x1, 'class': DefaultCallback},
+        0x14: {'name': 'select_sprite_layout', 'flag': 0x2, 'class': DualCallback},
         0x24: {'name': 'select_tile_layout', 'flag': 0, 'class': PurchaseCallback},
         0x140: {'name': 'anim_control', 'flag': 0, 'class': DefaultCallback},
         0x141: {'name': 'anim_next_frame', 'flag': 0x4, 'class': DefaultCallback},
@@ -575,7 +575,7 @@ class CallbackManager(object):
             props['extra_cb_flags'] = props.get('extra_cb_flags', 0) | (res >> 8)
 
     def make_switch(self):
-        has_graphics = self.feature in grf.VEHICLE_FEATURES or self.feature in {grf.HOUSE, grf.INDUSTRY_TILE}
+        has_graphics = self.feature in grf.VEHICLE_FEATURES or self.feature in {grf.STATION, grf.HOUSE, grf.INDUSTRY_TILE}
         has_purchase = self.feature in grf.VEHICLE_FEATURES or self.feature in {grf.STATION, grf.OBJECT, grf.ROAD_STOP}
         if self.graphics.default is None and has_graphics:
             raise ValueError('No graphics')
