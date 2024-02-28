@@ -225,14 +225,11 @@ class PaletteRemap(Action):
         return b'\x00' + self.remap.tobytes()
 
     @classmethod
-    def oklab_from_function(cls, colour_func, remap_water=False):
+    def oklab_from_function(cls, colour_func, remap_range=SAFE_COLOURS):
         res = cls()
         # TODO use numpy vector operations
-        for i in SAFE_COLOURS:
+        for i in remap_range:
             res.remap[i] = oklab_find_best_colour(colour_func(colour.OKLAB_PALETTE[i]))
-        if remap_water:
-            for i in WATER_COLOURS:
-                res.remap[i] = oklab_find_best_colour(colour_func(colour.OKLAB_PALETTE[i]))
         return res
 
     @classmethod
