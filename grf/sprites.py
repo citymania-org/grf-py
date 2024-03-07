@@ -486,7 +486,10 @@ class Sprite(Resource):
     def get_resource_files(self):
         return self.get_image_files() + (THIS_FILE,)
 
-    def save_gif(self, filename: str):
+    def save_gif(self, filename: str, context=None):
+        if context is None:
+            context = DummyWriteContext()
+
         DARK_BLUE_WATER = ((32,  68, 112), (36,  72, 116), (40,  76, 120), (44,  80, 124), (48,  84, 128))
         DARK_BLUE_WATER_TOYLAND = ((28, 108, 124), (32, 112, 128), (36, 116, 132), (40, 120, 136), (44, 124, 140))
         LIGHTHOUSE_AND_STADIUM = ((240, 208, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0))
@@ -544,7 +547,7 @@ class Sprite(Resource):
 
             return start, res
 
-        _, _, _, _, img, alpha, mask = self.get_data_layers()
+        _, _, img, alpha, mask = self.get_data_layers(context)
         if img is not None or alpha is not None:
             raise NotImplementedError('Only 8bpp sprites are supported')
 

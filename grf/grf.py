@@ -6,6 +6,7 @@ import os
 import struct
 import time
 import textwrap
+import tempfile
 from collections import defaultdict
 
 from PIL import Image, ImageDraw
@@ -515,8 +516,7 @@ class BaseNewGRF:
 
         return res
 
-    def write(self, filename, clean_build=False, debug_zoom_levels=False):
-        t = Timer()
+    def _do_write(self, filename, t, sprite_cache, debug_zoom_levels=False):
         t.start(f'Evaluating sprite generators')
         sprites = self.generate_sprites()
 
@@ -532,8 +532,7 @@ class BaseNewGRF:
         sprites = self.strings.get_persistent_actions() + sprites + self.strings.get_actions()
 
         t.log(f'Enumerating {len(sprites)} real sprites')
-        sprite_cache = SpriteCache(self.sprite_cache_path)
-        sprite_cache.load(clean_build=clean_build)
+
         sprite_order = self._enumerate_sprites(sprites)
 
         t.log(f'Writing actions')
@@ -657,11 +656,25 @@ class BaseNewGRF:
 
             self._context.num_duplicate = len(renumerate_sprites)
 
-        sprite_cache.save()
         self._id_map.save()
         t.stop()
         self._context.print_report()
         print(f'Generated grf size: {byte_size_format(file_size)}')
+        return sprites
+
+    def write(self, filename, clean_build=False, debug_zoom_levels=False):
+        t = Timer()
+        sprite_cache = SpriteCache(self.sprite_cache_path)
+        sprite_cache.load(clean_build=clean_build)
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        try:
+            sprites = self._do_write(tmp.name, t, sprite_cache, debug_zoom_levels=debug_zoom_levels)
+            os.replace(tmp.name, filename)
+        except Exception as e:
+            os.unlink(tmp.name)
+            raise
+        finally:
+            sprite_cache.save()
 
         watched = set()
         for s in sprites:

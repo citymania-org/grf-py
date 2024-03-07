@@ -59,6 +59,7 @@
 - Don't write redundant actions for railtypes without fallbacks in railtype table.
 - Return cargo type ids in `NewGRF.set_cargo_table`.
 - Remove all uses of spectra in favour of own colour submodule using OKLAB colour space.
+- Only replace output file when build succeeded.
 
 - lib: Fix `CallbackManager.make_switches` for non-vehicle features.
 - lib: Fix incorrect 2cc colors for auto-articulated parts.
