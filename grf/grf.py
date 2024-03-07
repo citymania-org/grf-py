@@ -458,7 +458,6 @@ class BaseNewGRF:
         fingerprints = {}
         for s in sprites:
             if isinstance(s, ResourceAction):
-                s.prepare_files()
                 resource_files = s.get_resource_files()
                 for f in resource_files:
                     assert isinstance(f, ResourceFile), type(f)
@@ -516,6 +515,30 @@ class BaseNewGRF:
 
         return res
 
+    def get_sprite_fingerprint(self, s):
+        if not isinstance(s, Sprite):
+            return None
+
+        fingerprint = s.get_fingerprint()
+        if fingerprint is None:
+            return None
+
+        files = s.get_resource_files()
+        files_data = []
+        for f in files:
+            fmod = None
+            if f.path is not None:
+                path = str(f.path)
+                fmod = self._file_mod_date.get(path)
+                if fmod is None:
+                    fmod = self._file_mod_date[path] = os.path.getmtime(path)
+            files_data.append((f.get_fingerprint(), fmod))
+
+        return {
+            'data': fingerprint,
+            'files': files_data,
+        }
+
     def _do_write(self, filename, t, sprite_cache, debug_zoom_levels=False):
         t.start(f'Evaluating sprite generators')
         sprites = self.generate_sprites()
@@ -531,7 +554,36 @@ class BaseNewGRF:
         t.log(f'Adding strings')
         sprites = self.strings.get_persistent_actions() + sprites + self.strings.get_actions()
 
-        t.log(f'Enumerating {len(sprites)} real sprites')
+        t.log(f'Pre-processing {len(sprites)} real sprites')
+
+        # Setup sprite transformations
+        sprite_map = {}
+        for a in sprites:
+            if not isinstance(a, ResourceAction):
+                continue
+            for s in a.get_resources():
+                if isinstance(s, Sprite) and debug_zoom_levels:
+                    s = ZoomDebugRecolourSprite(s)
+                sprite_map[s] = s
+
+        # Calculate sprite fingerprints and check cache
+        cached_sprites = set()
+        self._file_mod_date = {}
+        fingerprints = {}
+        for a in sprites:
+            if not isinstance(a, ResourceAction):
+                continue
+            for s in a.get_resources():
+                if not isinstance(s, Sprite):
+                    s.prepare_files()
+                    continue
+                s = sprite_map[s]
+                fp = sprite_cache.hexdigest(self.get_sprite_fingerprint(s))
+                fingerprints[s] = fp
+                if sprite_cache.is_cached(fp):
+                    cached_sprites.add(s)
+                else:
+                    s.prepare_files()
 
         sprite_order = self._enumerate_sprites(sprites)
 
@@ -558,44 +610,16 @@ class BaseNewGRF:
             f.write(b'\x00\x00\x00\x00')
 
             t.log(f'Writing resources')
-            file_mod_date = {}
-
-            def get_sprite_fingerprint(s):
-                if not isinstance(s, Sprite):
-                    return None
-
-                fingerprint = s.get_fingerprint()
-                if fingerprint is None:
-                    return None
-
-                files = s.get_resource_files()
-                files_data = []
-                for f in files:
-                    fmod = None
-                    if f.path is not None:
-                        path = str(f.path)
-                        fmod = file_mod_date.get(path)
-                        if fmod is None:
-                            fmod = file_mod_date[path] = os.path.getmtime(path)
-                    files_data.append((f.get_fingerprint(), fmod))
-
-
-                return {
-                    'data': fingerprint,
-                    'files': files_data,
-                }
 
             def get_sprite_data(s):
                 sprite_data = None
-                if debug_zoom_levels:
-                    s = ZoomDebugRecolourSprite(s)
+                s = sprite_map[s]
                 if isinstance(s, Sprite):
-                    sprite_data = get_sprite_fingerprint(s)
-                if sprite_data is not None:
-                    data = sprite_cache.get(sprite_data)
+                    # Do get istead of checking cached as it could've been added on this run
+                    data = sprite_cache.get(fingerprints[s])
                     if data is None:
                         data = s.get_real_data(self._context)
-                        sprite_cache.set(sprite_data, data)
+                        sprite_cache.set(fingerprints[s], data)
                     else:
                         self._context.num_cached += 1
                 else:

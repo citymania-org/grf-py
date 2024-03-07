@@ -61,21 +61,24 @@ class SpriteCache:
         ).encode('utf-8')
         return hashlib.md5(s).hexdigest()[:16]
 
-    def get(self, hash_data):
-        h = self.hexdigest(hash_data)
-        # NOTE only check hashes because checking data is tricky in json (stringified keys)
-        if h not in self._index:
+    def is_cached(self, hash_key):
+        assert isinstance(hash_key, str) and len(hash_key) == 16, hash_key
+        return hash_key in self._index
+
+    def get(self, hash_key):
+        assert isinstance(hash_key, str) and len(hash_key) == 16, hash_key
+        if hash_key not in self._index:
             return None
 
-        self._new_keys.add(h)
+        self._new_keys.add(hash_key)
         try:
-            return open(self.path / h, 'rb').read()
+            return open(self.path / hash_key, 'rb').read()
         except Exception as e:
-            print(f'WARNING(internal): Broken sprite cache entry {h} (get fail): {e}')
+            print(f'WARNING(internal): Broken sprite cache entry {hash_key} (get fail): {e}')
 
-    def set(self, hash_data, data):
-        h = self.hexdigest(hash_data)
-        self._new_keys.add(h)
-        with open(self.path / str(h), 'wb') as f:
+    def set(self, hash_key, data):
+        assert isinstance(hash_key, str) and len(hash_key) == 16, hash_key
+        self._new_keys.add(hash_key)
+        with open(self.path / str(hash_key), 'wb') as f:
             f.write(data)
-        self._index[h] = hash_data
+        self._index[hash_key] = True

@@ -130,10 +130,6 @@ class SingleResourceAction(ResourceAction):
     def get_resource_files(self):
         return self.resource.get_resource_files()
 
-    # NOTE: may be removed in future in favor of preparing in constructor
-    def prepare_files(self):
-        self.resource.prepare_files()
-
 
 class AlternativeSprites(ResourceAction):
     def __init__(self, *sprites):
@@ -159,11 +155,6 @@ class AlternativeSprites(ResourceAction):
         for s in self.sprites:
             res.extend(s.get_resource_files())
         return res
-
-    # NOTE: may be removed in future in favor of preparing in constructor
-    def prepare_files(self):
-        for s in self.sprites:
-            s.prepare_files()
 
 
 class ResourceFile:
