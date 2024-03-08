@@ -120,7 +120,7 @@ def watch_func(g, grf_file, args):
     if args.live_reload is not None:
         s = args.live_reload
         port = 3977
-        addr = '127.0.0.1'
+        addr = 'localhost'
         if ':' in s:
             s, port_str = s.rsplit(':', 1)
             port = int(port_str)
