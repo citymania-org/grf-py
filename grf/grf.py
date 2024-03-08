@@ -77,23 +77,25 @@ class PythonGenerationContext:
         self._var_count = {}
 
 
+# TODO merge with WriteContext.Timer
 class Timer:
-    def __init__(self):
+    def __init__(self, context):
+        self.context = context
         self.t = 0
 
     def start(self, s):
         self.t = time.time()
-        print(f'{s}: ... ', end='', flush=True)
+        self.context.print(f'{s}: ... ', end='', flush=True)
 
     def log(self, s):
         t = time.time()
-        print(f'{t - self.t:.02f}')
-        print(f'{s}: ... ', end='', flush=True)
+        self.context.print(f'{t - self.t:.02f}')
+        self.context.print(f'{s}: ... ', end='', flush=True)
         self.t = t
 
     def stop(self):
         t = time.time()
-        print(f'{t - self.t:.02f}')
+        self.context.print(f'{t - self.t:.02f}')
 
 
 class WriteContext:
@@ -137,13 +139,13 @@ class WriteContext:
             self.custom_time[category] += now - self.time
             self.time = now
 
-        def print_time_report(self):
-            print(f'   Resource loading: {self.loading_time:.02f}')
-            print(f'   Graphics conversion: {self.conversion_time:.02f}')
-            print(f'   Graphics composing: {self.composing_time:.02f}')
+        def print_time_report(self, func):
+            func(f'   Resource loading: {self.loading_time:.02f}')
+            func(f'   Graphics conversion: {self.conversion_time:.02f}')
+            func(f'   Graphics composing: {self.composing_time:.02f}')
             for cat, time in self.custom_time.items():
-                print(f'   {cat}: {time:.02f}')
-            print(f'   Graphics compression: {self.compression_time:.02f}')
+                func(f'   {cat}: {time:.02f}')
+            func(f'   Graphics compression: {self.compression_time:.02f}')
 
 
     def __init__(self):
@@ -154,6 +156,14 @@ class WriteContext:
         self.num_duplicate = 0
         self.messages = []
         self.timer = self.Timer(self)
+        self.print_handlers = []
+
+    def add_print_handler(self, func):
+        self.print_handlers.append(func)
+
+    def print(self, msg, end='\n', flush=False):
+        for f in self.print_handlers:
+            f(msg, end=end, flush=False)
 
     def failure(self, obj, message):
         # self.messages.append((MessageType.ERROR, code, obj, message))
@@ -179,7 +189,7 @@ class WriteContext:
         return res
 
     def print_report(self):
-        self.timer.print_time_report()
+        self.timer.print_time_report(self.print)
         scount = wcount = 0
         for mt, code, obj, message in self.messages:
             if mt == self.MessageType.SANITY:
@@ -188,10 +198,10 @@ class WriteContext:
             elif mt == self.MessageType.WARNING:
                 wcode = f'w-{code}'
                 wcount += 1
-            print(f'WARNING in {obj}: {message} [{wcode}]')
+            self.print(f'WARNING in {obj}: {message} [{wcode}]')
         if wcount + scount > 0:
-            print(f'Total warnings: {wcount + scount}')
-        print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
+            self.print(f'Total warnings: {wcount + scount}')
+        self.print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
 
 
 class BaseNewGRF:
@@ -201,6 +211,7 @@ class BaseNewGRF:
         self._sounds = {}
         self.strings = StringManager() if strings is None else strings
         self._context = WriteContext()
+        self._context.add_print_handler(print)
         self._id_map = IDMap(id_map_file)
         self.sprite_cache_path = sprite_cache_path
 
@@ -683,11 +694,11 @@ class BaseNewGRF:
         self._id_map.save()
         t.stop()
         self._context.print_report()
-        print(f'Generated grf size: {byte_size_format(file_size)}')
+        self._context.print(f'Generated grf size: {byte_size_format(file_size)}')
         return sprites
 
     def write(self, filename, clean_build=False, debug_zoom_levels=False):
-        t = Timer()
+        t = Timer(self._context)
         sprite_cache = SpriteCache(self.sprite_cache_path)
         sprite_cache.load(clean_build=clean_build)
         tmp = tempfile.NamedTemporaryFile(delete=False)
@@ -745,6 +756,7 @@ class IDMap:
     def _check_path(self):
         if self.path is None:
             self.path = 'id_map.json'
+            # TODO context.print
             print(f'WARNING: ID index is not configured, using default "{self.path}"')
             print('Set id index path by passing id_map_file to NewGRF constructor.')
 
