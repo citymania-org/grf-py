@@ -10,10 +10,14 @@ NOTE: Live reloading is a highly experimental feature that may not work that wel
 [network]
 admin_password = pw
 ```
+
 2. Check the value of `network.server_admin_port` in `openttd.cfg`, it can be any port, 3977 by default.
+
 3. Use `grf.main` function in your code to generate grf instead of `NewGRF.write`:
 ```python
 grf.main(g, 'super.grf')
 ```
-4. Using CityMania patchpack start the game in *multiplayer* mode with necessary settings. Keep the server private so random players don't join it.
+
+4. Using CityMania patchpack start the game in *multiplayer server* mode with necessary settings. Keep the server private so random players don't join it.
+
 5. Use `python generate.py watch --live-reload=pw` to build grf and start watching for changes. Full format for `--live-reload` is `pw@server:port`, by default it's using server 'localhost' and port 3977.
