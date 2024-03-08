@@ -5,7 +5,7 @@ NOTE: Live reloading is a highly experimental feature that may not work that wel
 2. Use CityMania patchpack 14.0-RC1 or later: https://citymania.org/downloads
 
 # Setup
-1. Change `network.admin_password` in `secrets.cfg` to some non-empty value:
+1. Change `network.admin_password` in `secrets.cfg` to some non-empty value (and don't forget to close the game before editing ayn configs):
 ```ini
 [network]
 admin_password = pw

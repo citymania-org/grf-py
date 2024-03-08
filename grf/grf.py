@@ -85,6 +85,7 @@ class Timer:
 
     def start(self, s):
         self.t = time.time()
+        self.start_time = self.t
         self.context.print(f'{s}: ... ', end='', flush=True)
 
     def log(self, s):
@@ -96,6 +97,10 @@ class Timer:
     def stop(self):
         t = time.time()
         self.context.print(f'{t - self.t:.02f}')
+
+    def log_total(self, s):
+        t = time.time()
+        self.context.print(f'{s}: {t - self.t:.02f}')
 
 
 class WriteContext:
@@ -150,6 +155,7 @@ class WriteContext:
 
     def __init__(self):
         self._nml = nml.spriteencoder.SpriteEncoder(True, False, None)
+        self.print_handlers = []
         self.reset()
 
     def reset(self):
@@ -158,7 +164,6 @@ class WriteContext:
         self.num_uncacheable = 0
         self.num_duplicate = 0
         self.messages = []
-        self.print_handlers = []
         self.timer = self.Timer(self)
 
     def add_print_handler(self, func):
@@ -721,6 +726,8 @@ class BaseNewGRF:
                 for f in s.get_resource_files():
                     assert isinstance(f, ResourceFile)
                     watched.add(f.path)
+
+        t.log_total('Total build time')
 
         return watched
 
