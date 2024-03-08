@@ -150,13 +150,16 @@ class WriteContext:
 
     def __init__(self):
         self._nml = nml.spriteencoder.SpriteEncoder(True, False, None)
+        self.reset()
+
+    def reset(self):
         self.num_sprites = 0
         self.num_cached = 0
         self.num_uncacheable = 0
         self.num_duplicate = 0
         self.messages = []
-        self.timer = self.Timer(self)
         self.print_handlers = []
+        self.timer = self.Timer(self)
 
     def add_print_handler(self, func):
         self.print_handlers.append(func)
@@ -698,6 +701,7 @@ class BaseNewGRF:
         return sprites
 
     def write(self, filename, clean_build=False, debug_zoom_levels=False):
+        self._context.reset()
         t = Timer(self._context)
         sprite_cache = SpriteCache(self.sprite_cache_path)
         sprite_cache.load(clean_build=clean_build)
