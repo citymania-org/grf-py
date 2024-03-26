@@ -18,6 +18,7 @@ class Callback:
         AUTOREPLACE_SELECTION = 0x34
         CHANGE_PROPERTIES = 0x36
         NAME = 0x161
+        REVERSE_BUILD_PROBABILITY = 0x162
 
     class Train(Vehicle):
         class Properties:
@@ -268,6 +269,7 @@ VEHICLE_CALLBACKS = {
     0x33: {'name': 'sound_effect', 'flag': 0x80, 'class': DefaultCallback},
     0x15e: {'name': 'refit_cost', 'flag': 0, 'class': DualCallback},
     0x161: {'name': 'name', 'flag': 0x100, 'class': PurchaseCallback},
+    0x162: {'name': 'reverse_build_probability', 'flag': 0, 'class': DefaultCallback},
     # 0x34: {'name': 'autoreplace_selection', 'flag': 0, 'class': DefaultCallback},
     0x36: {'name': 'change_properties', 'flag': 0, 'class': DualCallback},
 }
