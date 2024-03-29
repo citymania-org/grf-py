@@ -83,6 +83,8 @@
 - grftopy: Fix decompilation of ActionB.
 - grftopy: Fix decompilation of action 7/9 with value > 4 bytes.
 - grftopy: Add -p/--palette cli option to set output palette for 8bpp images.
+- grftopy: Decompile `cargo_(dis)allow_refit` properties as a tuple of cargo indexes.
+
 ---------
 0.2.2
 ---------

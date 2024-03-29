@@ -284,6 +284,26 @@ class ClimateProperty(Property):
         return ' | '.join(res)
 
 
+class ByteListProperty(Property):
+    def validate(cls, value):
+        if not isinstance(value, (list, tuple)):
+            raise ValueError(f'list or tuple object expected')
+        if not all(isinstance(x, int) and 0 <= x < 256 for x in value):
+            raise ValueError(f'expected integer values in range 0..255')
+
+    def read(cls, data, ofs):
+        n = data[ofs]
+        res = tuple(map(int, data[ofs + 1: ofs + 1 + n]))
+        return res, ofs + 1 + n
+
+    def encode(cls, value):
+        return struct.pack('<B', len(value)) + bytes(value)
+
+
+class CargoListProperty(ByteListProperty):
+    pass
+
+
 class PyComment(FakeAction):
     def __init__(self, text):
         self.text = text
@@ -346,8 +366,8 @@ ACTION0_TRAIN_PROPS = {
     0x29: ('non_refittable_cargo_classes', 'W'),  # Non-refittable cargo classes    yes
     0x2A: ('introduction_date', DateProperty()),  # Long format introduction date   no
     0x2B: ('cargo_age_period', 'W'),  # period  yes
-    0x2C: ('cargo_allow_refit', 'n*B'), # refittable cargo types   yes
-    0x2D: ('cargo_disallow_refit', 'n*B'),  # refittable cargo types    yes
+    0x2C: ('cargo_allow_refit', CargoListProperty()), # refittable cargo types   yes
+    0x2D: ('cargo_disallow_refit', CargoListProperty()),  # refittable cargo types    yes
     0x2E: ('curve_speed_mod', 'W'),  # speed modifier    yes
     0x2F: ('variant_group', IDProperty()),  # Vehicle variant group
     0x30: ('extra_flags', 'D'),  # extra flags
@@ -382,8 +402,8 @@ ACTION0_RV_PROPS = {
     0x21: ('visual_effect', 'B'),  # Visual effect   yes
     0x22: ('cargo_age_period', 'W'),  # Custom cargo ageing period  yes
     0x23: ('shorten_by', 'B'),  # Make vehicle shorter, see train property 21     yes
-    0x24: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C    yes
-    0x25: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D     yes
+    0x24: ('cargo_allow_refit', CargoListProperty()),  # List of always refittable cargo types, see train property 2C    yes
+    0x25: ('cargo_disallow_refit', CargoListProperty()),  # List of never refittable cargo types, see train property 2D     yes
     0x26: ('variant_group', IDProperty()),  # Vehicle variant group
     0x27: ('extra_flags', 'D'),  # extra flags
     0x28: ('extra_cb_flags', 'B'),  # extra callback flags
@@ -412,8 +432,8 @@ ACTION0_SHIP_PROPS = {
     0x1B: ('sort_purchase_list', IDProperty(extended=True)), # Sort the purchase list
     0x1C: ('visual_effect', 'B'),  # Visual effect
     0x1D: ('cargo_age_period', 'W'),  # Custom cargo ageing period
-    0x1E: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
-    0x1F: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
+    0x1E: ('cargo_allow_refit', CargoListProperty()),  # List of always refittable cargo types, see train property 2C
+    0x1F: ('cargo_disallow_refit', CargoListProperty()),  # List of never refittable cargo types, see train property 2D
     0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
     0x22: ('extra_cb_flags', 'B'),  # extra callback flags
@@ -441,8 +461,8 @@ ACTION0_AIRCRAFT_PROPS = {
     0x1A: ('introduction_date', DateProperty()),  # Long format introduction date
     0x1B: ('sort_purchase_list', IDProperty(extended=True)),  # Sort the purchase list
     0x1C: ('cargo_age_period', 'W'),  # Custom cargo ageing period
-    0x1D: ('cargo_allow_refit', 'n*B'),  # List of always refittable cargo types, see train property 2C
-    0x1E: ('cargo_disallow_refit', 'n*B'),  # List of never refittable cargo types, see train property 2D
+    0x1D: ('cargo_allow_refit', CargoListProperty()),  # List of always refittable cargo types, see train property 2C
+    0x1E: ('cargo_disallow_refit', CargoListProperty()),  # List of never refittable cargo types, see train property 2D
     0x1F: ('range', 'W'),  # Aircraft range in tiles. Distance is euclidean, a value of 0 means range is unlimited
     0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
