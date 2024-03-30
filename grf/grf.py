@@ -714,6 +714,7 @@ class BaseNewGRF:
         sprite_cache = SpriteCache(self.sprite_cache_path)
         sprite_cache.load(clean_build=clean_build)
         tmp = tempfile.NamedTemporaryFile(delete=False)
+        tmp.close()
         try:
             sprites = self._do_write(tmp.name, t, sprite_cache, debug_zoom_levels=debug_zoom_levels)
             os.replace(tmp.name, filename)
