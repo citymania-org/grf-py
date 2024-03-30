@@ -96,7 +96,7 @@ def restore_rgba_image(rgb, alpha):
 # Pseudo sprite in grf
 class Action:
     def get_data(self, context):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class FakeAction:
@@ -190,10 +190,10 @@ class LoadedResourceFile(ResourceFile):
 
 class Resource:
     def get_fingerprint(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_resource_files(self):
-        return NotImplemented
+        return NotImplementedError
 
     # NOTE: may be removed in future in favor of preparing in constructor
     def prepare_files(self):
@@ -256,25 +256,13 @@ class PaletteRemap(Action):
 WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
-def combine_fingerprint(*args, **kw):
-    res = {}
-    for x in args:
-        if x is None:
-            return None
-        res.update(x)
-
-    for k, v in kw.items():
-        if callable(v):
-            v = v()
-            if v is None:
-                return None
-        res[k] = v
-    return res
-
-
 class MaskMode:
     DEFAULT = 0
     OVERDRAW = 1
+
+
+class Uncacheable(Exception):
+    pass
 
 
 class Sprite(Resource):
@@ -301,18 +289,6 @@ class Sprite(Resource):
     @property
     def default_name(self):
         return f'{self.w}x{self.h}'
-
-    def get_fingerprint_base(self):
-        return combine_fingerprint(
-            **{'class': self.__class__.__name__},
-            w=self.w,
-            h=self.h,
-            xofs=self.xofs,
-            yofs=self.yofs,
-            zoom=self.zoom,
-            bpp=self.bpp,
-            crop=self.crop,
-        )
 
     def get_fingerprint(self):
         raise NotImplementedError
@@ -604,6 +580,20 @@ class Sprite(Resource):
         return Image.fromarray(img, mode='RGBA')
 
 
+class CacheableSprite(Sprite):
+    def get_fingerprint(self):
+        return {
+            'class': self.__class__.__name__,
+            'w': self.w,
+            'h': self.h,
+            'xofs': self.xofs,
+            'yofs': self.yofs,
+            'zoom': self.zoom,
+            'bpp': self.bpp,
+            'crop': self.crop,
+        }
+
+
 class WithMask(Sprite):
     def __init__(self, sprite, mask, name=None, mode=MaskMode.DEFAULT):
         if mask.bpp is not None and mask.bpp != BPP_8:
@@ -709,7 +699,7 @@ class ImageSprite(Sprite):
         super().__init__(*self._image[0].size, bpp=self._image[1], **kw)
 
     def get_fingerprint(self):
-        return None
+        raise Uncacheable
 
     def get_image(self):
         return self._image
@@ -750,7 +740,7 @@ class ImageFile(LoadedResourceFile):
         return self._image
 
 
-class FileSprite(Sprite):
+class FileSprite(CacheableSprite):
     def __init__(self, file, x, y, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None, **kw):
         assert(isinstance(file, ImageFile))
         super().__init__(w, h, xofs=xofs, yofs=yofs, bpp=bpp, zoom=zoom, crop=crop, name=name)
@@ -791,8 +781,8 @@ class FileSprite(Sprite):
         return (self.file,)
 
     def get_fingerprint(self):
-        return combine_fingerprint(
-            super().get_fingerprint_base(),
+        return dict(
+            **super().get_fingerprint(),
             colourkey=None if self.file.colourkey is None else tuple(self.file.colourkey),
             x=self.x,
             y=self.y,

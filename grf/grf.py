@@ -26,7 +26,7 @@ from .colour import PIL_PALETTE
 from .cache import SpriteCache
 from .sprites import Action, Sprite, Sound, ResourceAction, FakeAction, Resource, \
                      PaletteRemap, AlternativeSprites, ResourceFile, LoadedResourceFile, \
-                     SingleResourceAction, ZoomDebugRecolourSprite
+                     SingleResourceAction, ZoomDebugRecolourSprite, Uncacheable
 from .strings import StringManager, StringRef
 
 
@@ -209,7 +209,7 @@ class WriteContext:
             self.print(f'WARNING in {obj}: {message} [{wcode}]')
         if wcount + scount > 0:
             self.print(f'Total warnings: {wcount + scount}')
-        self.print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, non-cacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
+        self.print(f'Total {self.num_sprites} sprites, cached {self.num_cached}, uncacheable {self.num_uncacheable}. Optimized {self.num_duplicate} duplicates.')
 
 
 class BaseNewGRF:
@@ -538,8 +538,9 @@ class BaseNewGRF:
         if not isinstance(s, Sprite):
             return None
 
-        fingerprint = s.get_fingerprint()
-        if fingerprint is None:
+        try:
+            fingerprint = s.get_fingerprint()
+        except Uncacheable:
             return None
 
         files = s.get_resource_files()
@@ -597,12 +598,14 @@ class BaseNewGRF:
                     s.prepare_files()
                     continue
                 s = sprite_map[s]
-                fp = sprite_cache.hexdigest(self.get_sprite_fingerprint(s))
-                fingerprints[s] = fp
-                if sprite_cache.is_cached(fp):
-                    cached_sprites.add(s)
-                else:
-                    s.prepare_files()
+                fpdict = self.get_sprite_fingerprint(s)
+                if fpdict is not None:
+                    fp = sprite_cache.hexdigest(fpdict)
+                    fingerprints[s] = fp
+                    if sprite_cache.is_cached(fp):
+                        cached_sprites.add(s)
+                        continue
+                s.prepare_files()
 
         sprite_order = self._enumerate_sprites(sprites)
 
@@ -633,7 +636,7 @@ class BaseNewGRF:
             def get_sprite_data(s):
                 sprite_data = None
                 s = sprite_map[s]
-                if isinstance(s, Sprite):
+                if isinstance(s, Sprite) and s in fingerprints:
                     # Do get istead of checking cached as it could've been added on this run
                     data = sprite_cache.get(fingerprints[s])
                     if data is None:

@@ -44,3 +44,8 @@ Use `MAJOR.MINOR.PATCH` versioning with `MAJOR` currently at 0 to signify it's c
 - NFO: procedure+subroutine (https://newgrf-specs.tt-wiki.net/wiki/VarAction2Advanced).
 - NML: procedure (https://github.com/OpenTTD/nml/issues/105).
 - Call them "function" in grf-py, "subrotine" is too archaic and "procedure" is deceptive as they return a value.
+
+
+## Uncacheable sprite fingerpring
+- Old approach: `return None`. Due to the high inheritability of sprite classes, special handling for None values introduces significant complexity and frequently leads to difficult-to-detect errors.
+- New approach: `raise UncacheableSprite`. If it's uncacheable it's uncacheable, just raise exception and be done with it.
