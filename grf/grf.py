@@ -101,7 +101,7 @@ class Timer:
 
     def log_total(self, s):
         t = time.time()
-        self.context.print(f'{s}: {t - self.t:.02f}')
+        self.context.print(f'{s}: {t - self.start_time:.02f}')
 
 
 class WriteContext:
