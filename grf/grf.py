@@ -3,6 +3,7 @@ import heapq
 import inspect
 import json
 import os
+import shutil
 import struct
 import time
 import textwrap
@@ -717,7 +718,7 @@ class BaseNewGRF:
         tmp.close()
         try:
             sprites = self._do_write(tmp.name, t, sprite_cache, debug_zoom_levels=debug_zoom_levels)
-            os.replace(tmp.name, filename)
+            shutil.move(tmp.name, filename)
         except Exception as e:
             os.unlink(tmp.name)
             raise
