@@ -189,6 +189,8 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Stations
 | 0x19 | road_routing | Not supported | Road routing (reserved for future use) |
 | 0x1A | advanced_layout | NewStationLayoutProperty | Advanced sprite layout with register modifiers |
 | 0x1B | min_bridge_height | 8 bytes (TODO) | dvanced sprite layout with register modifiers |
+| 0x1C | station_name | int(0-65535) | Station name ID |
+| 0x1D | station_class_name | int(0-65535) | Station class name ID |
 
 
 # Canals (CANAL, 0x05)
