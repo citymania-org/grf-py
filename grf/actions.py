@@ -730,6 +730,8 @@ ACTION0_STATION_PROPS = {
     0x19: ('road_routing', 'V'),  # Road routing (reserved for future use)
     0x1A: ('advanced_layout', NewStationLayoutProperty()),  # Advanced sprite layout with register modifiers
     0x1B: ('min_bridge_height', '8*B'),  # Advanced sprite layout with register modifiers
+    0x1C: ('station_name', 'W'),  # Station name
+    0x1D: ('station_class_name', 'W'),  # Station class name
 }
 
 # TODO river
