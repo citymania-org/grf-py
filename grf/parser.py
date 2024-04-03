@@ -1,4 +1,5 @@
 import struct
+import tempfile
 
 import ply.lex
 import ply.yacc
@@ -772,7 +773,8 @@ def p_error(t):
 
 def parse_code(feature, code):
     lexer = ply.lex.lex()
-    parser = ply.yacc.yacc()
+    # TODO make some custom build directory
+    parser = ply.yacc.yacc(debug=False, outputdir=tempfile.gettempdir())
     parser.grf_feature = feature
     res = parser.parse(code)
     if res is None:
