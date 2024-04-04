@@ -1921,7 +1921,7 @@ class Action3(Action, ReferencingAction):
         else:
             idlist = self.ids
             idfmt = 'B'
-            if self.feature in VEHICLE_FEATURES and any(x >= 0xff for x in self.ids):
+            if (self.feature in VEHICLE_FEATURES or self.feature == STATION) and any(x >= 0xff for x in self.ids):
                 idlist = [0xff] * (2 * idcount)
                 idlist[1::2] = self.ids
                 idfmt = 'BH'
