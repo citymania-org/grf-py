@@ -350,7 +350,7 @@ class Sprite(Resource):
         timer.count_loading()
 
         if self.bpp is not None and bpp != self.bpp:
-            context.log_warning('sprite-bpp-mismatch', self, f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
+            context.warning('sprite-bpp-mismatch', self, f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
             if self.bpp == BPP_24:
                 img = img.convert('RGB')
             elif self.bpp == BPP_32:
