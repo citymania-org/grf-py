@@ -251,6 +251,11 @@ def days_till(year):
     return res
 
 
+def check_sequence_range(sequence, min_value, max_value, error_str):
+    if (value := next((x for x in sequence if not (min_value <= x <= max_value)), None)) is not None:
+        raise ValueError(f'{error_str} item {value} is not in range {min_value} <= item <= {max_value}')
+
+
 class Date:
     def __init__(self, year, month, day):
         self.year = year

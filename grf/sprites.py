@@ -267,6 +267,7 @@ class Uncacheable(Exception):
 
 class Sprite(Resource):
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None):
+        assert bpp in (None, BPP_8, BPP_24, BPP_32)
         super().__init__()
         self.w = w
         self.h = h

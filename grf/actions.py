@@ -3,11 +3,15 @@ import textwrap
 import struct
 import pprint
 from abc import abstractmethod
-from typing import NamedTuple, Union
-from collections.abc import Iterable
+from typing import NamedTuple, Union, Optional
+from collections.abc import Iterable, Sequence
+
+from typeguard import typechecked
+
 
 from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, ANY_LANGUAGE, \
-                    DataReader, to_bytes, read_dword, read_word, days_to_date, read_extended_byte, encode_extended_byte, Date
+                    DataReader, to_bytes, read_dword, read_word, days_to_date, read_extended_byte, \
+                    encode_extended_byte, Date, check_sequence_range
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND, TOWN
@@ -1500,8 +1504,19 @@ class SpriteSet(Action1):
 # Action 2
 
 class GenericSpriteLayout(Action, ReferenceableAction):
-    def __init__(self, *, ent1, ent2, feature=None, ref_id=None):
+    # @typechecked
+    def __init__(
+        self,
+        *,
+        ent1: Sequence[int],
+        ent2: Sequence[int],
+        feature: Optional[Feature] = None,
+        ref_id : Optional[int] = None,
+    ):
         assert feature not in (HOUSE, INDUSTRY_TILE, OBJECT, AIRPORT_TILE, INDUSTRY), feature
+        check_sequence_range(ent1, 0, 0xffff, 'ent1')
+        check_sequence_range(ent2, 0, 0xffff, 'ent2')
+
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
