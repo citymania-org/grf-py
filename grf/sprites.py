@@ -267,6 +267,7 @@ class Uncacheable(Exception):
 
 class Sprite(Resource):
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None):
+        assert bpp in (None, BPP_8, BPP_24, BPP_32)
         super().__init__()
         self.w = w
         self.h = h
@@ -350,7 +351,7 @@ class Sprite(Resource):
         timer.count_loading()
 
         if self.bpp is not None and bpp != self.bpp:
-            context.log_warning('sprite-bpp-mismatch', self, f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
+            context.warning('sprite-bpp-mismatch', self, f'Sprite {self.name} expected {self.bpp}bpp but file is {bpp}bpp, converting.')
             if self.bpp == BPP_24:
                 img = img.convert('RGB')
             elif self.bpp == BPP_32:
