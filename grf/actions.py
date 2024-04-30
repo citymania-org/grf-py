@@ -1744,9 +1744,6 @@ class Switch(Action, ReferenceableAction, ReferencingAction):
                 raise
         return self._parsed_code
 
-    def __str__(self):
-        return str(self.ref_id)
-
     def get_data(self, context):
         context = CodeContext(subroutines=self.subroutines, register=0x80)
         res = bytes((0x02, self.feature.id, self.ref_id, 0x8a if self.related_scope else 0x89))
