@@ -958,13 +958,22 @@ class NewGRF(BaseNewGRF):
             for i, p in enumerate(self._params):
                 self._props['INFO']['PARA'][i] = p
 
+        if isinstance(self.name, StringRef):
+            name = self.name.get_pairs()[0][1]
+        else:
+            name = str(self.name)
+        if isinstance(self.description, StringRef):
+            description = self.description.get_pairs()[0][1]
+        else:
+            description = str(self.description)
+
         res = [
             SetProperties(self._props),
             SetDescription(
                 format_version=self.format_version,
                 grfid=self.grfid,
-                name=str(self.name),
-                description=str(self.description),
+                name=name,
+                description=description,
             )
         ]
 
