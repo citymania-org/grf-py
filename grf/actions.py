@@ -1383,9 +1383,18 @@ class DefineMultiple(Action):
                 if fail is not None:
                     context.format_error(self, f'Items should be integers in range(0, 256) for property format n*B (max 255), found {fail}')
                 return struct.pack('<B', len(value)) + bytes(value)
+        if fmt == '8*B':
+            if not isinstance(value, tuple):
+                context.format_error(self, f'8*B format value needs to be a tuple')
+                raise FormatError(self, )
+            assert len(value) == 8, (len(value), value)
+            res = bytes()
+            for l in value:
+                res += struct.pack('<B', l)
+            return res
         if fmt == '2*L':
             if not isinstance(value, tuple):
-                raise FormatError(self, )
+                context.format_error(self, f'2*L format value needs to be a tuple')
             assert len(value) == 2, (len(value), value)
             return self._encode_label(value[0]) + self._encode_label(value[1])
         if fmt == 'n*L':
