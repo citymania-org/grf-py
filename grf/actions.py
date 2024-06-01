@@ -1386,7 +1386,6 @@ class DefineMultiple(Action):
         if fmt == '8*B':
             if not isinstance(value, tuple):
                 context.format_error(self, f'8*B format value needs to be a tuple')
-                raise FormatError(self, )
             assert len(value) == 8, (len(value), value)
             res = bytes()
             for l in value:
