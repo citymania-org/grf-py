@@ -309,7 +309,7 @@ CALLBACKS = {
         **VEHICLE_CALLBACKS,
     },
     grf.STATION: {
-        0x13: {'name': 'availability', 'flag': 0x1, 'class': DefaultCallback},
+        0x13: {'name': 'availability', 'flag': 0x1, 'class': PurchaseCallback},
         0x14: {'name': 'select_sprite_layout', 'flag': 0x2, 'class': DualCallback},
         0x24: {'name': 'select_tile_layout', 'flag': 0, 'class': PurchaseCallback},
         0x140: {'name': 'anim_control', 'flag': 0, 'class': DefaultCallback},
