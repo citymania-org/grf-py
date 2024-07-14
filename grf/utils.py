@@ -231,7 +231,7 @@ def main(g, grf_file, commands=None):
             c['add_args'](cmd_parser)
         cmd_parser.set_defaults(func=c['handler'])
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     if args.command is None:
         build_func(g, grf_file, None)
