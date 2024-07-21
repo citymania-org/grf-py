@@ -131,7 +131,7 @@ class Train(Vehicle):
 
             ALLOWED_PROPS = (
                 'cargo_capacity',
-                'loadning_speed',
+                'loading_speed',
                 'default_cargo_type',
                 'refit_cost',
                 'refittable_cargo_types',
