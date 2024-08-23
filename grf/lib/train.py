@@ -39,7 +39,6 @@ class Train(Vehicle):
 
     def __init__(self, *, id, name, max_speed, weight, length=None, sound_effects=None, liveries=None, callbacks=None, purchase_sprite=None, additional_text=None, **props):
         super().__init__(grf.TRAIN, liveries=liveries, callbacks=callbacks, purchase_sprite=purchase_sprite, additional_text=additional_text)
-
         REQUIRED_PROPS = ('engine_class', )
         missing_props = [p for p in REQUIRED_PROPS if p not in props]
         if missing_props:
@@ -98,10 +97,18 @@ class Train(Vehicle):
         else:
             central_length = 8
             articulated_length = (length - 8) // 2
-        articulated_liveries = [{
-            'name': l['name'],
-            'sprites': [grf.EMPTY_SPRITE] * 8,
-        } for l in liveries or []]
+
+        if liveries:
+            articulated_liveries = [{
+                'name': l['name'],
+                'sprites': [grf.EMPTY_SPRITE] * 8,
+            } for l in liveries]
+        else:
+            # If liveries are omitted we need to make some empty graphics for articulated parts
+            articulated_liveries = [{
+                'name': 'Default',
+                'sprites': [grf.EMPTY_SPRITE] * 8,
+            }]
 
         return 8 - central_length, 8 - articulated_length, articulated_liveries
 
