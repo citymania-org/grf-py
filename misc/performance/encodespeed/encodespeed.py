@@ -1,6 +1,7 @@
 import array
-import time
+import ctypes
 import gc
+import time
 from typing import Union, ByteString
 
 import numpy as np
@@ -10,8 +11,29 @@ import grf
 import grfrs
 
 N = 1000
+ziggrflib = ctypes.CDLL('zig/libziggrf.so')
 
 gc.disable()
+
+
+# Define the argument types and return type of the process_bytes function
+ziggrflib.encode_sprite_v4.argtypes = (ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t, ctypes.POINTER(ctypes.c_size_t))
+ziggrflib.encode_sprite_v4.restype = ctypes.POINTER(ctypes.c_ubyte)
+
+# Define the argument types for the free_bytes function
+# ziggrflib.free_bytes.argtypes = (ctypes.POINTER(ctypes.c_ubyte), ctypes.c_size_t)
+# ziggrflib.free_bytes.restype = None
+
+
+def ziggrf_encode_sprite_v4(data):
+    out_len = ctypes.c_size_t()
+    data_array = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+    output_ptr = ziggrflib.encode_sprite_v4(data_array, len(data), ctypes.byref(out_len))
+    output_len = out_len.value
+    output_bytes = bytes((output_ptr[i] for i in range(output_len)))
+    print('OUTPUT_PTR', output_ptr, output_bytes)
+    # lib.free_bytes(output_ptr, output_len)
+    return output_bytes
 
 
 def nml_lz77_py(data):
@@ -715,6 +737,7 @@ def time_algo(name, func):
     print(f' decode {decres:.5f} sec')
 
 
+time_algo('zig-v4', ziggrf_encode_sprite_v4)
 time_algo('grf-py-v4', grfrs.encode_sprite_v4)
 time_algo('grf-py-v3', grfrs.encode_sprite_v3)
 # time_algo('grf-py-v1', grfrs.encode_sprite_v1)
