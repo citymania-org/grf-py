@@ -494,24 +494,29 @@ class BaseNewGRF:
 
         img_index = defaultdict(list)
         sprite_priority = {}
+        sprite_order = []
+        sprite_pos = {}
         sprite_idx = {}
         q = []
-        for s, files in unordered_sprites:
+        sfiles = 0
+        for i, (s, files) in enumerate(unordered_sprites):
+            sid = id(s)
             for f in files:
-                img_index[id(f)].append(id(s))
-            sprite_idx[id(s)] = (s, files)
+                sfiles += 1
+                img_index[id(f)].append(sid)
+            sprite_idx[sid] = (s, files)
             p = len(files)
-            sprite_priority[id(s)] = p
-            heapq.heappush(q, (p, id(s)))
+            sprite_order.append(sid)
+            sprite_priority[sid] = p
+
+        sprite_order.sort(key=lambda x: sprite_priority[x])
+        for i, sid in enumerate(sprite_order):
+            sprite_pos[sid] = i
 
         load_files = defaultdict(list)
         last_use = {}
-        processed_sprites = set()
-        while q:
-            _, sid = heapq.heappop(q)
-            if sid in processed_sprites:
-                continue
-            processed_sprites.add(sid)
+
+        for i, sid in enumerate(sprite_order):
             s, files = sprite_idx[sid]
             ordered_sprites.append(s)
             s.sprite_id = next_sprite_id
@@ -522,8 +527,17 @@ class BaseNewGRF:
                     load_files[sid].append(f)
                 last_use[fid] = (sid, f)
                 for x in img_index[fid]:
-                    sprite_priority[x] -= 1
-                    heapq.heappush(q, (sprite_priority[x], x))
+                    prio = sprite_priority[x] - 1
+                    sprite_priority[x] = prio
+                    old_pos = sprite_pos[x]
+                    pos = old_pos
+                    while pos > i + 1 and sprite_priority[sprite_order[pos]] > prio:
+                        pos -= 1
+                    if pos != old_pos:
+                        move_sid = sprite_order[pos]
+                        sprite_order[pos], sprite_order[old_pos] = x, move_sid
+                        sprite_pos[x] = pos
+                        sprite_pos[move_sid] = old_pos
 
         unload_files = defaultdict(list)
         for sid, f in last_use.values():
