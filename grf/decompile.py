@@ -1053,7 +1053,7 @@ def read_pseudo_sprite(f, nfo_line, container, context):
 
     # if not data and container == 1:
     #     return False, []
-    l = struct.unpack('<H' if container < 2 else '<I', data)[0]
+    l = struct.unpack('<H' if size_bytes == 2 else '<I', data)[0]
     if l == 0:
         return False, [PyComment('End of pseudo sprites')], None
     grf_type = f.read(1)[0]
@@ -1064,7 +1064,6 @@ def read_pseudo_sprite(f, nfo_line, container, context):
     # data = f.read(l)
     # print(f'{nfo_line}: Sprite({l}, {grf_type_str}) <{data[0]:02x}>: {hex_str(data, 100)}')
     # f.seek(ofs)
-
     if grf_type == 0xff:
         data = f.read(l)
         if l == 1:  # Some NewGRF files have "empty" pseudo-sprites which are 1 byte long.
@@ -1092,27 +1091,26 @@ def read_pseudo_sprite(f, nfo_line, container, context):
         res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data)} ({sprite_id})'))
         res.append(SpritePlaceholder(sprite_id))
         context.consume(sprite_id)
-    else:
-        if container == 1:
-            context.count_action(0xff, l + size_bytes * 2 + 1)
-            height, width, xofs, yofs = struct.unpack('<BHhh', f.read(7))
-            zoom = ZOOM_NORMAL
-            if grf_type & 0x02:
-                num = height * width
-            else:
-                num = l - 8
-            sprite_type = (grf_type & 0x08) | 0x4
-            sprite = RealGraphicsSprite(context.get_v1_sprite_id(), f.tell(), num, width, height, sprite_type, zoom, xofs, yofs)
-            decode_sprite(f, sprite, container)
-            res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): Image: M {width}x{height} zoom={zoom} x_offs={xofs} y_offs={yofs} decomp_size={num}'))
-            res.append(SpritePlaceholder(sprite.id))
-            context.consume()
-            return True, res, sprite
+    elif container == 1:
+        context.count_action(0xff, l + size_bytes * 2 + 1)
+        height, width, xofs, yofs = struct.unpack('<BHhh', f.read(7))
+        zoom = ZOOM_NORMAL
+        if grf_type & 0x02 == 0:
+            num = l - 8
         else:
-            data = f.read(l)
-            context.count_action(data[0], l + size_bytes * 2 + 1)
-            context.consume()
-            res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}'))
+            num = height * width
+        sprite_type = (grf_type & 0x08) | 0x4
+        sprite = RealGraphicsSprite(context.get_v1_sprite_id(), f.tell(), num, width, height, sprite_type, zoom, xofs, yofs)
+        decode_sprite(f, sprite, container)
+        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): Image: M {width}x{height} zoom={zoom} x_offs={xofs} y_offs={yofs} decomp_size={num}'))
+        res.append(SpritePlaceholder(sprite.id))
+        context.consume()
+        return True, res, sprite
+    else:
+        data = f.read(l)
+        context.count_action(data[0], l + size_bytes * 2 + 1)
+        context.consume()
+        res.append(PyComment(f'{nfo_line}: Sprite({l}, {grf_type_str}): {hex_str(data, 100)}'))
     return True, res, None
 
 
