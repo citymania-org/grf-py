@@ -622,6 +622,7 @@ class BaseNewGRF:
                         continue
                 s.prepare_files()
 
+        t.log(f'Enumerating sprites')
         sprite_order = self._enumerate_sprites(sprites)
 
         t.log(f'Writing actions')
