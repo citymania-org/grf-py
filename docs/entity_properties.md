@@ -397,7 +397,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Objects
 | 0x0C | size | SizeTupleProperty | Byte representing size |
 | 0x0D | build_cost_multiplier | int(0-255) | Object build cost factor (sets object removal cost factor as well) |
 | 0x0E | introduction_date | DateProperty | Introduction date |
-| 0x0F | end_of_life_date | int(0-4294967295) | End of life date |
+| 0x0F | end_of_life_date | DateProperty | End of life date |
 | 0x10 | flags | int(0-65535) | Object flags |
 | 0x11 | animation_info | int(0-65535) | Animation information |
 | 0x12 | animation_speed | int(0-255) | Animation speed |
