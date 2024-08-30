@@ -145,7 +145,7 @@ class Feature(metaclass=FeatureMeta):
 
 
 
-FeatureMeta.FEATURES = [None] * 0x15
+FeatureMeta.FEATURES = {}
 for k, n, cn in (
             (0x00, 'train', 'Train'),
             (0x01, 'rv', 'RV'),
@@ -174,12 +174,12 @@ for k, n, cn in (
     Feature._FROM_NAME[n] = obj
 
 TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, BRIDGE, HOUSE, GLOBAL_VAR, INDUSTRY_TILE, INDUSTRY, CARGO, \
-SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP = FeatureMeta.FEATURES
+SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP = FeatureMeta.FEATURES.values()
 TOWN = 0xFF  # fake feature for varact2
 
 CANAL = RIVER
 
-VEHICLE_FEATURES = (TRAIN, RV, SHIP, AIRCRAFT)
+VEHICLE_FEATURES = set((TRAIN, RV, SHIP, AIRCRAFT))
 
 
 def read_extended_byte(data, offset):
