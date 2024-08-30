@@ -42,6 +42,30 @@ def fix_palette(obj, context, img, sprite_name):
     return res
 
 
+def quantize(img):
+    p_img = Image.new('P', (16, 16))
+    SAFE_PALETTE = sum([PIL_PALETTE[3 * i: 3 * i + 3] for i in SAFE_COLOURS], ())
+    p_img.putpalette(SAFE_PALETTE)
+
+    transparent = None
+    if img.mode == 'RGBA':
+        npimg = np.array(img)
+        transparent = (npimg[:,:,3] < 128)  # Make pixels with alpha < 128 completely transparent in 8bpp
+        img = Image.fromarray(npimg[:, :, :3])
+
+    img8 = img.quantize(palette=p_img, dither=0)
+    npimg8 = np.array(img8)
+    remap = np.array(SAFE_COLOURS, dtype=np.uint8)
+    npimg8 = remap[npimg8]
+
+    if transparent is not None:
+        npimg8[transparent] = 0
+
+    res = Image.fromarray(npimg8, mode='P')
+    res.putpalette(PIL_PALETTE)
+    return res
+
+
 def convert_image(image):
     if image.mode == 'P':
         return image, BPP_8
@@ -357,9 +381,7 @@ class Sprite(Resource):
             elif self.bpp == BPP_32:
                 img = img.convert('RGBA')
             elif self.bpp == BPP_8:
-                p_img = Image.new('P', (16, 16))
-                p_img.putpalette(PIL_PALETTE)
-                img = img.quantize(palette=p_img, dither=0)
+                img = quantize(img)
             bpp = self.bpp
         else:
             if bpp == BPP_8:
@@ -744,6 +766,7 @@ class ImageFile(LoadedResourceFile):
 class FileSprite(CacheableSprite):
     def __init__(self, file, x, y, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None, **kw):
         assert(isinstance(file, ImageFile))
+        assert(file.colourkey is None or bpp != BPP_8)
         super().__init__(w, h, xofs=xofs, yofs=yofs, bpp=bpp, zoom=zoom, crop=crop, name=name)
         self.x = x
         self.y = y
