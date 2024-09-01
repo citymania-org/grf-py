@@ -1,5 +1,5 @@
 ##grflangid 0x01
 ##plural 0
 
-NAME :name_gb
-DESCRIPTION :description_gb
+NAME :name_{RED}gb
+DESCRIPTION :description_{RED}gb

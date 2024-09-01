@@ -978,8 +978,8 @@ class NewGRF(BaseNewGRF):
             SetDescription(
                 format_version=self.format_version,
                 grfid=self.grfid,
-                name=str(self.name),
-                description=str(self.description),
+                name=self.name.get_default() if isinstance(self.name, StringRef) else str(self.name),
+                description=self.description.get_default() if isinstance(self.description, StringRef) else str(self.description),
             )
         ]
 

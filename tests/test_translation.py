@@ -45,8 +45,8 @@ def test_newgrf_name_and_descripription_translation():
         grf.SetDescription(
             format_version=8,
             grfid=b'GPTT',
-            name=b'name_gb',
-            description=b'description_gb',
+            name=b'name_\x8bgb',
+            description=b'description_\x8bgb',
         ),
         # grf.SetProperties(
 		# 	{'INFO': {'NAME': g.strings['NAME']}}

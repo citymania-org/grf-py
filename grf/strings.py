@@ -409,6 +409,10 @@ class StringRef:
         strings = [(0x7F, grf_compile_string(grfstrings.get_translation(ns)))] + strings
         return strings
 
+    def get_default(self):
+        self.manager.set_nml_globals()
+        return grf_compile_string(grfstrings.get_translation(self.string_nmlexpr))
+
     def get_actions(self, feature, offset, is_generic_offset=False):
         strings = self.get_pairs()
         return [
@@ -431,6 +435,9 @@ class StringRef:
     def __str__(self):
         self.manager.set_nml_globals()
         return grfstrings.get_translation(self.string_nmlexpr)
+
+    def __repr__(self):
+        return 'StringRef({!r})'.format(str(self))
 
     def __eq__(self, ref):
         return self.manager is ref.manager and self.nmlexpr == ref.nmlexpr
