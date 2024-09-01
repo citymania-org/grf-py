@@ -4,14 +4,17 @@ from collections.abc import Iterable
 import grf
 
 
-def combine_ranges(value):
+def combine_ranges(values, *, chunk_size=255):
     last_id = None
     res = []
-    for i, value in sorted(value):
-        if last_id != i - 1:
+    count = 0
+    for i, value in sorted(values):
+        if last_id != i - 1 or count >= chunk_size:
             res.append((i, [value]))
+            count = 1
         else:
             res[-1][1].append(value)
+            count += 1
         last_id = i
     return res
 
