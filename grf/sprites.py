@@ -73,7 +73,7 @@ def convert_image(image):
         return image, BPP_32
     if image.mode != 'RGB':
         image = image.convert('RGB')
-    return img, BPP_24
+    return image, BPP_24
 
 
 # Tries to get the original rgba that rgb and alpha channels were split from, returns None if not possible
