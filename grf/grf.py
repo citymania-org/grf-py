@@ -99,9 +99,8 @@ class Timer:
         t = time.time()
         self.context.print(f'{t - self.t:.02f}')
 
-    def log_total(self, s):
-        t = time.time()
-        self.context.print(f'{s}: {t - self.start_time:.02f}')
+    def get_total(self):
+        return time.time() - self.start_time
 
 
 class WriteContext:
@@ -721,7 +720,8 @@ class BaseNewGRF:
         self._id_map.save()
         t.stop()
         self._context.print_report()
-        self._context.print(f'Generated grf size: {byte_size_format(file_size)}')
+        self._context.print(f'Generated grf size {byte_size_format(file_size)}, build time {t.get_total():.02f} sec')
+
         return sprites
 
     def write(self, filename, clean_build=False, debug_zoom_levels=False):
@@ -746,8 +746,6 @@ class BaseNewGRF:
                 for f in s.get_resource_files():
                     assert isinstance(f, ResourceFile)
                     watched.add(f.path)
-
-        t.log_total('Total build time')
 
         return watched
 
