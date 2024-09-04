@@ -470,11 +470,8 @@ class Sprite(Resource):
             yofs,
         ) + data
 
-    def get_image_files(self):
-        raise NotImplementedError
-
     def get_resource_files(self):
-        return self.get_image_files() + (THIS_FILE,)
+        return (THIS_FILE,)
 
     def save_gif(self, filename: str, context=None):
         if context is None:
@@ -667,9 +664,6 @@ class WithMask(Sprite):
 
         return w, h, rgb, alpha, mask
 
-    def get_image_files(self):
-        return ()
-
     def get_resource_files(self):
         return super().get_resource_files() + (THIS_FILE,) + self.sprite.get_resource_files() + self.mask.get_resource_files()
 
@@ -726,9 +720,6 @@ class ImageSprite(Sprite):
 
     def get_image(self):
         return self._image
-
-    def get_image_files(self):
-        return ()
 
 
 class ImageFile(LoadedResourceFile):
@@ -801,8 +792,8 @@ class FileSprite(CacheableSprite):
                 alpha[is_key] = 0
         return w, h, rgb, alpha, mask
 
-    def get_image_files(self):
-        return (self.file,)
+    def get_resource_files(self):
+        return super().get_resource_files() + (self.file, THIS_FILE)
 
     def get_fingerprint(self):
         return dict(
@@ -857,7 +848,7 @@ class NMLFileSpriteWrapper:
         return (self.file.value,)
 
 
-class SpriteWrapper(grf.Sprite):
+class SpriteWrapper(Sprite):
     def __init__(self, sprites, *, name=None):
         self.sprites = sprites
         try:
@@ -875,9 +866,6 @@ class SpriteWrapper(grf.Sprite):
         for s in i:
             if s is not None:
                 yield s
-
-    def get_image_files(self):
-        return ()
 
     def get_resource_files(self):
         # TODO add wrapped class __file__, possibly traversing mro (do that globally?)
@@ -953,9 +941,6 @@ class ZoomDebugRecolourSprite(Sprite):
         timer.count_custom('Zoom level debug recolouring')
 
         return w, h, ni, na, nm
-
-    def get_image_files(self):
-        return ()
 
     def get_resource_files(self):
         return super().get_resource_files() + (THIS_FILE, ) + self.sprite.get_resource_files()
