@@ -10,7 +10,7 @@ from .constants import *
 from .vox import VoxReader, VoxFile, VoxTrainFile
 from .sprites import ResourceAction, Sprite, ImageSprite, ImageFile, FileSprite, Sound, RAWSound, \
     PaletteRemap, EMPTY_SPRITE, fix_palette, Uncacheable, ResourceFile, \
-    PythonFile, WithMask, MaskMode
+    PythonFile, WithMask, MaskMode, SpriteWrapper, MoveSprite
 from .common import *
 from .actions import RVFlags, TrainFlags, CargoClass, train_hpi, train_ton, \
     nml_te, nml_drag, py_property, SpriteRef, SpriteLayout, SpriteLayoutList, \
