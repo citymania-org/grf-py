@@ -43,6 +43,7 @@
 - Add `--debug-zoom-levels` command line argument to `build` command of `main` function.
 - Add `WithMask` sprite class to add mask layer to images.
 - Add `SpriteWrapper` class to simplify writing sprite modifiers.
+- Add `MoveSprite` modifier to change sprite offsets.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of bridge layouts.

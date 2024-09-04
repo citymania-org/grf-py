@@ -899,6 +899,24 @@ class SpriteWrapper(Sprite):
             s.prepare_files()
 
 
+class MoveSprite(SpriteWrapper):
+    def __init__(self, sprite, *, xofs=0, yofs=0):
+        super().__init__((sprite, ))
+        self.sprite = sprite
+        self.xofs += xofs
+        self.yofs += yofs
+
+    def get_data_layers(self, context):
+        return self.sprite.get_data_layers(context)
+
+    def get_fingerprint(self):
+        return dict(
+            **super().get_fingerprint(),
+            xofs=self.xofs,
+            yofs=self.yofs,
+        )
+
+
 class ZoomDebugRecolourSprite(Sprite):
 
     ZOOM_DEBUG_COLOURS = {
