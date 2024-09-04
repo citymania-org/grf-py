@@ -18,6 +18,8 @@
 - Fix `Switch` code using wrong feature for related scope.
 - Fix `Switch` code grammar issues.
 - Fix alpha generation when using colourkey.
+- Fix encoding of `min_bridge_height` Action 0 station property (#33).
+- Fix imageSprite conversion for non-P and non-RGBA images (#43).
 - Add sprite cache.
 - Optimize memory usage when writing NewGRF.
 - Optimize grf file size by removing duplicate sprites (by data).
@@ -28,9 +30,11 @@
 - Add `srgb_to_linear`, `linear_to_srgb`, `srgb_to_oklab`, `oklab_to_srgb` colour conversion functions.
 - Add `mode` argument to `Mask` with option to overdraw sprite.
 - Add `ShipFlags` enum.
-- Add support for the extended format in Action1.
+- Support extended format in Action 1.
+- Support ids > 255 in Action 3 (#42).
 - Add `main` function to handle command line arguments.
 - Add some VarAction2 variables for houses.
+- Add `station_name` and `station_class_name` Action 0 properties for stations.
 - Add `TTDString` and `TTDIndustry` constants.
 - Add `TownGrowthEffect` constants.
 - Add `Eval` as a version of `Switch` without ranges.
@@ -38,6 +42,7 @@
 - Add `debug_zoom_levels` argument to `BaseNewGRF.write` to recolour sprites according to their zoom level: 4x - red, 2x - blue, 1x - green, out-2x - cyan, out-4x - yellow, out-8x - magenta.
 - Add `--debug-zoom-levels` command line argument to `build` command of `main` function.
 - Add `WithMask` sprite class to add mask layer to images.
+- Add `SpriteWrapper` class to simplify writing sprite modifiers.
 - Support using StringRef in Action 0x14 (`SetProperties`).
 - Support using StringRef as `NewGRF` `name` and `description`.
 - Support encoding of bridge layouts.
@@ -66,6 +71,8 @@
 - lib: Fix unicode vehicle names.
 - lib: Don't change callbacks passed to `CallbackMananger`.
 - lib: Set correct flags and track_type on auto-articulated parts.
+- lib: Fix auto-articulation for vehicles without liveries.
+- lib: Fix: Make station availability a purchase callback.
 - lib: Add high-level `Industry` class.
 - lib: `CallbackManager` rewrite:
 	- Support all features (non-vehicles may still be incomplete).
@@ -77,6 +84,7 @@
 - lib: Add `reverse_build_probability` vehicle callback.
 - lib: Allow omitting `ids` in `DisableDefault` to disable all items.
 - lib: Support `HOUSE`, `INDUSTRY` and `CARGO` features in `DisableDefault`.
+- lib: Add `chunk_size` parameter to `combine_ranges`.
 
 - grftopy: Fix missing sprite zoom
 - grftopy: Improve decoding of industry layouts.
@@ -84,6 +92,9 @@
 - grftopy: Fix decompilation of action 7/9 with value > 4 bytes.
 - grftopy: Add -p/--palette cli option to set output palette for 8bpp images.
 - grftopy: Decompile `cargo_(dis)allow_refit` properties as a tuple of cargo indexes.
+
+- dev: Add new `dev` submodule for extending newgrf spec support.
+- dev: Add `dev.add_feature` function.
 
 ---------
 0.2.2

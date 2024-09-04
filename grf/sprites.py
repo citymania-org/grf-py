@@ -857,6 +857,60 @@ class NMLFileSpriteWrapper:
         return (self.file.value,)
 
 
+class SpriteWrapper(grf.Sprite):
+    def __init__(self, sprites, *, name=None):
+        self.sprites = sprites
+        try:
+            f = next(iter(self._iter_sprites()))
+        except StopIteration:
+            raise ValueError('SpriteWrapper got no sprites to wrap')
+
+        super().__init__(w=f.w, h=f.h, xofs=f.xofs, yofs=f.yofs, zoom=f.zoom, bpp=f.bpp, crop=f.crop)
+
+    def _iter_sprites(self):
+        if isinstance(self.sprites, dict):
+            i = self.sprites.values()
+        else:
+            i = self.sprites
+        for s in i:
+            if s is not None:
+                yield s
+
+    def get_image_files(self):
+        return ()
+
+    def get_resource_files(self):
+        # TODO add wrapped class __file__, possibly traversing mro (do that globally?)
+        res = super().get_resource_files() + (THIS_FILE,)
+        for s in self._iter_sprites():
+            res += s.get_resource_files()
+        return res
+
+    def get_fingerprint(self):
+        res = {'class': self.__class__.__name__}
+        if isinstance(self.sprites, dict):
+            sf = {}
+            for k, s in self.sprites.items():
+                if s is None:
+                    sf[k] = None
+                else:
+                    f = s.get_fingerprint()
+                    sf[k] = s.get_fingerprint()
+        else:
+            sf = []
+            for s in self.sprites:
+                if s is None:
+                    sf.append(None)
+                    continue
+                sf.append(s.get_fingerprint())
+        res['sprites'] = sf
+        return res
+
+    def prepare_files(self):
+        for s in self._iter_sprites():
+            s.prepare_files()
+
+
 class ZoomDebugRecolourSprite(Sprite):
 
     ZOOM_DEBUG_COLOURS = {
