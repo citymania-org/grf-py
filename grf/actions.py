@@ -1573,7 +1573,7 @@ class GenericSpriteLayout(Action, ReferenceableAction):
 
 class BasicSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ground, building, feature=None, ref_id=None):
-        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
+        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY, ROAD_STOP), feature
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1599,7 +1599,7 @@ class BasicSpriteLayout(Action, ReferenceableAction):
 
 class AdvancedSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ground, feature=None, ref_id=None, buildings=(), has_flags=True):
-        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
+        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY, ROAD_STOP), feature
         assert len(buildings) < 64, len(buildings)
 
         super().__init__()
