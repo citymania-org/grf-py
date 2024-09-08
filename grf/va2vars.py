@@ -310,6 +310,7 @@ NML_VA2_RAILTYPES = {
 # Railtypes have no 60+x variables
 
 NML_VA2_ROAD_STOPS = {
+    **NML_VA2_BASE_STATIONS,
     'view'                  : {'var': 0x40, 'start':  0, 'size':  8},
     'stop_type'             : {'var': 0x41, 'start':  0, 'size':  8},
     'terrain_type'          : {'var': 0x42, 'start':  0, 'size':  8},
