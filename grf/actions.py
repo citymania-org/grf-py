@@ -14,7 +14,8 @@ from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, AN
                     encode_extended_byte, Date, check_sequence_range
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
-                    AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, TROPICAL, TOYLAND, TOWN
+                    AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, \
+                    TROPICAL, TOYLAND, TOWN, ROAD_STOP
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
 from .sprites import Action, Sound, FakeAction
@@ -1220,6 +1221,21 @@ ACTION0_ROADTYPE_PROPS = {
     0x1D: ('alternative_roadtype_list', 'n*L'),  # Alternate road type labels that shall be "redirected" to this road type
 }
 
+ACTION0_ROAD_STOP_PROPS = {
+    0x08: ('class_label', 'L'),
+    0x09: ('availability_type', 'B'),
+    0x0A: ('name_id', 'W'),
+    0x0B: ('class_name_id', 'W'),
+    0x0C: ('draw_mode', 'B'),
+    0x0D: ('cargo_random_triggers', 'D'),
+    0x0E: ('animation_info', 'W'),
+    0x0F: ('animation_speed', 'B'),
+    0x10: ('animation_triggers', 'B'),
+    0x11: ('cb_flags', 'B'),
+    0x12: ('general_flags', 'D'),
+    0x15: ('cost_multipliers', 'W'),
+}
+
 # TODO airport_tile
 
 ACTION0_PROPS = {
@@ -1239,6 +1255,7 @@ ACTION0_PROPS = {
     RAILTYPE: ACTION0_RAILTYPE_PROPS,
     ROADTYPE: ACTION0_ROADTYPE_PROPS,
     TRAMTYPE: ACTION0_ROADTYPE_PROPS,
+    ROAD_STOP: ACTION0_ROAD_STOP_PROPS,
 }
 
 ACTION0_PROP_DICT = {
@@ -1556,7 +1573,7 @@ class GenericSpriteLayout(Action, ReferenceableAction):
 
 class BasicSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ground, building, feature=None, ref_id=None):
-        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
+        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY, ROAD_STOP), feature
         super().__init__()
         self.feature = feature
         self.ref_id = ref_id
@@ -1582,7 +1599,7 @@ class BasicSpriteLayout(Action, ReferenceableAction):
 
 class AdvancedSpriteLayout(Action, ReferenceableAction):
     def __init__(self, *, ground, feature=None, ref_id=None, buildings=(), has_flags=True):
-        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY), feature
+        assert feature in (HOUSE, INDUSTRY_TILE, OBJECT, INDUSTRY, ROAD_STOP), feature
         assert len(buildings) < 64, len(buildings)
 
         super().__init__()

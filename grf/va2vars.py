@@ -1,5 +1,5 @@
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
-                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE
+                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP
 
 
 NML_VA2_GLOBALVARS = {
@@ -306,7 +306,29 @@ NML_VA2_RAILTYPES = {
     'town_zone'             : {'var': 0x44, 'start': 0, 'size':  8},
     'random_bits'           : {'var': 0x5F, 'start': 8, 'size':  2},
 }
+
 # Railtypes have no 60+x variables
+
+NML_VA2_ROAD_STOPS = {
+    **NML_VA2_BASE_STATIONS,
+    'view'                  : {'var': 0x40, 'start':  0, 'size':  8},
+    'stop_type'             : {'var': 0x41, 'start':  0, 'size':  8},
+    'terrain_type'          : {'var': 0x42, 'start':  0, 'size':  8},
+    'tile_slope'            : {'var': 0x42, 'start':  8, 'size':  5},
+    'road_type'             : {'var': 0x43, 'start':  8, 'size':  8},
+    'tram_type'             : {'var': 0x44, 'start':  8, 'size':  8},
+    'town_manhattan_dist'   : {'var': 0x45, 'start':  0, 'size': 16},
+    'town_zone'             : {'var': 0x45, 'start': 16, 'size':  8},
+    'town_euclidean_dist'   : {'var': 0x46, 'start':  0, 'size': 32},
+    'company_num'           : {'var': 0x47, 'start':  0, 'size':  8},
+    'company_type'          : {'var': 0x47, 'start': 16, 'size':  2},
+    'company_colour1'       : {'var': 0x47, 'start': 24, 'size':  4},
+    'company_colour2'       : {'var': 0x47, 'start': 28, 'size':  4},
+    'animation_frame'       : {'var': 0x49, 'start':  0, 'size':  8},
+    'drawn_in_gui'          : {'var': 0x50, 'start':  4, 'size':  1},
+    'waiting_triggers'      : {'var': 0x5F, 'start':  0, 'size':  8},
+    'random_bits_tile'      : {'var': 0x5F, 'start': 24, 'size':  8},
+}
 
 
 
@@ -323,6 +345,7 @@ VA2_VARS = {
         (INDUSTRY, NML_VA2_INDUSTRIES),
         (OBJECT, NML_VA2_OBJECTS),
         (RAILTYPE, NML_VA2_RAILTYPES),
+        (ROAD_STOP, NML_VA2_ROAD_STOPS),
     )
 }
 

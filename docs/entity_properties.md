@@ -476,5 +476,19 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Tramtypes
 
 
 # Road stops
+https://newgrf-specs.tt-wiki.net/wiki/Action0/Road_Stops
 
- Not supported
+| NFO# | Name | Type | Description |
+| - | - | - | - |
+| 0x08 | class_label | Label | Road stop class label |
+| 0x09 | availability_type | int(0-255) | Road stop type |
+| 0x0A | name_id | int(0-65535) | StringID: Road stop name |
+| 0x0B | class_name_id | int(0-65535) | StringID: Class name |
+| 0x0C | draw_mode | int(0-255) | Draw mode |
+| 0x0D | cargo_random_triggers | int(0-4294967295) | Random trigger cargoes |
+| 0x0E | animation_info | int(0-65535) | Animation information |
+| 0x0F | animation_speed | int(0-255) | Animation speed |
+| 0x10 | animation_triggers | int(0-255) | Animation triggers |
+| 0x11 | cb_flags | int(0-255) | Callback flags |
+| 0x12 | general_flags | int(0-4294967295) | General flags |
+| 0x15 | cost_multipliers | int(0-65535) | Cost multipiers |
