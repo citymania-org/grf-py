@@ -33,6 +33,7 @@
 - Support extended format in Action 1.
 - Support ids > 255 in Action 3 (#42).
 - Add `main` function to handle command line arguments.
+- Add support for road stop feature (#44).
 - Add some VarAction2 variables for houses.
 - Add `station_name` and `station_class_name` Action 0 properties for stations.
 - Add `TTDString` and `TTDIndustry` constants.
