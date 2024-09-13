@@ -1,4 +1,9 @@
 ---------
+0.3.1
+---------
+
+
+---------
 0.3.0
 ---------
 - Reorganize base sprite/action hierarchy so it better reflects newgrf structure. Also rename classes to use common terms rather than grf-specific ones (real/pseudo sprite).
