@@ -1,7 +1,7 @@
 ---------
 0.3.1
 ---------
-
+- Fix duplicate sprite counter in build report not counting individual alternative sprites like total does.
 
 ---------
 0.3.0

@@ -681,7 +681,8 @@ class BaseNewGRF:
                         continue
 
                     data = []
-                    for s in sl.get_resources():
+                    sprites = sl.get_resources()
+                    for s in sprites:
                         d = get_sprite_data(s)
                         data.append(d)
 
@@ -690,6 +691,7 @@ class BaseNewGRF:
                     if sid is not None:
                         # Don't duplicate sprite, just change the reference.
                         renumerate_sprites[sl.sprite_id] = sid
+                        self._context.num_duplicate += len(sprites)
                     else:
                         # Unique sprite, write it and add to index.
                         for d in data:
@@ -714,8 +716,6 @@ class BaseNewGRF:
                 for ofs in resource_references[k]:
                     f.seek(ofs)
                     f.write(struct.pack('<I', v))
-
-            self._context.num_duplicate = len(renumerate_sprites)
 
         self._id_map.save()
         t.stop()
