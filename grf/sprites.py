@@ -917,6 +917,19 @@ class MoveSprite(SpriteWrapper):
         )
 
 
+class QuantizeSprite(SpriteWrapper):
+    def __init__(self, sprite):
+        super().__init__((sprite, ))
+        self.sprite = sprite
+
+    def get_image(self):
+        img, bpp = self.sprite.get_image()
+        if bpp == BPP_8:
+            raise RuntimeError('QuantizeSprite applied to 8bpp sprite')
+        img = quantize(img)
+        return img, BPP_8
+
+
 class ZoomDebugRecolourSprite(Sprite):
 
     ZOOM_DEBUG_COLOURS = {
