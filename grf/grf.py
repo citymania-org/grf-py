@@ -273,7 +273,7 @@ class BaseNewGRF:
         context = PythonGenerationContext()
         res = 'import datetime\nimport grf\n'
         make_grf_import = lambda l: 'from grf import ' + ', '.join(l) + '\n'
-        res += make_grf_import(f.constant for f in FeatureMeta.FEATURES)
+        res += make_grf_import(f.constant for f in FeatureMeta.FEATURES.values())
         res += 'from grf import ZOOM_NORMAL, ZOOM_4X, ZOOM_2X, ZOOM_OUT_2X, ZOOM_OUT_4X, ZOOM_OUT_8X\n'
         res += 'from grf import Ref, CB, ImageFile, FileSprite, WithMask, RAWSound, PaletteRemap\n\n'
         res += 'g = grf.BaseNewGRF()\n\n'
