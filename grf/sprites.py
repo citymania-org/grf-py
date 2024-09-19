@@ -920,6 +920,7 @@ class MoveSprite(SpriteWrapper):
 class QuantizeSprite(SpriteWrapper):
     def __init__(self, sprite):
         super().__init__((sprite, ))
+        self.bpp = BPP_8
         self.sprite = sprite
 
     def get_image(self):

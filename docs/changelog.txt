@@ -3,6 +3,7 @@
 ---------
 - Fix duplicate sprite counter in build report not counting individual alternative sprites like total does.
 - Add `QuantizeSprite` wrapper and `quantize` function to convert 32/24bpp sprites into 8bpp with openttd palette.
+- grftopy: Fix decompilation error.
 
 ---------
 0.3.0
