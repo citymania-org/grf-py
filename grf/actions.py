@@ -1622,10 +1622,11 @@ class AdvancedSpriteLayout(Action, ReferenceableAction):
             is_parent = 'extent' in sprite or 'offset' in sprite
             if is_parent:
                 offset = sprite.get('offset', (0, 0, 0))
+                res += struct.pack('<bbB', *offset)
             else:
                 offset = sprite.get('pixel_offset', (0, 0))
                 offset = (offset[0], offset[1], 0x80)
-            res += struct.pack('<BBB', *offset)
+                res += struct.pack('<BBB', *offset)
             if is_parent:
                 res += struct.pack('<BBB', *sprite.get('extent', (0, 0, 0)))
 
