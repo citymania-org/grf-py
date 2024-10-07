@@ -1431,7 +1431,7 @@ class DefineMultiple(Action):
                 try:
                     res += self._encode_value(context, value[i], fmt)
                 except Exception as e:
-                    raise context.log_error(self, f'Error encoding value {value[i]} for property {prop} with format `{fmt}`: {e}')
+                    raise context.format_error(self, f'Error encoding value {value[i]} for property {prop} with format `{fmt}`: {e}')
         return res
 
     def py(self, context):
