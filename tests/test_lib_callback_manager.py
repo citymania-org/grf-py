@@ -1,6 +1,6 @@
 from nose.tools import raises
 
-from grf import TRAIN, HOUSE, DualCallback, GraphicsCallback, make_callback_manager, SpriteGenerator, Action3, Switch, DefineMultiple, Ref
+from grf import TRAIN, HOUSE, CANAL, DualCallback, GraphicsCallback, make_callback_manager, SpriteGenerator, Action3, Switch, DefineMultiple, Ref
 
 from .common import check_lib
 
@@ -26,8 +26,8 @@ def test_non_vehicle_properties_raises_attribute_error():
     cbm.properties
 
 
-def test_non_vehicle_can_make_switch():
-    cbm = make_callback_manager(feature=HOUSE, callbacks={})
+def test_no_graphics_can_make_switch():
+    cbm = make_callback_manager(feature=CANAL, callbacks={})
     cbm.make_switch()
 
 
