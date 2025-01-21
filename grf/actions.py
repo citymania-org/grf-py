@@ -2256,7 +2256,7 @@ class Comment(Action):
         self.data = data
 
     def get_data(self, context):
-        return bytes((0x0C)) + self.data
+        return bytes((0x0C,)) + to_bytes(self.data or '')
 
     def py(self, context):
         return f'Comment({self.data!r})'
@@ -2313,7 +2313,7 @@ class Label(Action):
         self.comment = comment
 
     def get_data(self, context):
-        return bytes((0x10, self.label)) + self.comment
+        return bytes((0x10, self.label)) + to_bytes(self.comment or '')
 
     def py(self, context):
         return f'Label({self.label}, {self.comment!r})'
