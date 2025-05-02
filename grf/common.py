@@ -1,3 +1,11 @@
+"""
+@file common.py
+
+This module provides shared utilities and constants for the grf-py framework,
+including helper functions for GRF manipulation, data validation, and common
+data structures used throughout the project.
+"""
+
 import datetime
 import struct
 
@@ -78,6 +86,16 @@ ANY_LANGUAGE = 0x7f
 
 
 def hex_str(s, n=None):
+    """
+    Convert a string or byte sequence into a colon-separated hex string.
+
+    Args:
+        s (bytes | memoryview | str): The input data to convert.
+        n (int, optional): Max length of output string before truncation.
+
+    Returns:
+        str: Hexadecimal representation with optional truncation.
+    """
     add = ''
     if n is not None and len(s) > n:
         s = s[:n - 3]
@@ -88,31 +106,96 @@ def hex_str(s, n=None):
 
 
 def str_hex(s):
+    """
+    Convert a colon-separated hex string into a bytes object.
+
+    Args:
+        s (str): The hex string to convert (e.g. "0a:ff").
+
+    Returns:
+        bytes: The corresponding bytes object.
+    """
     return bytes(int(x, 16) for x in s.split(':'))
 
 
 def to_bytes(value):
+    """
+    Convert a string to bytes using UTF-8 encoding, if it's not already bytes.
+
+    Args:
+        value (str | bytes): The input string or bytes.
+
+    Returns:
+        bytes: The byte-encoded value.
+    """
     if isinstance(value, bytes):
         return value
     return value.encode('utf-8')
 
 
 def utoi8(value):
+    """
+    Convert an 8-bit unsigned integer to a signed integer using two's complement.
+
+    Args:
+        value (int): The 8-bit unsigned integer.
+
+    Returns:
+        int: The corresponding signed integer.
+    """
     return value | -(value & 0x80)
 
 
 def utoi32(value):
+    """
+    Convert a 32-bit unsigned integer to a signed integer using two's complement.
+
+    Args:
+        value (int): The 32-bit unsigned integer.
+
+    Returns:
+        int: The corresponding signed integer.
+    """
     return value | -(value & 0x80000000)
 
 
 def is_leap_year(year):
+    """
+    Check whether a given year is a leap year.
+
+    Args:
+        year (int): The year to check.
+
+    Returns:
+        bool: True if the year is a leap year, False otherwise.
+    """
     return yr % 4 == 0 and (yr % 100 != 0 or yr % 400 == 0)
 
 
 def date_to_days(d):
+    """
+    Convert a date to the number of days since 0000-01-01, with an offset.
+
+    Args:
+        d (datetime.date): The date to convert.
+
+    Returns:
+        int: Number of days since 0000-01-01.
+    """
     return (d - datetime.date(1, 1, 1)).days + 366
 
+
+
 def days_to_date(days):
+    """
+    Convert a number of days since 0000-01-01 back to a date object.
+
+    Args:
+        days (int): Number of days since 0000-01-01.
+
+    Returns:
+        datetime.date | int: The corresponding date object, or the raw days if out of valid range.
+    """
     if days < 366 or days > 3652424: return days
     # TODO make grf.date
     return datetime.date(1, 1, 1) + datetime.timedelta(days=days-366)
@@ -124,6 +207,15 @@ class FeatureMeta(type):
 
 
 class Feature(metaclass=FeatureMeta):
+    """
+    Represents a GRF feature type such as train, station, industry, etc.
+
+    Attributes:
+        id (int): Numeric ID of the feature type.
+        name (str): Name of the feature type.
+        class_name (str): Internal class name.
+        constant (str): Uppercase name used as a constant reference.
+    """
     _FROM_NAME = {}
 
     def __init__(self, id, name, class_name):
@@ -206,11 +298,25 @@ def read_dword(data, offset):
 
 
 class DataReader:
+    """
+    Utility class for sequentially reading binary data with typed access methods.
+
+    Attributes:
+        data (bytes): The data buffer.
+        offset (int): Current read offset.
+    """
+
     def __init__(self, data, offset=0):
         self.data = data
         self.offset = offset
 
     def get_byte(self):
+        """
+        Read a single byte from data.
+
+        Returns:
+            int: Byte value.
+        """
         self.offset += 1
         return self.data[self.offset - 1]
 
@@ -252,6 +358,18 @@ def days_till(year):
 
 
 def check_sequence_range(sequence, min_value, max_value, error_str):
+    """
+    Validate that all items in a sequence are within a specified range.
+
+    Args:
+        sequence (iterable): Values to check.
+        min_value (int): Minimum allowed value.
+        max_value (int): Maximum allowed value.
+        error_str (str): Prefix for the raised error message.
+
+    Raises:
+        ValueError: If any item is out of range.
+    """
     if (value := next((x for x in sequence if not (min_value <= x <= max_value)), None)) is not None:
         raise ValueError(f'{error_str} item {value} is not in range {min_value} <= item <= {max_value}')
 

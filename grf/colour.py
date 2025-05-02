@@ -1,3 +1,10 @@
+"""
+@file colour.py
+@brief Colour palette and conversion utilities.
+
+This module provides constants, palettes, and functions for colour conversion and manipulation,
+including sRGB, Oklab, and palette blending, as well as OpenTTD-specific brightness adjustments.
+"""
 from typing import Any
 
 import numpy as np
@@ -82,6 +89,12 @@ _LAZY_CONSTANTS = {}
 
 
 def __getattr__(name: str) -> Any:
+    """
+    @brief Lazy constant getter for module-level constants as some of them take some time to compute and should not be computed on import.
+    @param name Name of the constant to retrieve.
+    @return The requested constant.
+    @throws AttributeError if the constant is not defined.
+    """
     func = LAZY_CONSTANT_GENERATORS.get(name)
     if func is not None:
         value = _LAZY_CONSTANTS.get(name)
@@ -93,6 +106,11 @@ def __getattr__(name: str) -> Any:
 
 
 def srgb_to_linear(rgb):
+    """
+    @brief Convert sRGB colour to linear RGB.
+    @param rgb Tuple or array of sRGB values (0-255).
+    @return Numpy array of linear RGB values (0-1).
+    """
     rgb = np.array(rgb) / 255.
     mask = rgb <= 0.04045
     rgb[mask] /= 12.92
@@ -101,6 +119,11 @@ def srgb_to_linear(rgb):
 
 
 def linear_to_srgb(rgb_linear):
+    """
+    @brief Convert linear RGB to sRGB.
+    @param rgb_linear Numpy array of linear RGB values (0-1).
+    @return Numpy array of sRGB values (0-255).
+    """
     mask = rgb_linear <= 0.0031308
     rgb_linear[mask] *= 12.92
     rgb_linear[~mask] = 1.055 * (rgb_linear[~mask] ** (1 / 2.4)) - 0.055
@@ -120,6 +143,11 @@ LRGB_TO_OKLAB_M2 = np.array((
 
 
 def srgb_to_oklab(rgb):
+    """
+    @brief Convert sRGB colour to Oklab colour space.
+    @param rgb Tuple or array of sRGB values (0-255).
+    @return Numpy array of Oklab values.
+    """
     rgb_linear = srgb_to_linear(rgb)
     x = LRGB_TO_OKLAB_M1.dot(rgb_linear)
     return LRGB_TO_OKLAB_M2.dot(np.cbrt(x))
@@ -141,12 +169,23 @@ OKLAB_TO_LRGB_M2 = np.array((
 
 
 def oklab_to_srgb(lab):
+    """
+    @brief Convert Oklab colour to sRGB colour space.
+    @param lab Numpy array of Oklab values.
+    @return Numpy array of sRGB values (0-255).
+    """
     x = lab.dot(OKLAB_TO_LRGB_M1)
     rgb = (x ** 3).dot(OKLAB_TO_LRGB_M2)
     return linear_to_srgb(rgb)
 
 
 def oklab_find_best_colour(x, in_range=SAFE_COLOURS):
+    """
+    @brief Find the closest palette colour using Oklab space.
+    @param x Oklab colour or array of colours.
+    @param in_range Iterable of palette indices to consider.
+    @return Index or list of indices of the closest palette colour(s).
+    """
     colours = __getattr__('OKLAB_PALETTE').take(in_range, axis=0)
     if len(x.shape) == 1:
         return in_range[np.argmin(np.sum((colours - x) ** 2, axis=1))]
@@ -155,14 +194,33 @@ def oklab_find_best_colour(x, in_range=SAFE_COLOURS):
 
 
 def oklab_blend(source, tint, ratio=0.5):
+    """
+    @brief Blend two Oklab colours.
+    @param source Source Oklab colour.
+    @param tint Tint Oklab colour.
+    @param ratio Blend ratio (0-1).
+    @return Blended Oklab colour.
+    """
     return source * (1 - ratio) + tint * ratio
 
 
 def srgb_find_best_colour(x, in_range=SAFE_COLOURS):
+    """
+    @brief Find the closest palette colour in sRGB space (via Oklab).
+    @param x sRGB colour or array of colours.
+    @param in_range Iterable of palette indices to consider.
+    @return Index or list of indices of the closest palette colour(s).
+    """
     return oklab_find_best_colour(srgb_to_oklab(x), in_range=in_range)
 
 
 def make_palette_image(palette, size=20):
+    """
+    @brief Create an image visualizing a palette in a 16x16 grid.
+    @param palette List of RGB tuples.
+    @param size Size of each palette square.
+    @return PIL Image of the palette.
+    """
     npimg = np.zeros((16 * size, 16 * size, 3), dtype=np.uint8)
     for i, c in enumerate(palette):
         x = (i % 16) * size
@@ -172,6 +230,13 @@ def make_palette_image(palette, size=20):
 
 
 def srgb_color_distance(c1, c2):
+    """
+    @brief Compute a perceptual distance between two sRGB colours.
+    @param c1 First colour (object with .rgb attribute).
+    @param c2 Second colour (object with .rgb attribute).
+    @return Distance as a float.
+    """
+    # TODO rewrite for new colour tuples?
     rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
     r = c1.rgb[0] - c2.rgb[0]
     g = c1.rgb[1] - c2.rgb[1]
@@ -183,6 +248,12 @@ def srgb_color_distance(c1, c2):
 
 
 def openttd_adjust_brightness(c, brightness):
+    """
+    @brief Adjust the brightness of a colour using OpenTTD's algorithm.
+    @param c Tuple of sRGB values (0-255).
+    @param brightness Brightness value (0-255, 128 = no change).
+    @return Adjusted tuple of sRGB values (0-255).
+    """
     if brightness == 128:
         return c
 
