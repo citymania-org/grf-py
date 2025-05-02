@@ -131,7 +131,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Ships
 | 0x22 | extra_cb_flags | int(0-255) | extra callback flags |
 
 
-# Aircraft (AIRCRAFT, 0x03)
+## Aircraft (AIRCRAFT, 0x03)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 
 | NFO# | Name | Type | Description |
@@ -164,7 +164,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Vehicles/Planes
 | 0x22 | extra_cb_flags | int(0-255) | extra callback flags |
 
 
-# Stations (STATION, 0x04)
+## Stations (STATION, 0x04)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Stations
 
 | NFO# | Name | Type | Description |
@@ -193,13 +193,13 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Stations
 | 0x1D | station_class_name | int(0-65535) | Station class name ID |
 
 
-# Canals (CANAL, 0x05)
+## Canals (CANAL, 0x05)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Canals
 
 Not supported
 
 
-# Bridges (BRIDGE, 0x06)
+## Bridges (BRIDGE, 0x06)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Bridges
 
 | NFO# | Name | Type | Description |
@@ -219,7 +219,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Bridges
 | 0x13 | cost_factor | int(0-65535) | Cost factor word access |
 
 
-# Houses (HOUSE, 0x07)
+## Houses (HOUSE, 0x07)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Houses
 
 | NFO# | Name | Type | Description |
@@ -254,7 +254,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Houses
 | 0x23 | tile_acceptance | TileAcceptanceProperty | Tile acceptance list |
 
 
-# Global settings (GLOBAL_VAR, 0x08)
+## Global settings (GLOBAL_VAR, 0x08)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Global_Settings
 
 | NFO# | Name | Type | Description |
@@ -276,7 +276,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Global_Settings
 | 0x17 | roadtype_table2 | int(0-4294967295) | Road-/tramtype translation table |
 
 
-# Industry tiles (INDUSTRY_TILE, 0x09)
+## Industry tiles (INDUSTRY_TILE, 0x09)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Industry_Tiles
 
 | NFO# | Name | Type | Description |
@@ -296,7 +296,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Industry_Tiles
 
 
 
-# Industries (INDUSTRY, 0x0A)
+## Industries (INDUSTRY, 0x0A)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Industries
 
 | NFO# | Name | Type | Description |
@@ -336,7 +336,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Industries
 | 0x28 | input_multipliers | n*m*W | Input cargo multiplier list |
 
 
-# Cargo types (CARGO, 0x0B)
+## Cargo types (CARGO, 0x0B)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Cargos
 
 | NFO# | Name | Type | Description |
@@ -365,7 +365,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Cargos
 | 0x1D | capacity_mult | int(0-65535) | Capacity mulitplier |
 
 
-# Sound effects (SOUND_EFFECT, 0x0C)
+## Sound effects (SOUND_EFFECT, 0x0C)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Sound_Effects
 
 | NFO# | Name | Type | Description |
@@ -374,18 +374,18 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Sound_Effects
 | 0x09 | priority | int(0-255) | Priority |
 | 0x0A | override | int(0-255) | Override old sound |
 
-# Airports (AIRPORT, 0x0D)
+## Airports (AIRPORT, 0x0D)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Airports
 
 Not supported
 
 
-# Signals (SIGNAL, 0x0E)
+## Signals (SIGNAL, 0x0E)
 
 Not supported
 
 
-# Objects (OBJECT, 0x0F)
+## Objects (OBJECT, 0x0F)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Objects
 
 | NFO# | Name | Type | Description |
@@ -409,7 +409,7 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Objects
 | 0x18 | count_per_map256 | int(0-255) | Measure for number of objects placed upon map creation |
 
 
-# Railtypes (RAILTYPE, 0x10)
+## Railtypes (RAILTYPE, 0x10)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Railtypes
 
 | NFO# | Name | Type | Description |
@@ -438,13 +438,13 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Railtypes
 | 0x1D | alternative_railtype_list | list[Label] | Alternate rail type labels that shall be "redirected" to this rail type |
 
 
-# Airport tiles (AIRPORT_TILE, 0x11)
+## Airport tiles (AIRPORT_TILE, 0x11)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Airports
 
 Not supported
 
 
-# Road types (ROADTYPE, 0x12)
+## Road types (ROADTYPE, 0x12)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Roadtypes
 
 | NFO# | Name | Type | Description |
@@ -469,13 +469,13 @@ https://newgrf-specs.tt-wiki.net/wiki/Action0/Roadtypes
 | 0x1D | alternative_roadtype_list | list[Label] | Alternate road type labels that shall be "redirected" to this road type |
 
 
-# Tram types (TRAMTYPE, 0x13)
+## Tram types (TRAMTYPE, 0x13)
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Tramtypes
 
  Not supported
 
 
-# Road stops
+## Road stops
 https://newgrf-specs.tt-wiki.net/wiki/Action0/Road_Stops
 
 | NFO# | Name | Type | Description |

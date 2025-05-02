@@ -1,10 +1,12 @@
+# Live NewGRF reload
+
 NOTE: Live reloading is a highly experimental feature that may not work that well. Especially it's known to not update changes to python files.
 
-# Prerequisites
+## Prerequisites
 1. Install `watchdog` module: `pip instal watchdog==3.0.0`
 2. Use CityMania patchpack 14.0-RC1 or later: https://citymania.org/downloads
 
-# Setup
+## Setup
 1. Change `network.admin_password` in `secrets.cfg` to some non-empty value (and don't forget to close the game before editing ayn configs):
 ```ini
 [network]

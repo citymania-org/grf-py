@@ -12,7 +12,7 @@ This file contains documentation detailing the design decisions made during the 
 Use NML naming where advantageous but remain flexible without excessive reliance on it.
 
 
-# Zoom constants
+## Zoom constants
 As of version 0.3 use "human"/nml naming of constants. I.e. `ZOOM_4X` -> `ZOOM_2X` -> `ZOOM_NORMAL` -> `ZOOM_OUT_2X` -> `ZOOM_OUT_4X` -> `ZOOM_OUT_8X`. In OpenTTD code 4x zoom is called "normal" and that is extremely confusing, don't copy that.
 
 
