@@ -18,6 +18,14 @@ _FIX_PALETTE_LOOKUP = {PALETTE[i]: i for i in ALL_COLOURS}
 
 
 def fix_palette(obj, context, img, sprite_name):
+    """
+    @brief Fix the palette of a PIL image to match the expected OpenTTD palette.
+    @param obj The object requesting the palette fix (for warnings).
+    @param context The context for warnings and timing.
+    @param img The PIL Image in 'P' mode.
+    @param sprite_name Name of the sprite (for warnings).
+    @return The image with the corrected palette.
+    """
     assert (img.mode == 'P')  # TODO
     pal = tuple(img.getpalette())
     if pal == PIL_PALETTE: return img
@@ -43,6 +51,11 @@ def fix_palette(obj, context, img, sprite_name):
 
 
 def quantize(img):
+    """
+    @brief Quantize an image to the OpenTTD 8bpp palette.
+    @param img PIL Image (RGB or RGBA).
+    @return Quantized PIL Image in 'P' mode with OpenTTD palette.
+    """
     p_img = Image.new('P', (16, 16))
     SAFE_PALETTE = sum([PIL_PALETTE[3 * i: 3 * i + 3] for i in SAFE_COLOURS], ())
     p_img.putpalette(SAFE_PALETTE)
@@ -67,6 +80,11 @@ def quantize(img):
 
 
 def convert_image(image):
+    """
+    @brief Convert a PIL image to a supported mode and return its bit depth.
+    @param image PIL Image.
+    @return (image, bpp) tuple, where bpp is one of BPP_8, BPP_24, BPP_32.
+    """
     if image.mode == 'P':
         return image, BPP_8
     if image.mode == 'RGBA':
@@ -76,8 +94,13 @@ def convert_image(image):
     return image, BPP_24
 
 
-# Tries to get the original rgba that rgb and alpha channels were split from, returns None if not possible
 def restore_rgba_image(rgb, alpha):
+    """
+    @brief Attempt to reconstruct the original RGBA array from split RGB and alpha arrays.
+    @param rgb Numpy array of RGB data.
+    @param alpha Numpy array of alpha data.
+    @return Numpy array of RGBA data if possible, else None.
+    """
     # We rely on base of both arrays to still be the original array
     base = rgb.base
     if base is not alpha.base:
@@ -119,17 +142,25 @@ def restore_rgba_image(rgb, alpha):
 
 # Pseudo sprite in grf
 class Action:
+    """
+    @brief Base class for pseudo-sprites in GRF.
+    """
     def get_data(self, context):
         raise NotImplementedError
 
 
 class FakeAction:
+    """
+    @brief Dummy action for testing or placeholder use.
+    """
     def get_data(self, context):
         return b't'
 
 
-# Pseudo sprite (reference) + real sprite in grf
 class ResourceAction(Action):
+    """
+    @brief Base class for real sprites in NewGRF, also have preudo-sprite for the reference.
+    """
     def __init__(self):
         self.sprite_id = None
 
@@ -144,6 +175,9 @@ class ResourceAction(Action):
 
 
 class SingleResourceAction(ResourceAction):
+    """
+    @brief ResourceAction for a single resource.
+    """
     def __init__(self, resource):
         super().__init__()
         self.resource = resource
@@ -156,6 +190,9 @@ class SingleResourceAction(ResourceAction):
 
 
 class AlternativeSprites(ResourceAction):
+    """
+    @brief ResourceAction for a set of alternative sprites (different zooms/bpp).
+    """
     def __init__(self, *sprites):
         assert all(isinstance(s, Sprite) for s in sprites), sprites
         if len(set((s.zoom, s.bpp) for s in sprites)) != len(sprites):
@@ -182,6 +219,9 @@ class AlternativeSprites(ResourceAction):
 
 
 class ResourceFile:
+    """
+    @brief Represents a file-based resource (image, sound, code, etc).
+    """
     def __init__(self, path):
         self.path = path
 
@@ -190,14 +230,23 @@ class ResourceFile:
 
 
 class CodeFile(ResourceFile):
+    """
+    @brief Represents a code file resource.
+    """
     pass
 
 
 class PythonFile(CodeFile):
+    """
+    @brief Represents a Python code file resource.
+    """
     pass
 
 
 class SoundFile(ResourceFile):
+    """
+    @brief Represents a sound file resource.
+    """
     pass
 
 
@@ -205,6 +254,9 @@ THIS_FILE = PythonFile(__file__)
 
 
 class LoadedResourceFile(ResourceFile):
+    """
+    @brief ResourceFile that can be loaded/unloaded (e.g., images).
+    """
     def load(self):
         raise NotImplementedError
 
@@ -213,6 +265,9 @@ class LoadedResourceFile(ResourceFile):
 
 
 class Resource:
+    """
+    @brief Base class for all resources (sprites, sounds, etc).
+    """
     def get_fingerprint(self):
         raise NotImplementedError
 
@@ -225,12 +280,18 @@ class Resource:
 
 
 class Sound(Resource):
+    """
+    @brief Base class for sound resources.
+    """
     def __init__(self):
         super().__init__()
         self.id = None
 
 
 class PaletteRemap(Action):
+    """
+    @brief Action for providing palette remaps in NewGRF files.
+    """
     def __init__(self, ranges=None):
         self.remap = np.arange(256, dtype=np.uint8)
         if ranges:
@@ -281,15 +342,24 @@ WIN_TO_DOS_REMAP = PaletteRemap.from_array(WIN_TO_DOS)
 
 
 class MaskMode:
+    """
+    @brief Enum for sprite mask rendering modes (default, overdraw).
+    """
     DEFAULT = 0
     OVERDRAW = 1
 
 
 class Uncacheable(Exception):
+    """
+    @brief Exception to raise when a sprite cannot be cached. This is not an error, just makes it easier to propagate along the chain of git_fingerprint functions.
+    """
     pass
 
 
 class Sprite(Resource):
+    """
+    @brief Base class for all sprites (image, mask, etc).
+    """
     def __init__(self, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None):
         assert bpp in (None, BPP_8, BPP_24, BPP_32)
         super().__init__()
@@ -602,6 +672,9 @@ class Sprite(Resource):
 
 
 class CacheableSprite(Sprite):
+    """
+    @brief Sprite subclass that can be cached (has a fingerprint).
+    """
     def get_fingerprint(self):
         return {
             'class': self.__class__.__name__,
@@ -616,6 +689,9 @@ class CacheableSprite(Sprite):
 
 
 class WithMask(Sprite):
+    """
+    @brief Sprite composed with a mask sprite.
+    """
     def __init__(self, sprite, mask, name=None, mode=MaskMode.DEFAULT):
         if mask.bpp is not None and mask.bpp != BPP_8:
             raise ValueError('Mask is not a 8bpp sprite')
@@ -678,6 +754,9 @@ class WithMask(Sprite):
 
 
 class EmptySprite(Sprite):
+    """
+    @brief Sprite representing an empty image. To use in place where NewGRF format requires a sprite. It's technically a 1x1 transparent image.
+    """
     def __init__(self):
         super().__init__(1, 1)
 
@@ -712,6 +791,9 @@ EMPTY_SPRITE = EmptySprite()
 
 
 class ImageSprite(Sprite):
+    """
+    @brief Sprite created from a PIL Image object.
+    """
     def __init__(self, image, **kw):
         self._image = convert_image(image)
         super().__init__(*self._image[0].size, bpp=self._image[1], **kw)
@@ -724,6 +806,9 @@ class ImageSprite(Sprite):
 
 
 class ImageFile(LoadedResourceFile):
+    """
+    @brief LoadedResourceFile for image files (PNG, etc).
+    """
     def __init__(self, path, colourkey=None):
         self.path = path
         self.colourkey = colourkey
@@ -756,6 +841,9 @@ class ImageFile(LoadedResourceFile):
 
 
 class FileSprite(CacheableSprite):
+    """
+    @brief Sprite representing a subregion of an image file.
+    """
     def __init__(self, file, x, y, w, h, *, xofs=0, yofs=0, zoom=ZOOM_NORMAL, bpp=None, crop=True, name=None, **kw):
         assert(isinstance(file, ImageFile))
         assert(file.colourkey is None or bpp != BPP_8)
@@ -807,6 +895,9 @@ class FileSprite(CacheableSprite):
 
 
 class RAWSound(Sound):
+    """
+    @brief Sound resource loaded from a RAW sound file.
+    """
     def __init__(self, file):
         super().__init__()
         if not isinstance(file, SoundFile):
@@ -828,6 +919,9 @@ class RAWSound(Sound):
 
 
 class NMLFileSpriteWrapper:
+    """
+    @brief Wrapper to use NML sprite ojbects as grf-py sprites. NOTE: Likely outdated.
+    """
     def __init__(self, sprite, file, bit_depth):
         self.sprite = sprite
         self.file = type('Filename', (object, ), {'value': file.path})
@@ -850,6 +944,9 @@ class NMLFileSpriteWrapper:
 
 
 class SpriteWrapper(Sprite):
+    """
+    @brief Sprite that wraps one or more other sprites (for composition, etc).
+    """
     def __init__(self, sprites, *, name=None):
         self.sprites = sprites
         try:
@@ -901,6 +998,9 @@ class SpriteWrapper(Sprite):
 
 
 class MoveSprite(SpriteWrapper):
+    """
+    @brief Sprite wrapper that moves (offsets) another sprite.
+    """
     def __init__(self, sprite, *, xofs=0, yofs=0):
         super().__init__((sprite, ))
         self.sprite = sprite
@@ -919,6 +1019,9 @@ class MoveSprite(SpriteWrapper):
 
 
 class QuantizeSprite(SpriteWrapper):
+    """
+    @brief Wrapper that quantizes another sprite to 8bpp.
+    """
     def __init__(self, sprite):
         super().__init__((sprite, ))
         self.bpp = BPP_8
@@ -933,6 +1036,9 @@ class QuantizeSprite(SpriteWrapper):
 
 
 class ZoomDebugRecolourSprite(Sprite):
+    """
+    @brief Wrapper that recolours another sprite for zoom-level debugging.
+    """
 
     ZOOM_DEBUG_COLOURS = {
         ZOOM_4X: np.array((0, 1, 0), dtype=np.uint8),
