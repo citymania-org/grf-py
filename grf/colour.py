@@ -259,7 +259,7 @@ def openttd_adjust_brightness(c, brightness):
 
     r, g, b = c
     combined = (r << 32) | (g << 16) | b
-    combined *= brightness
+    combined *= int(brightness)
 
     r = (combined >> 39) & 0x1ff
     g = (combined >> 23) & 0x1ff
