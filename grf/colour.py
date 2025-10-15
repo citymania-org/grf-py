@@ -232,19 +232,19 @@ def make_palette_image(palette, size=20):
 def srgb_color_distance(c1, c2):
     """
     @brief Compute a perceptual distance between two sRGB colours.
-    @param c1 First colour (object with .rgb attribute).
-    @param c2 Second colour (object with .rgb attribute).
+    @param c1 First colour (tuple of sRGB values (0-255)).
+    @param c2 Second colour (tuple of sRGB values (0-255)).
     @return Distance as a float.
     """
-    # TODO rewrite for new colour tuples?
-    rmean = (c1.rgb[0] + c2.rgb[0]) / 2.
-    r = c1.rgb[0] - c2.rgb[0]
-    g = c1.rgb[1] - c2.rgb[1]
-    b = c1.rgb[2] - c2.rgb[2]
-    return math.sqrt(
+    rmean = (c1[0] + c2[0]) / 2. / 256.
+    r = c1[0] - c2[0]
+    g = c1[1] - c2[1]
+    b = c1[2] - c2[2]
+    return (
         ((2 + rmean) * r * r) +
         4 * g * g +
-        (3 - rmean) * b * b)
+        (3 - rmean) * b * b
+    ) ** .5
 
 
 def openttd_adjust_brightness(c, brightness):
