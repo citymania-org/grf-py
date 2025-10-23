@@ -91,7 +91,7 @@ class Train(Vehicle):
         if length <= 8:
             return 8 - length, None, None
 
-        if self.length % 2 == 1:
+        if length % 2 == 1:
             central_length = 7
             articulated_length = (length - 7) // 2
         else:
