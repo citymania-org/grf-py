@@ -9,7 +9,6 @@ install_requires = [
     'nml==0.8.0',
     'numpy==2.3.4',
     'Pillow==12.0.0',
-    'ply==3.11',
     'typeguard==4.4.4',
 ]
 

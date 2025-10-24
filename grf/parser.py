@@ -1,8 +1,7 @@
 import struct
 import tempfile
 
-import ply.lex
-import ply.yacc
+from .ply import lex, yacc
 
 from .common import utoi32
 from .va2vars import VA2_VARS
@@ -771,12 +770,12 @@ def p_error(t):
     print(f'T={t}')
 
 
+lexer = lex.lex()
+parser = yacc.yacc(debug=False)
+
 def parse_code(feature, code):
-    lexer = ply.lex.lex()
-    # TODO make some custom build directory
-    parser = ply.yacc.yacc(debug=False, outputdir=tempfile.gettempdir())
     parser.grf_feature = feature
-    res = parser.parse(code)
+    res = parser.parse(code, lexer=lexer)
     if res is None:
         stack_state_str = ' '.join([symbol.type for symbol in parser.symstack][1:])
 
