@@ -6,11 +6,11 @@ from pathlib import Path
 root_path = Path(__file__).parent
 
 install_requires = [
-    'nml==0.7.5',
-    'numpy==1.25.0',
-    'Pillow==9.4.0',
+    'nml==0.8.0',
+    'numpy==2.3.4',
+    'Pillow==12.0.0',
     'ply==3.11',
-    'typeguard==4.1.5',
+    'typeguard==4.4.4',
 ]
 
 setup(
@@ -28,6 +28,6 @@ setup(
         ]
     },
     install_requires=install_requires,
-    python_requires=">=3.6.9",
+    python_requires=">=3.12.12",
     setup_requires=["setuptools-git-versioning>=2"],
 )
