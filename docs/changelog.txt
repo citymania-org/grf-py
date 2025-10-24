@@ -2,7 +2,14 @@
 0.3.1
 ---------
 - Fix duplicate sprite counter in build report not counting individual alternative sprites like total does.
+- Fix unsigned parent sprite offsets in advanced layout (#45).
+- Fix exception when handling property encoding errors.
+- Fix error in `Sprite.make_rgba_image` for sprites with rgb and mask.
+- Fix Comment and Label actions (#49).
+- Fix length calculation for auto-articulated parts on articulated parts.
 - Add `QuantizeSprite` wrapper and `quantize` function to convert 32/24bpp sprites into 8bpp with openttd palette.
+- Add some code comments and documentation.
+- Update `srgb_color_distance` to use colour tuples.
 - grftopy: Fix decompilation error.
 
 ---------
