@@ -1,5 +1,3 @@
-from nose.tools import eq_
-
 import grf
 from grf.parser import parse_code
 
@@ -7,7 +5,7 @@ from grf.parser import parse_code
 def hex_eq(value, result):
 	result = ''.join(result.split()).lower()
 	value_hex = grf.hex_str(value)
-	eq_(value_hex, result)
+	assert value_hex == result
 
 
 def check_action(action, result):
@@ -31,10 +29,10 @@ def test_switch_var_param():
 def check_code(feature, code, result):
 	ast = parse_code(feature, code)
 	context = grf.actions.CodeContext(subroutines={}, register=0x80)
-	eq_(len(ast), len(result))
+	assert len(ast) == len(result)
 	for a, r in zip(ast, result):
 		is_value, data = a.compile(context)
-		eq_(is_value, r[0])
+		assert is_value == r[0]
 		hex_eq(data, r[1])
 
 

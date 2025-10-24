@@ -1,8 +1,6 @@
-from nose.tools import raises
-
 from grf import TRAIN, HOUSE, CANAL, DualCallback, GraphicsCallback, make_callback_manager, SpriteGenerator, Action3, Switch, DefineMultiple, Ref
 
-from .common import check_lib
+from .common import check_lib, raises
 
 
 class DummyDefinition(DefineMultiple):

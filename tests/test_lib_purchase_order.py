@@ -1,7 +1,5 @@
 import types
 
-from nose.tools import eq_
-
 from grf import BaseNewGRF, SetPurchaseOrder, TRAIN, VariantGroup, Ref, DefineStrings, Define, Action3, Switch
 
 from .common import check_lib

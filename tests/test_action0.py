@@ -1,5 +1,3 @@
-from nose.tools import eq_
-
 import grf
 
 from .common import check_action

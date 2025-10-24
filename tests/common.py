@@ -1,7 +1,7 @@
 import tempfile
 import os
 
-from nose.tools import eq_
+import pytest
 
 from grf import BaseNewGRF, hex_str, WriteContext
 
@@ -63,4 +63,14 @@ def check_action(action, result):
 	result = ''.join(result.split()).lower()
 	encoded = action.get_data(WriteContext())
 	encoded_hex = hex_str(encoded)
-	eq_(encoded_hex, result)
+	assert encoded_hex == result
+
+
+# pytest equivalent of nose @raises
+def raises(*exceptions):
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            with pytest.raises(exceptions):
+                fn(*args, **kwargs)
+        return wrapper
+    return decorator
