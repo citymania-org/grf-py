@@ -27,6 +27,6 @@ setup(
         ]
     },
     install_requires=install_requires,
-    python_requires=">=3.12.12",
+    python_requires=">=3.12.10",
     setup_requires=["setuptools-git-versioning>=2"],
 )
