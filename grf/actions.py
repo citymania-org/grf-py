@@ -903,8 +903,8 @@ ACTION0_GLOBAL_PROPS = {
     0x13: ('lang_genders', MultiDictProperty()),  # Gender/case translation table
     0x14: ('lang_cases', MultiDictProperty()),  # Gender/case translation table
     0x15: ('lang_plural', 'B'),  # Plural form
-    0x16: ('roadtype_table1', 'B'),  # Road-/tramtype translation table
-    0x17: ('roadtype_table2', 'D'),  # Road-/tramtype translation table
+    0x16: ('roadtype_table', 'L'),  # Road-/tramtype translation table
+    0x17: ('tramtype_table', 'L'),  # Road-/tramtype translation table
 }
 
 ACTION0_INDUSTRY_TILE_PROPS = {

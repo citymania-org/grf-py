@@ -1,4 +1,11 @@
 ---------
+0.4.0
+---------
+
+- Rename Action0 global variable `roadtype_table1` to `roadtype_table` and `roadtype_table2` to `tramtype_table` and change their type to a label.
+- lib: Allow to use auto-assigned (string) ID for `RoadVehicle`.
+
+---------
 0.3.1
 ---------
 - Fix duplicate sprite counter in build report not counting individual alternative sprites like total does.
