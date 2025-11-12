@@ -98,11 +98,12 @@ class RoadVehicle(Vehicle):
 
         self.callbacks.set_flag_props(self._props)
 
-        res.extend(self._gen_name_sprites(g, self.id))
+        tid = g.resolve_id(self.feature, self.id)
+        res.extend(self._gen_name_sprites(g, tid))
 
         res.append(definition := grf.Define(
             feature=grf.RV,
-            id=self.id,
+            id=tid,
             props={
                 'sprite_id': 0xff,
                 'precise_max_speed': min(self.max_speed.precise_value, 0xff),
