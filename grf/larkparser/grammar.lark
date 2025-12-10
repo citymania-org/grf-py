@@ -1,0 +1,74 @@
+// Simple arithmetic grammar
+
+?start: statement+
+
+?statement: expr
+
+?expr: assign_expr
+
+?assign_expr: logic_expr
+            | name "=" assign_expr -> assign_var   // right-associative
+            | "PERM" "[" number "]" "=" assign_expr -> assign_perm   // right-associative
+            | "TEMP" "[" number "]" "=" assign_expr -> assign_temp   // right-associative
+            // | "PARAM" "[" number "]" "=" assign_expr -> assign_param   // right-associative
+
+?logic_expr: shift_expr
+           | logic_expr "==" shift_expr -> op_eq
+           | logic_expr "!=" shift_expr -> op_ne
+           | logic_expr "<" shift_expr -> op_lt
+           | logic_expr "<=" shift_expr -> op_le
+           | logic_expr ">"  shift_expr -> op_gt
+           | logic_expr ">=" shift_expr -> op_ge
+
+?shift_expr: bitwise_or_expr
+           | shift_expr "<<" bitwise_or_expr -> op_shl
+           | shift_expr ">>" bitwise_or_expr -> op_shr
+           | shift_expr ">>>" bitwise_or_expr -> op_shru
+
+?bitwise_or_expr: bitwise_xor_expr
+               | bitwise_or_expr "|" bitwise_xor_expr -> op_binor
+
+?bitwise_xor_expr: bitwise_and_expr
+                | bitwise_xor_expr "^" bitwise_and_expr -> op_binxor
+
+?bitwise_and_expr: add_expr
+                 | bitwise_and_expr "&" add_expr -> op_binand
+
+?add_expr: mul_expr
+         | add_expr "+" mul_expr -> op_add
+         | add_expr "-" mul_expr -> op_sub
+
+?mul_expr: unary_expr
+         | mul_expr "*" unary_expr -> op_mul
+         | mul_expr "/" unary_expr -> op_divu
+         | mul_expr "%" unary_expr -> op_modu
+
+?unary_expr: "-" unary_expr   -> uminus
+           | factor
+
+?factor: number
+       | "(" expr ")"
+       | "TEMP" "[" number "]" -> read_temp
+       | "PERM" "[" number "]" -> read_perm
+       | "PARAM" "." name -> read_param_by_name
+       | func_call
+       | name -> read_var
+       | "self" "." name -> self_var
+       | "related" "." name -> related_var
+
+
+?func_call: name "(" [expr ("," expr)*] ")"   -> call
+
+?name : CNAME          -> name
+
+?number: HEX_NUMBER    -> hex
+       | BIN_NUMBER    -> bin
+       | DEC_NUMBER    -> dec
+
+HEX_NUMBER: /0[xX][0-9a-fA-F]+/
+BIN_NUMBER: /0[bB][01]+/
+DEC_NUMBER: /[0-9]+/
+
+%import common.CNAME
+%import common.WS
+%ignore WS

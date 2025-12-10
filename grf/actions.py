@@ -2142,6 +2142,17 @@ class If(Action):
                 skip={self.skip},
             )'''
 
+    def __eq__(self, action):
+        return (
+            isinstance(action, If) and
+            self.is_static == action.is_static and
+            self.variable == action.variable and
+            self.varsize == action.varsize and
+            self.condition == action.condition and
+            self.value == action.value and
+            self.skip == action.skip
+        )
+
 # Action7 = Action9 = If
 
 
@@ -2305,7 +2316,7 @@ class ComputeParameters(Action):
 # Action 10
 
 class Label(Action):
-    def __init__(self, label, comment):
+    def __init__(self, label: int, comment: str = None):
         if not(0 <= label <= 255):
             raise ValueError(f'label {label} not in range 0..255')
         super().__init__()
@@ -2317,6 +2328,13 @@ class Label(Action):
 
     def py(self, context):
         return f'Label({self.label}, {self.comment!r})'
+
+    def __eq__(self, action):
+        return (
+            isinstance(action, Label) and
+            self.label == action.label and
+            self.comment == action.comment
+        )
 
 
 # Action 11

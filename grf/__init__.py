@@ -27,6 +27,7 @@ from .colour import PALETTE, PIL_PALETTE, SAFE_COLOURS, ALL_COLOURS, WATER_COLOU
     srgb_color_distance, openttd_adjust_brightness
 
 from . import dev
+from . import larkparser
 
 
 try:

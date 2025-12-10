@@ -222,12 +222,34 @@ class BaseNewGRF:
         self._context.add_print_handler(print)
         self._id_map = IDMap(id_map_file)
         self.sprite_cache_path = sprite_cache_path
+        self._parameters = {}
+        self._labels = set()
 
     def reserve_ids(self, feature, ids):
         self._id_map.reserve_ids(feature, ids)
 
     def resolve_id(self, feature, value, *, articulated=False):
         return self._id_map.resolve(feature, value, articulated=articulated)
+
+    def register_parameter(self, key: str):
+        assert key not in self._parameters
+        param_id = len(self._parameters)
+        self._parameters[key] = param_id
+        return param_id
+
+    def get_parameter_id(self, key: str):
+        # TODO error handling
+        return self._parameters[key]
+
+    def reserve_label(self):
+        for i in range(1, 0x100, 1):
+            if i not in self._labels:
+                self._labels.add(i)
+                return i
+        raise RuntimeError(f'Too many labels (255 max)')
+
+    def release_label(self, label_id):
+        self._labels.remove(label_id)
 
     def _add_sound(self, s):
         assert isinstance(s, Sound)
@@ -904,7 +926,7 @@ class NewGRF(BaseNewGRF):
             props['INFO']['URL_'] = url
 
         self._props = props
-        self._params = []
+        self._param_data = {}
         self._cargo_table = None
         self._railtype_table = None
         self.grfid = grfid
@@ -965,10 +987,11 @@ class NewGRF(BaseNewGRF):
         return bytes(self._cargo_table[to_bytes(l)] for l in labels)
 
     def generate_sprites(self):
-        if self._params:
-            self._props['INFO']['NPAR'] = bytes((len(self._params),))
+        if self._param_data:
+            assert max(self._param_data.keys()) + 1 == len(self._param_data)  # TODO figure out what to do with sparse ids
+            self._props['INFO']['NPAR'] = bytes((len(self._param_data),))
             self._props['INFO']['PARA'] = {}
-            for i, p in enumerate(self._params):
+            for i, p in self._param_data.items():
                 self._props['INFO']['PARA'][i] = p
 
         res = [
@@ -1044,7 +1067,7 @@ class NewGRF(BaseNewGRF):
         ))
         return res
 
-    def add_bool_parameter(self, *, name, description, default=None):
+    def add_bool_parameter(self, *, key, name, description, default=None):
         data = {
             'NAME': name,
             'DESC': description,
@@ -1054,9 +1077,11 @@ class NewGRF(BaseNewGRF):
             if not isinstance(default, bool):
                 raise ValueError('Default value for bool parameter should be bool')
             data['DFLT'] = int(default)
-        self._params.append(data)
 
-    def add_int_parameter(self, *, name, description, default=None, limits=None, enum=None):
+        param_id = self.register_parameter(key)
+        self._param_data[param_id] = data
+
+    def add_int_parameter(self, *, key, name, description, default=None, limits=None, enum=None):
         data = {
             'NAME': name,
             'DESC': description,
@@ -1079,7 +1104,8 @@ class NewGRF(BaseNewGRF):
 
             data['VALU'] = enum
 
-        self._params.append(data)
+        param_id = self.register_parameter(key)
+        self._param_data[param_id] = data
 
 
 # Defines g.Class for newgrf binding
