@@ -665,7 +665,7 @@ class Sprite(Resource):
             no_mask = ~has_mask
             img[no_mask, :3] = rgb[no_mask]
             # TODO use animated palette
-            img[has_mask, :3] = [openttd_adjust_brightness(PALETTE[m], max(c)) for c, m in zip(rgb[has_mask], mask[has_mask])]
+            img[has_mask, :3] = [openttd_adjust_brightness(PALETTE[m], int(max(c))) for c, m in zip(rgb[has_mask], mask[has_mask])]
             if alpha is None:
                 img[:, :, 3] = 255
         return Image.fromarray(img, mode='RGBA')
