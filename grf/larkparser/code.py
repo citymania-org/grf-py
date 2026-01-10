@@ -8,8 +8,8 @@ from .nodes import (
     OPE_NHASBIT,
     OPE_EQ,
     OPE_NE,
-    OPE_LT,
-    OPE_GT,
+    OPE_LE,
+    OPE_GE,
 )
 
 
@@ -28,15 +28,15 @@ class Code:
         self.root = Code.parser.parse(code)
 
     def compile_if(self, g, *, is_static, skip):
-        print(self.root)
         assert isinstance(self.root, Expr), type(self.root)
+        # NOTE: operations are inversed since it's a skip condition
         opcode = {
-            OPE_HASBIT: 0x00,
-            OPE_NHASBIT: 0x01,
-            OPE_EQ: 0x02,
-            OPE_NE: 0x03,
-            OPE_LT: 0x04,
-            OPE_GT: 0x05,
+            OPE_NHASBIT: 0x00,
+            OPE_HASBIT: 0x01,
+            OPE_NE: 0x02,
+            OPE_EQ: 0x03,
+            OPE_GE: 0x04,
+            OPE_LE: 0x05,
         }.get(self.root.op)
 
         if opcode is None:
@@ -45,7 +45,6 @@ class Code:
 
         assert isinstance(self.root.a, GetParamByName)
         assert isinstance(self.root.b, Value)
-        print('Value', self.root.b)
         param_id = g.get_parameter_id(self.root.a.name)
         return [
             If(is_static=is_static, variable=param_id, condition=opcode, value=self.root.b.value, skip=skip, varsize=4)
