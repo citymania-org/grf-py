@@ -2279,6 +2279,10 @@ ActionC = Comment
 class ComputeParameters(Action):
     def __init__(self, *, target, operation, if_undefined, source1, source2, value=None):
             super().__init__()
+
+            if source2 == 0xfe:
+                assert operation == 0x00 and not if_undefined, "Only assignment is accepted for special variable access"
+
             self.target = target
             self.operation = operation
             self.if_undefined = if_undefined
@@ -2289,7 +2293,7 @@ class ComputeParameters(Action):
     def get_data(self, context):
         operation_byte = self.operation | 0x80 * self.if_undefined
         res = bytes((0x0D, self.target, operation_byte, self.source1, self.source2))
-        if self.source1 == 0xff or self.source2 == 0xff:
+        if self.source1 == 0xff or self.source2 == 0xff or self.source2 == 0xfe:
             if isinstance(self.value, bytes):
                 res += self.value
             else:
