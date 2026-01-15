@@ -6,3 +6,4 @@ from .ship import *
 from .object import *
 from .industry import *
 from .misc import *
+from .badge import *

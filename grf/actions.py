@@ -15,7 +15,7 @@ from .common import Feature, hex_str, utoi32, VEHICLE_FEATURES, date_to_days, AN
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, GLOBAL_VAR, \
                     INDUSTRY_TILE, INDUSTRY, CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, \
                     AIRPORT_TILE, ROADTYPE, TRAMTYPE, NO_CLIMATE, ALL_CLIMATES, TEMPERATE, ARCTIC, \
-                    TROPICAL, TOYLAND, TOWN, ROAD_STOP
+                    TROPICAL, TOYLAND, TOWN, ROAD_STOP, BADGE
 
 from .parser import Node, Expr, Value, Var, Temp, Perm, Call, parse_code, OP_INIT, SPRITE_FLAGS
 from .sprites import Action, Sound, FakeAction
@@ -377,6 +377,7 @@ ACTION0_TRAIN_PROPS = {
     0x2F: ('variant_group', IDProperty()),  # Vehicle variant group
     0x30: ('extra_flags', 'D'),  # extra flags
     0x31: ('extra_cb_flags', 'B'),  # extra callback flags
+    0x33: ('badges', 'n*W'), # list of badges
 }
 
 ACTION0_RV_PROPS = {
@@ -412,6 +413,7 @@ ACTION0_RV_PROPS = {
     0x26: ('variant_group', IDProperty()),  # Vehicle variant group
     0x27: ('extra_flags', 'D'),  # extra flags
     0x28: ('extra_cb_flags', 'B'),  # extra callback flags
+    0x2A: ('badges', 'n*W'), # list of badges
 }
 
 ACTION0_SHIP_PROPS = {
@@ -442,6 +444,7 @@ ACTION0_SHIP_PROPS = {
     0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
     0x22: ('extra_cb_flags', 'B'),  # extra callback flags
+    0x26: ('badges', 'n*W'), # list of badges
 }
 
 ACTION0_AIRCRAFT_PROPS = {
@@ -472,6 +475,7 @@ ACTION0_AIRCRAFT_PROPS = {
     0x20: ('variant_group', IDProperty()),  # Vehicle variant group
     0x21: ('extra_flags', 'D'),  # extra flags
     0x22: ('extra_cb_flags', 'B'),  # extra callback flags
+    0x24: ('badges', 'n*W'), # list of badges
 }
 
 
@@ -737,6 +741,7 @@ ACTION0_STATION_PROPS = {
     0x1B: ('min_bridge_height', '8*B'),  # Advanced sprite layout with register modifiers
     0x1C: ('station_name', 'W'),  # Station name
     0x1D: ('station_class_name', 'W'),  # Station class name
+    0x1F: ('badges', 'n*W'), # list of badges
 }
 
 # TODO river
@@ -849,6 +854,7 @@ ACTION0_HOUSE_PROPS = {
     0x21: ('min_year', 'W'),  # Long year (zero based) of minimum appearance
     0x22: ('max_year', 'W'),  # Long year (zero based) of maximum appearance
     0x23: ('tile_acceptance', TileAcceptanceProperty()), # Tile acceptance list
+    0x24: ('badges', 'n*W'), # list of badges
 }
 
 
@@ -905,6 +911,7 @@ ACTION0_GLOBAL_PROPS = {
     0x15: ('lang_plural', 'B'),  # Plural form
     0x16: ('roadtype_table', 'L'),  # Road-/tramtype translation table
     0x17: ('tramtype_table', 'L'),  # Road-/tramtype translation table
+    0x18: ('badge_table', 'S'),  # Badge translation table
 }
 
 ACTION0_INDUSTRY_TILE_PROPS = {
@@ -920,6 +927,7 @@ ACTION0_INDUSTRY_TILE_PROPS = {
     0x11: ('cb25_triggers', 'B'),  # Triggers for callback 25
     0x12: ('flags', 'B'),  # Special flags
     0x13: ('tile_acceptance_list', TileAcceptanceProperty()),  # Tile acceptance list
+    0x14: ('badges', 'n*W'), # list of badges
 }
 
 
@@ -1088,6 +1096,7 @@ ACTION0_INDUSTRY_PROPS = {
     0x26: ('acceptance_types', 'n*B'),  # Acceptance cargo type list
     0x27: ('produciton_multipliers', 'n*B'),  # Production multiplier list
     0x28: ('input_multipliers', 'n*m*W'),  # Input cargo multiplier list
+    0x19: ('badges', 'n*W'), # list of badges
 }
 
 class TownGrowthEffect:
@@ -1170,6 +1179,7 @@ ACTION0_OBJECT_PROPS = {
     0x16: ('height', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Height of the building
     0x17: ('num_views', 'B'),  # Supported by OpenTTD 1.1 (r20670)1.1 Supported by TTDPatch 2.6 (r2340)2.6   Number of object views
     0x18: ('count_per_map256', 'B'),  # Supported by OpenTTD 1.4 (r25879)1.4 Not supported by TTDPatch  Measure for number of objects placed upon map creation
+    0x19: ('badges', 'n*W'), # list of badges
 }
 
 ACTION0_RAILTYPE_PROPS = {
@@ -1186,6 +1196,7 @@ ACTION0_RAILTYPE_PROPS = {
     0x1A: ('sort_order', 'B'),  # Sort order
     0x1B: ('name', 'W'),  # StringID: Rail type name[4]
     0x1C: ('maintenance_cost', 'W'),  # Infrastructure maintenance cost factor
+    0x1E: ('badges', 'n*W'), # list of badges
 
 # railtype
     0x0E: ('compatible_railtype_list', 'n*L'),  # Compatible rail type list[2]
@@ -1219,6 +1230,7 @@ ACTION0_ROADTYPE_PROPS = {
     0x1B: ('name', 'W'),  # StringID: Road type name
     0x1C: ('maintenance_cost', 'W'),  # Infrastructure maintenance cost factor
     0x1D: ('alternative_roadtype_list', 'n*L'),  # Alternate road type labels that shall be "redirected" to this road type
+    0x1E: ('badges', 'n*W'), # list of badges
 }
 
 ACTION0_ROAD_STOP_PROPS = {
@@ -1234,6 +1246,12 @@ ACTION0_ROAD_STOP_PROPS = {
     0x11: ('cb_flags', 'B'),
     0x12: ('general_flags', 'D'),
     0x15: ('cost_multipliers', 'W'),
+    0x16: ('badges', 'n*W'), # list of badges
+}
+
+ACTION0_BADGE_PROPS = {
+    0x08: ('label', 'S'),
+    0x09: ('flags', 'D'),
 }
 
 # TODO airport_tile
@@ -1256,6 +1274,7 @@ ACTION0_PROPS = {
     ROADTYPE: ACTION0_ROADTYPE_PROPS,
     TRAMTYPE: ACTION0_ROADTYPE_PROPS,
     ROAD_STOP: ACTION0_ROAD_STOP_PROPS,
+    BADGE: ACTION0_BADGE_PROPS,
 }
 
 ACTION0_PROP_DICT = {
@@ -1378,6 +1397,12 @@ class DefineMultiple(Action):
         assert isinstance(value, bytes), (type(value), value)
         assert len(value) == 4, (len(value), value)
         return value
+    
+    def _encode_string(self, value):
+        if isinstance(value, str):
+            return to_bytes(value) + bytes([0x00])
+        assert isinstance(value, bytes), (type(value), value)
+        return value
 
     def _encode_value(self, context, value, fmt):
         if isinstance(fmt, Property):
@@ -1386,6 +1411,7 @@ class DefineMultiple(Action):
         if fmt == 'b': return struct.pack('<b', value)
         if fmt == 'W': return struct.pack('<H', value)
         if fmt == 'D': return struct.pack('<I', value)
+        if fmt == 'S': return self._encode_string(value)
         if fmt == 'L': return self._encode_label(value)
         if fmt == 'B*': return struct.pack('<BH', 255, value)
         if fmt == 'n*B':
@@ -1417,6 +1443,11 @@ class DefineMultiple(Action):
             res = bytes((len(value),))
             for l in value:
                 res += self._encode_label(l)
+            return res
+        if fmt == 'n*W':
+            res = struct.pack('<H', len(value))
+            for i in value:
+                res += struct.pack('<H', i)
             return res
         raise RuntimeError(f'Unsupported property format `{fmt}`')
 

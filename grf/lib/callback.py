@@ -255,6 +255,7 @@ PROPERTIES = {
         0x1d: {'name': 'cargo_age_period', 'class': DefaultCallback},
         0x1d: {'name': 'range', 'class': DualCallback},
     },
+    grf.BADGE: {},
 }
 
 VEHICLE_CALLBACKS = {
@@ -430,6 +431,7 @@ CALLBACKS = {
         0x141: {'name': 'anim_next_frame', 'flag': 0x2, 'class': DefaultCallback},
         0x142: {'name': 'anim_speed', 'flag': 0x3, 'class': DefaultCallback},
     },
+    grf.BADGE: {},
 }
 
 FEATURE_CALLBACKS = {

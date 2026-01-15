@@ -36,7 +36,7 @@ class SpriteTable(grf.SpriteGenerator):
 
 class VehicleSpriteTable(SpriteTable):
     def __init__(self, feature):
-        assert feature in grf.VEHICLE_FEATURES
+        assert feature in grf.VEHICLE_FEATURES and feature != grf.BADGE 
         super().__init__(feature)
         self._width = 8
 

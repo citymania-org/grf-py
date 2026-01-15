@@ -1,5 +1,5 @@
 from .common import TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, CANAL, BRIDGE, HOUSE, INDUSTRY_TILE, INDUSTRY, \
-                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP
+                    CARGO, SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP, BADGE
 
 
 NML_VA2_GLOBALVARS = {
@@ -330,6 +330,10 @@ NML_VA2_ROAD_STOPS = {
     'random_bits_tile'      : {'var': 0x5F, 'start': 24, 'size':  8},
 }
 
+NML_VA2_BADGE = {
+    'intro_date'             : {'var': 0x40, 'start':  0, 'size': 32},
+}
+
 
 
 VA2_VARS = {
@@ -346,6 +350,7 @@ VA2_VARS = {
         (OBJECT, NML_VA2_OBJECTS),
         (RAILTYPE, NML_VA2_RAILTYPES),
         (ROAD_STOP, NML_VA2_ROAD_STOPS),
+        (BADGE, NML_VA2_BADGE),
     )
 }
 
