@@ -10,6 +10,7 @@ install_requires = [
     'numpy==2.3.4',
     'Pillow==12.0.0',
     'typeguard==4.4.4',
+    'lark==1.3.0',
 ]
 
 setup(
@@ -25,6 +26,9 @@ setup(
         'console_scripts': [
             'grftopy = grf.decompile:main',
         ]
+    },
+    package_data={
+        "grf.larkparser": ["*.lark"],
     },
     install_requires=install_requires,
     python_requires=">=3.12.10",
