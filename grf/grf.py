@@ -213,7 +213,7 @@ class WriteContext:
 
 
 class BaseNewGRF:
-    def __init__(self, *, strings=None, id_map_file=None, sprite_cache_path='.cache'):
+    def __init__(self, *, strings=None, id_map_file=None, sprite_cache_path='.cache', fast_sprite_enumeration=False):
         self.generators = []
         self._next_sound_id = 73
         self._sounds = {}
@@ -222,6 +222,7 @@ class BaseNewGRF:
         self._context.add_print_handler(print)
         self._id_map = IDMap(id_map_file)
         self.sprite_cache_path = sprite_cache_path
+        self.fast_sprite_enumeration = fast_sprite_enumeration
         self._parameters = {}
         self._labels = set()
 
@@ -547,6 +548,8 @@ class BaseNewGRF:
                 if fid not in last_use:
                     load_files[sid].append(f)
                 last_use[fid] = (sid, f)
+                if self.fast_sprite_enumeration:
+                    continue
                 for x in img_index[fid]:
                     prio = sprite_priority[x] - 1
                     sprite_priority[x] = prio
@@ -891,8 +894,8 @@ class NewGRF(BaseNewGRF):
     BLITTER_BPP_8 = b'8'
     BLITTER_BPP_32 = b'3'
 
-    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache', preferred_blitter=None):
-        super().__init__(strings=strings, id_map_file=id_map_file, sprite_cache_path=sprite_cache_path)
+    def __init__(self, *, grfid, name, description, version=None, min_compatible_version=None, format_version=8, url=None, strings=None, id_map_file=None, sprite_cache_path='.cache', preferred_blitter=None, fast_sprite_enumeration=False):
+        super().__init__(strings=strings, id_map_file=id_map_file, sprite_cache_path=sprite_cache_path, fast_sprite_enumeration=fast_sprite_enumeration)
 
         if isinstance(grfid, str):
             grfid = grfid.encode('utf-8')
