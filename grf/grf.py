@@ -932,6 +932,7 @@ class NewGRF(BaseNewGRF):
         self._param_data = {}
         self._cargo_table = None
         self._railtype_table = None
+        self._badge_table = None
         self.grfid = grfid
         self.name = name
         self.description = description
@@ -988,6 +989,33 @@ class NewGRF(BaseNewGRF):
         if self._cargo_table is None:
             raise RuntimeError(f'`{self.__class__.__name__}.map_cargo_lables` requires cargo_table to be set')
         return bytes(self._cargo_table[to_bytes(l)] for l in labels)
+        
+    def _encode_string(self, value):
+        if isinstance(value, str):
+            return to_bytes(value) + bytes([0x00])
+        
+    def add_badge(self, badge):
+        if self._badge_table is None:
+            self._badge_table = {}
+
+        b_id = len(self._badge_table)
+        
+        bb = self._encode_string(badge)
+        self._badge_table[bb] = b_id
+
+        return b_id
+
+    def set_badge_table(self, badge_list):
+        self._badge_table = {}
+        for i, b in enumerate(badge_list):
+            self._badge_table[self._encode_string(b)] = i
+        return tuple(range(len(badge_list)))
+
+    def get_badge_id(self, badge):
+        bbytes = to_bytes(badge)
+        res = self._badge_table.get(bbytes+bytes([0x00]))
+        assert res is not None, bbytes
+        return res
 
     def generate_sprites(self):
         if self._param_data:
@@ -1014,6 +1042,16 @@ class NewGRF(BaseNewGRF):
                 count=len(self._cargo_table),
                 props={
                     'cargo_table': list(self._cargo_table.keys())
+                }
+            ))
+            
+        if self._badge_table is not None:
+            res.append(DefineMultiple(
+                feature=GLOBAL_VAR,
+                first_id=0,
+                count=len(self._badge_table),
+                props={
+                    'badge_table': list(self._badge_table.keys())
                 }
             ))
 
