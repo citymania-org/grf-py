@@ -260,18 +260,19 @@ for k, n, cn in (
             (0x12, 'roadtype', 'Roadtype'),
             (0x13, 'tramtype', 'Tramtype'),
             (0x14, 'road_stop', 'RoadStop'),
+            (0x15, 'badge', 'Badge')
         ):
     obj = type.__call__(Feature, k, n, cn)
     FeatureMeta.FEATURES[k] = obj
     Feature._FROM_NAME[n] = obj
 
 TRAIN, RV, SHIP, AIRCRAFT, STATION, RIVER, BRIDGE, HOUSE, GLOBAL_VAR, INDUSTRY_TILE, INDUSTRY, CARGO, \
-SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP = FeatureMeta.FEATURES.values()
+SOUND_EFFECT, AIRPORT, SIGNAL, OBJECT, RAILTYPE, AIRPORT_TILE, ROADTYPE, TRAMTYPE, ROAD_STOP, BADGE = FeatureMeta.FEATURES.values()
 TOWN = 0xFF  # fake feature for varact2
 
 CANAL = RIVER
 
-VEHICLE_FEATURES = set((TRAIN, RV, SHIP, AIRCRAFT))
+VEHICLE_FEATURES = set((TRAIN, RV, SHIP, AIRCRAFT, BADGE))
 
 
 def read_extended_byte(data, offset):
