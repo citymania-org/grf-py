@@ -286,7 +286,8 @@ class StringManager:
         self._persistents[ref.hash] = (string_id, ref)
         return string_id
 
-    def import_lang_dir(self, lang_dir, default_lang_file='english.lng'):
+    def import_lang_dir(self, lang_dir, default_lang_file='english.lng', custom_tags_file="custom_tags.txt"):
+        grfstrings.read_extra_commands(custom_tags_file)
         grfstrings.langs = []
         grfstrings.default_lang = grfstrings.Language(True)
         grfstrings.default_lang.langid = grfstrings.DEFAULT_LANGUAGE
